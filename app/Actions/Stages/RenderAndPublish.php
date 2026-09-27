@@ -1,0 +1,252 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Actions\Stages;
+
+use App\Actions\Publish\PublishSummary;
+use App\Actions\Publish\RelinkLocales;
+use App\Actions\Render\RenderCarousel;
+use App\Actions\Render\RenderOutput;
+use App\Enums\Locale;
+use App\Enums\OutputType;
+use App\Models\SummaryJob;
+use App\Services\Render\PageRenderer;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+/**
+ * مرحلة `rendering`: ترسم الصفحة وترفعها ثمّ تنتقل إلى `published` — §8 و§9.
+ *
+ * الرسمُ والنشر فعلان قائمان (T-14 وT-15)، وهذه تصلهما بالخطّ في خطوة
+ * واحدة كسائر المراحل، فيبقى المشغّل موزّعاً على الحالات لا حاملاً لمنطق.
+ *
+ * **والصفحة أوّلاً وقطعاً.** والكاروسيل يُبنى بعدها إن طلبته الجهة، وحزمةُ
+ * الصور عارضٌ مؤجَّل (T-20) — §8-أ.
+ */
+final class RenderAndPublish
+{
+    /** بصمةُ البنية في `output_meta_json` — T-167. والعارضُ يقرأ مفاتيحَه بأسمائها فلا يراها. */
+    private const META_HASH = 'source_hash';
+
+    public function __construct(
+        private readonly RenderOutput $render,
+        private readonly PublishSummary $publish,
+        private readonly PageRenderer $page,
+        private readonly RenderCarousel $carousel,
+        private readonly TranslateSummary $translate,
+        private readonly BuildOutputMeta $meta,
+        private readonly RelinkLocales $relink,
+    ) {}
+
+    /**
+     * @return array<string, string> الروابط العامّة بمفتاح نوع المخرَج.
+     */
+    public function handle(SummaryJob $job): array
+    {
+        // **بيانات الصفحة قبل رسمها** — وسومُ الوصف والمشاركة جزءٌ من
+        // الصفحة، فبناؤها بعد الرسم يعني رسماً بلا وسوم. **وقبل الترجمة
+        // كذلك**: الوصفُ يُشتقّ من البنية العربية، فلا يتبدّل بتبدّل اللغة.
+        $this->buildMeta($job);
+
+        $locales = $this->locales($job);
+
+        // **الأولى أوّلاً وقطعاً**: هي التي تُنشر على المسار الجذر، وبها
+        // تنتقل المهمّةُ إلى `published`. فلو سقطت لم يكن ثَمّ ما يُنشر.
+        $primary = Locale::primaryOf($locales);
+
+        if (! $primary->isSource()) {
+            $this->translate->handle($job, $primary);
+        }
+
+        // `RenderOutput` يحرس الشواهد المعلّقة ويقيّد المخرَج في `outputs`.
+        $output = $this->render->handle($job, $this->page, $primary);
+
+        // و`PublishSummary` هو من ينقل إلى `published` بعد أن يرفع الملفّ.
+        $urls = $this->publish->handle($job, [
+            $output->type->value.':'.$primary->value => $output->contents,
+        ]);
+
+        $urls = [...$urls, ...$this->secondaryLocales($job, $locales, $primary)];
+
+        // شريطُ اللغات يحتاج الجميعَ منشوراً قبل أن يُرسَم — T-134.
+        $this->relink->handle($job);
+
+        $carousel = $this->carouselUrl($job);
+
+        return $carousel === null ? $urls : [...$urls, OutputType::Carousel->value => $carousel];
+    }
+
+    /**
+     * بيانات صفحة الملخّص — المرحلة ٦، T-57.
+     *
+     * **وكانت مبنيّةً لا تُنادى**: لا فرعَ لها في {@see RunSummaryPipeline}
+     * ولا استدعاءَ هنا، فغابت عن `cost_breakdown` في المهامّ كلِّها. وأثرُها
+     * أنّ الصفحة تخرج بـ`<title>` وحده — **بلا وصفٍ ولا وسمِ مشاركة** — في
+     * منتجٍ غايتُه صفحةٌ تُشارَك.
+     *
+     * ★ **وسقوطُها لا يُسقط النشر** — نظير الكاروسيل والترجمة. فصفحةٌ بلا
+     * وصفٍ خيرٌ من ملخّصٍ تمّ عملُه كلُّه ثمّ وقف على وسمٍ في رأسه. ولذلك
+     * `on_exhausted: degrade` في صفّها كذلك.
+     *
+     * ★★ **ولا نداءَ لبنيةٍ بُنيت بياناتُها** — T-167، طلبُ مالك المنتج.
+     *
+     * فزرُّ «حدّث المنشور» يمرّ من هنا في كلّ ضغطة، وكان ينادي المرحلةَ
+     * السادسة كلَّ مرّة — **نداءٌ مدفوعٌ على فعلٍ تقول واجهتُه إنّه مجّاني**
+     * (§8-أ). والبياناتُ تُشتقّ من `structure_json` وحده، وهو لا يُكتب إلّا
+     * في الاستخراج؛ فالنداءُ يُعيد حسابَ ما لم يتبدّل. نظيرُ T-141 للترجمة.
+     */
+    private function buildMeta(SummaryJob $job): void
+    {
+        $stored = (array) ($job->output_meta_json ?? []);
+        $hash = self::structureHash($job);
+
+        if ($stored !== [] && ($stored[self::META_HASH] ?? null) === $hash) {
+            return;
+        }
+
+        /*
+         * **وبياناتٌ بلا بصمة (قبل T-167) تُتبنّى ولا تُعاد.** فالبنيةُ لا
+         * تُكتب بعد الاستخراج، والبياناتُ بُنيت منها بعده — فهي بياناتُ
+         * هذه البنية نفسِها. وإعادتُها «مرّةً أخيرة» مالٌ على يقين.
+         */
+        if ($stored !== [] && ! array_key_exists(self::META_HASH, $stored)) {
+            $job->forceFill(['output_meta_json' => [...$stored, self::META_HASH => $hash]])->save();
+
+            return;
+        }
+
+        try {
+            $meta = $this->meta->handle($job);
+        } catch (Throwable $failure) {
+            Log::warning('output_meta_failed', [
+                'summary_job_id' => $job->id,
+                'reason' => $failure->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if ($meta !== []) {
+            $job->forceFill(['output_meta_json' => [...$meta, self::META_HASH => $hash]])->save();
+        }
+    }
+
+    /**
+     * بصمةُ البنية التي تُبنى منها البيانات — والمفاتيحُ مرتّبة، فلا يوجب
+     * ترتيبُها وحده نداءً.
+     */
+    private static function structureHash(SummaryJob $job): string
+    {
+        $structure = (array) ($job->structure_json ?? []);
+        ksort($structure);
+
+        return hash('sha256', (string) json_encode($structure, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * لغاتُ النشر لهذا الملخّص — اختيارُ المحاضرة، وإلّا فافتراضُ الجهة.
+     *
+     * @return list<Locale>
+     */
+    private function locales(SummaryJob $job): array
+    {
+        return $job->lecture?->outputLocales()
+            ?? $job->tenant?->outputLocales()
+            ?? [Locale::source()];
+    }
+
+    /**
+     * الصفحاتُ باللغات التالية للأولى — T-38.
+     *
+     * ★ **وإخفاقُها لا يُسقط الملخّص** — نظير الكاروسيل تماماً. فاللغةُ
+     * الأولى نُشرت وبلغت المهمّةُ `published`، ونداءُ الترجمة قد يخفق أو
+     * يُبطئ. ورميُ الاستثناء هنا يُوقف مهمّةً تمّ عملُها كلُّه **من أجل
+     * مخرَجٍ ثانٍ**، ويُري الجهةَ ملخّصاً «متوقّفاً» وهو منشورٌ يُخدَم.
+     *
+     * **والأولى ليست كذلك**: سقوطُها يعني أنّ لا شيء يُنشر، فتسقط المهمّة
+     * كما ينبغي.
+     *
+     * @param  list<Locale>  $locales
+     * @return array<string, string>
+     */
+    private function secondaryLocales(SummaryJob $job, array $locales, Locale $primary): array
+    {
+        $urls = [];
+
+        foreach ($locales as $locale) {
+            if ($locale === $primary) {
+                continue;
+            }
+
+            try {
+                if (! $locale->isSource()) {
+                    $this->translate->handle($job, $locale);
+                }
+
+                $output = $this->render->handle($job, $this->page, $locale);
+
+                $urls = [...$urls, ...$this->publish->handle($job, [
+                    $output->type->value.':'.$locale->value => $output->contents,
+                ])];
+            } catch (Throwable $e) {
+                Log::warning('تعذّرت لغةٌ من لغات النشر، واللغة الأولى منشورة.', [
+                    'summary_job_id' => $job->id,
+                    'locale' => $locale->value,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $urls;
+    }
+
+    /**
+     * الكاروسيل إن طلبته الجهة — SCREENS.md §3-ب، وT-19.
+     *
+     * ★ **وإخفاقُه لا يُسقط الملخّص.** فالصفحة نُشرت وبلغت `published`، ونداءُ
+     * التكثيف (المرحلة ٧) قد يخفق أو يخالف عقدَه. ورميُ الاستثناء هنا يُوقف
+     * مهمّةً تمّ عملُها كلُّه من أجل **مخرَجٍ ثانٍ**، ويُري الجهةَ ملخّصاً
+     * «متوقّفاً» وهو منشورٌ يُخدَم.
+     *
+     * فيُقيَّد الإخفاق ويُمضى، وتُبنى الشرائح بعدها من شاشتها بضغطة —
+     * وكلفتُها صفرٌ على أيّ حال.
+     */
+    private function carouselUrl(SummaryJob $job): ?string
+    {
+        /*
+         * ★ **وما بُني مرّةً يُعاد بناؤه عند كلّ نشر** — T-30.
+         *
+         * فـ`want_carousel` تُسأل عنه الجهةُ ساعةَ الإنشاء وحدها، ومن بنى
+         * شرائحه بعدها من شاشتها لم يُبدَّل له الحقل. **فلمّا صار للجهة زرُّ
+         * «حدّثْ المنشور» (T-30) كان تحديثُ الصفحة يرفعها وحدها**، ويترك
+         * شرائحَ منشورةً بلا ملفّ — رابطٌ كان يعمل فلا يعمل، بلا قرارٍ من
+         * أحد.
+         *
+         * ووجودُ المخرَج نفسِه هو الطلب: من بناه أراده، وكلفةُ إعادة رسمه
+         * صفر (§8-أ).
+         */
+        $wanted = $job->lecture?->want_carousel === true
+            || $job->outputs()->where('type', OutputType::Carousel->value)->exists();
+
+        if (! $wanted || ! $job->tenant?->allowsRichOutputs()) {
+            return null;
+        }
+
+        try {
+            $this->carousel->handle($job);
+        } catch (Throwable $failure) {
+            Log::warning('carousel.render_failed', [
+                'summary_job_id' => $job->id,
+                'reason' => $failure->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        return $job->refresh()
+            ->outputs()
+            ->where('type', OutputType::Carousel->value)
+            ->value('public_url');
+    }
+}

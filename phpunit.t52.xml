@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="tests/bootstrap.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+    </source>
+    <php>
+        <!-- مدوّنة الحديث ٣٥٬٩٨٢ صفّاً، و`HadithCorpusDataTest` يفكّها كاملةً في
+             الذاكرة ليحرس بصماتها. فحدّ php.ini الافتراضي (128M) يُسقطه بخطأ
+             قاتل لا باختبار أحمر — وهو يُسقط `php artisan test` كلَّه، وهو
+             الأمر الموثَّق في CLAUDE.md §4. وCI يرفع الحدّ من عنده، فالعطل
+             محلّيّ وحده، ويُرفع هنا كي يعمل الأمر على كل جهاز. -->
+        <ini name="memory_limit" value="1G"/>
+
+        <!-- ★ `force="true"` على ما يلي، ومعها `tests/bootstrap.php`.
+
+             و`force` وحدها لا تكفي: تكتب في `$_ENV` و`putenv` لا في
+             `$_SERVER`، ولارافل تقرأ `$_SERVER` أوّلاً. فالنزعُ من هناك
+             هو ما يُنفذ القيمة — والشرح كاملاً في `tests/bootstrap.php`. -->
+        <env name="APP_ENV" value="testing" force="true"/>
+
+        <!-- الواجهة عربية، ورسائل الأخطاء من lang/ar — CLAUDE.md §1. ولا
+             تُترك اللغة لـ .env: بلا ملفّ .env في CI تعود en، فتُقارن
+             الاختباراتُ مفاتيحَ الترجمة بنصّها العربي وتسقط بلا سبب ظاهر. -->
+        <env name="APP_LOCALE" value="ar" force="true"/>
+        <env name="APP_FALLBACK_LOCALE" value="ar" force="true"/>
+
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array" force="true"/>
+
+        <!-- Postgres لا sqlite: المواصفة تعتمد jsonb وفهارس نصّية عربية. -->
+        <env name="DB_CONNECTION" value="pgsql" force="true"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="5432"/>
+        <env name="DB_DATABASE" value="khulasah_t52" force="true"/>
+        <env name="DB_USERNAME" value="khulasah"/>
+        <env name="DB_PASSWORD" value="secret"/>
+        <env name="DB_URL" value=""/>
+
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <env name="QUEUE_CONNECTION" value="sync" force="true"/>
+        <env name="SESSION_DRIVER" value="array" force="true"/>
+
+        <!-- البوّابة الوهمية إلزامية في الاختبار: لا نداء نموذج حقيقي في CI. -->
+        <env name="MODEL_GATEWAY" value="fake" force="true"/>
+    </php>
+</phpunit>

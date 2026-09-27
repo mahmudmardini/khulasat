@@ -1,0 +1,110 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
+use Inertia\Response;
+
+/**
+ * تسجيل الدخول — SCREENS.md §1، والمواصفة §10.
+ *
+ * **حقلان وزر، ولا تسجيل ذاتي**: الحسابات بدعوة، فلا مسار `register` ولا
+ * يُبنى. ومن أراد حساباً فمن مالك جهته أو من المشرف العام.
+ */
+class LoginController extends Controller
+{
+    /** خمس محاولات لكلّ (بريد + عنوان) — ثمّ انتظار. */
+    private const MAX_ATTEMPTS = 5;
+
+    private const DECAY_SECONDS = 60;
+
+    public function show(): Response
+    {
+        return Inertia::render('Auth/Login');
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $credentials = $request->validate([
+            'email' => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $key = $this->throttleKey($request);
+
+        if (RateLimiter::tooManyAttempts($key, self::MAX_ATTEMPTS)) {
+            throw ValidationException::withMessages([
+                'email' => trans('auth.throttle', ['seconds' => RateLimiter::availableIn($key)]),
+            ]);
+        }
+
+        $remember = $request->boolean('remember');
+
+        /*
+         * ★ **حارس المشرف يُجرَّب أوّلاً — T-21.**
+         *
+         * وكان `Auth::attempt` وحده، وهو على الحارس الافتراضي `web`. فيدخل
+         * المشرف العامّ على حارس الجهة ثمّ يُحوَّل إلى `/admin`، و`/admin`
+         * يشترط حارس `admin` فيردّ **404**. فاللوحة كانت محروسةً لا يبلغها
+         * أحد — عين ثغرة T-16ب: حارسٌ ومسارٌ بلا باب.
+         *
+         * والترتيب هو الحلّ كلُّه: مزوّد `admins` مقصورٌ على
+         * `tenant_id IS NULL`، فمستخدم الجهة **لا يُصادَق عليه هنا أصلاً**
+         * ولو صحّت كلمته، ويسقط إلى الحارس الذي يخصّه. والعكسُ غير صحيح:
+         * مزوّد `users` يشمل الجميع، فلو جُرّب `web` أوّلاً لدخل المشرف
+         * على حارس الجهة — وهو ما كان يقع.
+         */
+        $panel = Auth::guard('admin')->attempt($credentials, $remember);
+
+        if (! $panel && ! Auth::guard('web')->attempt($credentials, $remember)) {
+            RateLimiter::hit($key, self::DECAY_SECONDS);
+
+            /*
+             * **رسالة واحدة لا اثنتان.** والتفريق بين «لا حساب بهذا البريد»
+             * و«كلمة المرور خاطئة» يُخبر المهاجم أيّ البُرد مسجَّل عندنا،
+             * فيصير نموذج الدخول أداةَ استطلاع.
+             *
+             * والحارسان هنا لا يُفرّقان كذلك: من أخطأ لا يُعلَم أكان
+             * يقصد لوحةَ مشرفٍ أم لوحةَ جهة.
+             */
+            throw ValidationException::withMessages(['email' => trans('auth.failed')]);
+        }
+
+        RateLimiter::clear($key);
+
+        // تدوير معرّف الجلسة بعد النجاح — وإلّا صحّت جلسةٌ زرعها مهاجم قبله.
+        $request->session()->regenerate();
+
+        // المشرف العام في لوحةٍ منفصلة — المواصفة §10.
+        return redirect()->intended($panel ? '/admin' : route('lectures.index'));
+    }
+
+    public function destroy(Request $request): RedirectResponse
+    {
+        /*
+         * **الحارسان معاً.** والجلسة تُبطَل بعدهما، فيكفي واحدٌ عملياً —
+         * لكنّ الخروج الصريح من كليهما يجعل الشيفرة تقول ما تفعله، ويُخرج
+         * المشرفَ المنتحلَ من هويّة الجهة ومن لوحته بضغطةٍ واحدة.
+         */
+        Auth::guard('web')->logout();
+        Auth::guard('admin')->logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
+    }
+
+    private function throttleKey(Request $request): string
+    {
+        return 'login:'.mb_strtolower((string) $request->input('email')).'|'.$request->ip();
+    }
+}

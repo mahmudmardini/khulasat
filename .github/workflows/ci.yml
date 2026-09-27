@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: الاختبارات والتنسيق
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: khulasah_testing
+          POSTGRES_USER: khulasah
+          POSTGRES_PASSWORD: secret
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U khulasah -d khulasah_testing"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: تهيئة PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: bcmath, intl, pcntl, pdo_pgsql, zip
+          coverage: none
+
+      - name: تخزين حزم Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: تهيئة البيئة
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      # مفاتيح الواجهات فارغة في CI عمداً. البوّابة الوهمية هي المستعملة،
+      # ولا نداء نموذج حقيقي — انظر المواصفة §6-أ «البوّابة الوهمية».
+      - name: تنسيق PHP
+        run: ./vendor/bin/pint --test
+
+      - name: الاختبارات
+        run: php artisan test
+
+      # البوّابة صفر — عيّنة الشواهد المدسوسة. تُشغَّل خطوةً مستقلّة باسمها
+      # ليكون إخفاقها ظاهراً في قائمة الفحوص لا مدفوناً في مخرَج الاختبارات.
+      # ولا يُدمج شيء إلى main وهي حمراء — المهمّة T-06.
+      - name: البوّابة صفر — عيّنة الشواهد المدسوسة
+        run: php artisan test --filter=EvidenceFixtures
+
+  frontend:
+    name: بناء الواجهة
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: فحص الأنواع
+        run: npx tsc --noEmit
+
+      - run: npm run build

@@ -1,0 +1,38 @@
+Khulasat Source-Available License
+
+Copyright (c) 2026 The Khulasat team. All rights reserved.
+
+This repository is published so that its source code can be read and
+evaluated. Publication does not place it in the public domain and does not
+make it open-source software.
+
+1. Permitted use
+   You may view and read the source code, and clone, install and run it on
+   your own machines for the sole purpose of reviewing or evaluating it.
+
+2. Islamic AI Challenge
+   The organizers of the Islamic AI Challenge (islamicaich.org) and their
+   judges receive the licenses described in the challenge Terms and
+   Conditions, for the purposes and periods stated there. Where those terms
+   grant broader rights than this license, those terms govern for the
+   organizers only.
+
+3. Not permitted without prior written permission
+   - Using the software, or any part of it, in production or to provide a
+     service to others, whether commercial or not.
+   - Copying, modifying, merging, redistributing, sublicensing or selling the
+     software or any substantial part of it, or publishing derivative works.
+   - Reusing the model instructions under prompts/, the summary template in
+     khulasah.skill, or the design system, in another product.
+
+4. Third-party components
+   Components written by others remain under their own licenses. They are
+   listed in SOURCES.md and in composer.lock and package-lock.json. Nothing
+   in this license restricts rights granted by those licenses.
+
+5. No warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+   DAMAGES OR OTHER LIABILITY ARISING FROM THE SOFTWARE OR ITS USE.
+
+For permissions: https://khulasat.io

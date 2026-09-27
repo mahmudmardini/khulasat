@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>معاينة الكتل — modern</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+body{background:#ddd;margin:0;padding:24px 0}
+.page{max-width:640px;margin:0 auto;background:var(--paper,#fff);padding:28px;box-shadow:0 2px 18px rgba(0,0,0,.15)}
+:root{
+  --paper:#FFFFFF;
+  --paper-2:#F7F8F9;
+  --paper-3:#EDEFF2;
+  --emerald:#1F6F5C;
+  --emerald-deep:#12463A;
+  --emerald-soft:#4E9481;
+  --gold:#B07C2A;
+  --gold-light:#D8AE68;
+  --clay:#A6402F;
+  --clay-soft:#C8756A;
+  --ink:#161A1D;
+  --ink-soft:#5C6670;
+  --rule:rgba(22,26,29,.12);
+  --maxw:820px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--paper-2);
+  color:var(--ink);
+  font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;
+  font-size:17px;
+  font-weight:300;
+  line-height:1.95;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  position:relative;
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:0 20px 96px;
+  background:var(--paper);
+  box-shadow:0 1px 3px rgba(22,26,29,.05),0 12px 40px rgba(22,26,29,.06);
+}
+
+/* ── الطباعة ── */
+h1,h2,h3,h4{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:600;line-height:1.5;margin:0}
+.ruqaa{font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;font-weight:600}
+p{margin:0 0 1.05em}
+.lead{font-size:19px;line-height:2.05;color:var(--ink)}
+.muted{color:var(--ink-soft)}
+
+/* ── العنوان ── */
+.unwan{margin:0 -20px 26px;padding:44px 28px 30px;background:var(--emerald);color:#fff;text-align:center}
+.unwan .crest{display:none}
+.unwan .inner{max-width:640px;margin:0 auto}
+.unwan h1{font-size:31px;font-weight:600;color:#fff;letter-spacing:-.01em}
+.unwan .sub{margin-top:10px;font-size:16px;font-weight:300;color:rgba(255,255,255,.82)}
+.unwan .divider{
+  width:44px;height:3px;margin:18px auto 0;border-radius:2px;
+  background:var(--gold-light);
+}
+
+/* ── النسبة والمجلس ── */
+.attrib{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;
+  margin:0 0 26px;padding-bottom:20px;
+  font-size:14px;color:var(--ink-soft);border-bottom:1px solid var(--rule);
+}
+.attrib b{font-weight:600;color:var(--ink)}
+.attrib .dot{width:3px;height:3px;border-radius:50%;background:var(--rule)}
+
+.majlis{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+  margin:0 0 34px;background:var(--rule);border:1px solid var(--rule);border-radius:10px;overflow:hidden;
+}
+.majlis .row{display:flex;flex-direction:column;gap:3px;padding:13px 15px;background:var(--paper)}
+.majlis .k{font-size:12px;font-weight:500;color:var(--ink-soft)}
+.majlis .v{font-size:15px;font-weight:500;color:var(--ink)}
+.majlis .v em{font-style:normal;font-weight:300;color:var(--ink-soft)}
+.majlis svg{width:15px;height:15px;opacity:.5}
+
+/* ── عناوين الأقسام ── */
+.sec-head{display:flex;align-items:center;gap:12px;margin:46px 0 20px}
+.sec-head h2{font-size:22px;font-weight:600;color:var(--emerald-deep);white-space:nowrap}
+.sec-head .mark{
+  flex:none;width:5px;height:24px;border-radius:3px;background:var(--gold);
+}
+.sec-head .rule{flex:1;height:1px;background:var(--rule)}
+
+/* ── الشواهد ── */
+.sacred{
+  margin:26px 0;padding:22px 24px;
+  background:var(--paper-2);
+  border:1px solid var(--rule);
+  border-inline-start:4px solid var(--emerald);
+  border-radius:10px;
+}
+.sacred .text{
+  margin:0;font-size:20px;line-height:2.25;font-weight:400;color:var(--emerald-deep);
+}
+.sacred .text.hadith{font-size:18.5px;line-height:2.15;color:var(--ink)}
+.sacred .src{
+  display:block;margin-top:12px;font-size:13px;font-weight:500;color:var(--ink-soft);
+}
+.sacred.warn{border-inline-start-color:var(--clay);background:rgba(166,64,47,.045)}
+.sacred.warn .src{color:var(--clay)}
+.sacred.dark{background:var(--emerald-deep);border-color:transparent}
+.sacred.dark .text{color:#fff}
+.sacred.dark .src{color:rgba(255,255,255,.7)}
+
+.ayah-hero{
+  margin:30px 0;padding:34px 26px;text-align:center;
+  background:linear-gradient(180deg,var(--paper-2),var(--paper));
+  border:1px solid var(--rule);border-radius:14px;
+}
+.ayah-hero .src{display:block;margin-top:14px;font-size:13px;font-weight:500;color:var(--ink-soft)}
+.ayah-no{
+  display:inline-block;margin:0 4px;font-size:.82em;color:var(--gold);font-weight:500;
+}
+
+/* ── البطاقات الثلاثية ── */
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:26px 0}
+.imam{
+  padding:20px;background:var(--paper);border:1px solid var(--rule);border-radius:12px;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.imam:hover{border-color:var(--emerald-soft);box-shadow:0 3px 12px rgba(22,26,29,.06)}
+.imam .ico{
+  display:flex;align-items:center;justify-content:center;
+  width:34px;height:34px;margin-bottom:12px;border-radius:9px;
+  background:rgba(31,111,92,.1);color:var(--emerald);
+}
+.imam h3{font-size:16px;font-weight:600;margin-bottom:7px;color:var(--emerald-deep)}
+.imam p{font-size:14.5px;line-height:1.85;margin:0;color:var(--ink-soft)}
+
+/* ── المقارنة ── */
+.compare{display:grid;gap:16px;margin:26px 0}
+.axis-card{padding:20px;background:var(--paper-2);border:1px solid var(--rule);border-radius:12px}
+.axis-q{font-size:16px;font-weight:600;margin-bottom:14px;color:var(--emerald-deep)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.side{padding:15px;border-radius:9px;background:var(--paper);border:1px solid var(--rule)}
+.side p{margin:0;font-size:14.5px;line-height:1.85}
+.side.calm{border-color:rgba(31,111,92,.35);background:rgba(31,111,92,.05)}
+.side.panic{border-color:rgba(166,64,47,.3);background:rgba(166,64,47,.04)}
+.tag{
+  display:inline-block;margin-bottom:8px;padding:3px 10px;border-radius:20px;
+  font-size:12px;font-weight:600;
+}
+.side.calm .tag{background:rgba(31,111,92,.14);color:var(--emerald-deep)}
+.side.panic .tag{background:rgba(166,64,47,.12);color:var(--clay)}
+
+/* ── المجالات ── */
+.quad{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:26px 0}
+.quad a{
+  display:block;padding:18px;text-decoration:none;color:inherit;
+  background:var(--paper);border:1px solid var(--rule);border-radius:12px;
+  transition:border-color .15s ease,transform .15s ease;
+}
+.quad a:hover{border-color:var(--emerald-soft);transform:translateY(-2px)}
+.quad a:focus-visible{outline:2px solid var(--emerald);outline-offset:2px}
+.quad .ico{
+  display:flex;align-items:center;justify-content:center;
+  width:32px;height:32px;margin-bottom:10px;border-radius:9px;
+  background:rgba(176,124,42,.12);color:var(--gold);
+}
+.quad h3{font-size:15.5px;font-weight:600;margin-bottom:5px}
+.quad span{font-size:13.5px;color:var(--ink-soft)}
+
+/* ── الأركان والخطوات ── */
+.pillar{margin:26px 0;padding:22px;background:var(--paper-2);border:1px solid var(--rule);border-radius:12px}
+.pillar-title{display:flex;align-items:center;gap:11px;margin-bottom:16px}
+.pillar-title .ico{
+  display:flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:9px;background:var(--emerald);color:#fff;flex:none;
+}
+.pillar-title h3{font-size:17px;font-weight:600;color:var(--emerald-deep)}
+.step{display:flex;gap:13px;padding:13px 0;border-top:1px solid var(--rule)}
+.step:first-of-type{border-top:0;padding-top:0}
+.step .num{
+  flex:none;display:flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:50%;
+  background:var(--paper-3);color:var(--emerald-deep);
+  font-size:13px;font-weight:600;
+}
+.step h4{font-size:15.5px;font-weight:600;margin-bottom:4px}
+.step p{margin:0;font-size:14.5px;line-height:1.85;color:var(--ink-soft)}
+
+/* ── المسارات ── */
+.paths{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:26px 0}
+.path{padding:18px;border-radius:12px;border:1px solid var(--rule);background:var(--paper)}
+.path h4{font-size:15px;font-weight:600;margin-bottom:12px}
+.path.good{border-color:rgba(31,111,92,.35);background:rgba(31,111,92,.04)}
+.path.good h4{color:var(--emerald-deep)}
+.path.bad{border-color:rgba(166,64,47,.3);background:rgba(166,64,47,.035)}
+.path.bad h4{color:var(--clay)}
+.node{
+  padding:9px 13px;margin-bottom:8px;border-radius:8px;
+  background:var(--paper);border:1px solid var(--rule);
+  font-size:14px;
+}
+.path.bad .node{border-color:rgba(166,64,47,.2)}
+.node.final{font-weight:600;background:var(--emerald);color:#fff;border-color:transparent}
+.path.good .node.final{background:var(--emerald)}
+.path.bad .node.final{background:var(--clay);color:#fff}
+.arrow{display:block;text-align:center;color:var(--ink-soft);opacity:.45;font-size:13px;line-height:1}
+
+/* ── الليل ── */
+.night{
+  margin:34px -20px;padding:38px 28px;
+  background:var(--emerald-deep);color:#fff;
+}
+.night h2{font-size:21px;font-weight:600;color:#fff;margin-bottom:14px}
+.night .moon{display:block;margin-bottom:14px;opacity:.55}
+.night .q{font-size:18px;line-height:2.1;color:rgba(255,255,255,.94)}
+.night .note{font-size:14px;color:rgba(255,255,255,.62)}
+.checks{display:grid;gap:9px;margin-top:16px}
+.checks label{
+  display:flex;align-items:center;gap:10px;cursor:pointer;
+  font-size:15px;color:rgba(255,255,255,.9);
+}
+.checks label:hover{color:#fff}
+.checks input{
+  appearance:none;flex:none;width:19px;height:19px;border-radius:6px;
+  border:1.5px solid rgba(255,255,255,.42);background:transparent;cursor:pointer;
+  position:relative;transition:background .15s ease,border-color .15s ease;
+}
+.checks input:checked{background:var(--gold);border-color:var(--gold)}
+.checks input:checked::after{
+  content:"";position:absolute;inset:0;
+  background:no-repeat center/11px url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M3 8.5l3.5 3.5L13 5'/></svg>");
+}
+.checks input:focus-visible{outline:2px solid var(--gold-light);outline-offset:2px}
+
+/* ── الختام ── */
+.closing{
+  margin:38px 0 0;padding:26px;text-align:center;
+  font-size:18px;line-height:2.1;color:var(--emerald-deep);
+  background:var(--paper-2);border:1px solid var(--rule);border-radius:12px;
+}
+
+/* ── المصادر ── */
+.sources{margin:40px 0 0;padding-top:24px;border-top:1px solid var(--rule)}
+.sources h3{font-size:15px;font-weight:600;margin-bottom:12px;color:var(--ink-soft)}
+.sources ol{margin:0;padding-inline-start:20px}
+.sources li{font-size:14px;line-height:1.9;color:var(--ink-soft);margin-bottom:5px}
+
+/* ── الحاشية ── */
+.colophon{
+  margin:44px -20px -96px;padding:30px 28px 36px;
+  text-align:center;background:var(--paper-2);border-top:1px solid var(--rule);
+}
+.colophon::before{content:none}
+.colophon .note{font-size:13px;line-height:1.9;color:var(--ink-soft);margin:0 0 10px}
+.colophon .sep{
+  width:36px;height:2px;margin:14px auto;border-radius:2px;background:var(--rule);
+}
+.mosque-name{font-size:16px;font-weight:600;color:var(--emerald-deep)}
+.mosque-latin{font-size:12px;letter-spacing:.1em;color:var(--ink-soft);text-transform:uppercase}
+.links{display:flex;justify-content:center;gap:10px;margin-top:14px}
+.links a{
+  display:flex;align-items:center;gap:6px;padding:7px 13px;
+  font-size:13px;text-decoration:none;color:var(--ink-soft);
+  border:1px solid var(--rule);border-radius:20px;background:var(--paper);
+  transition:color .15s ease,border-color .15s ease;
+}
+.links a:hover{color:var(--emerald);border-color:var(--emerald-soft)}
+.links a:focus-visible{outline:2px solid var(--emerald);outline-offset:2px}
+.links svg{width:15px;height:15px}
+
+/* ── الأفعال ── */
+.actions{display:flex;justify-content:center;gap:10px;margin:30px 0 0;flex-wrap:wrap}
+.act{
+  display:inline-flex;align-items:center;gap:7px;padding:10px 18px;
+  font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;
+  color:var(--ink);background:var(--paper);
+  border:1px solid var(--rule);border-radius:9px;
+  transition:border-color .15s ease,background .15s ease;
+}
+.act:hover{border-color:var(--emerald-soft);background:var(--paper-2)}
+.act:focus-visible{outline:2px solid var(--emerald);outline-offset:2px}
+.act svg{width:16px;height:16px}
+.act.primary{background:var(--emerald);color:#fff;border-color:transparent}
+.act.primary:hover{background:var(--emerald-deep)}
+.act.primary:focus-visible{outline:2px solid var(--emerald-deep);outline-offset:2px}
+
+/* ── نصيحة الطباعة ── */
+.print-tip{
+  position:fixed;inset:0;z-index:50;display:none;
+  align-items:center;justify-content:center;padding:20px;
+  background:rgba(22,26,29,.45);
+}
+.print-tip.open{display:flex}
+.print-tip .box{
+  max-width:420px;width:100%;padding:26px;
+  background:var(--paper);border-radius:14px;
+  box-shadow:0 16px 48px rgba(22,26,29,.22);
+}
+.print-tip h3{font-size:18px;font-weight:600;margin-bottom:10px}
+.print-tip p{font-size:14.5px;color:var(--ink-soft)}
+.print-tip ol{margin:0 0 18px;padding-inline-start:20px;font-size:14.5px;line-height:1.95}
+.print-tip ol b{font-weight:600;color:var(--ink)}
+.print-tip .acts{display:flex;gap:9px;justify-content:flex-end}
+.print-tip button{
+  font-family:inherit;font-size:14px;font-weight:500;padding:9px 17px;
+  border-radius:9px;cursor:pointer;border:1px solid var(--rule);background:var(--paper);
+}
+.print-tip .go{background:var(--emerald);color:#fff;border-color:transparent}
+.print-tip .go:hover{background:var(--emerald-deep)}
+.print-tip .cancel{color:var(--ink-soft)}
+.print-tip .cancel:hover{background:var(--paper-2)}
+
+/* ── التنبيه ── */
+.toast{
+  position:fixed;inset-inline-start:50%;bottom:26px;transform:translate(50%,16px);
+  z-index:60;padding:11px 20px;border-radius:9px;
+  background:var(--ink);color:#fff;font-size:14px;
+  opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;
+}
+.toast.show{opacity:1;transform:translate(50%,0)}
+
+/* ── الجوال ── */
+@media (max-width:640px){
+  body{font-size:16px}
+  .wrap{padding:0 16px 72px}
+  .unwan{margin:0 -16px 22px;padding:34px 20px 24px}
+  .unwan h1{font-size:25px}
+  .pair,.paths{grid-template-columns:1fr}
+  .night{margin:28px -16px;padding:30px 20px}
+  .colophon{margin:36px -16px -72px}
+}
+
+/* ── الطباعة ── */
+@media print{
+  body{background:#fff;font-size:12pt}
+  .wrap{box-shadow:none;max-width:100%;padding:0}
+  .actions,.print-tip,.toast{display:none!important}
+  .unwan{background:#fff;color:var(--ink);border-bottom:2px solid var(--emerald);margin:0 0 18px;padding:0 0 16px}
+  .unwan h1{color:var(--emerald-deep)}
+  .unwan .sub{color:var(--ink-soft)}
+  .night{background:#fff;color:var(--ink);border:1px solid var(--rule);border-radius:10px;margin:20px 0;padding:22px}
+  .night h2,.night .q{color:var(--emerald-deep)}
+  .night .note{color:var(--ink-soft)}
+  .checks label{color:var(--ink)}
+  .checks input{border-color:var(--ink-soft)}
+  .sacred,.imam,.axis-card,.pillar,.quad a,.path,.closing,.ayah-hero{
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  .sec-head{break-after:avoid;page-break-after:avoid}
+  .colophon{margin:24px 0 0;background:#fff}
+  a{text-decoration:none;color:inherit}
+}
+
+
+/* ═══ جدول البيانات ═══ */
+.data{margin:26px 0}
+.data h3{font-size:16px;font-weight:600;color:var(--emerald-deep);margin-bottom:11px}
+.data table{
+  width:100%;border-collapse:separate;border-spacing:0;
+  background:var(--paper);border:1px solid var(--rule);border-radius:12px;
+  overflow:hidden;font-size:14.5px;
+}
+.data thead{background:var(--paper-2)}
+.data th{
+  font-size:13.5px;font-weight:600;letter-spacing:.02em;
+  color:var(--emerald);padding:12px 14px;text-align:right;
+  border-bottom:1px solid var(--rule);
+}
+.data td{padding:12px 14px;border-bottom:1px solid var(--rule);color:var(--ink-soft);line-height:1.8}
+.data tbody tr:last-child td{border-bottom:0}
+.data .note{margin-top:9px;font-size:13px;color:var(--ink-soft)}
+
+/* ═══ القائمة ═══ */
+.listing{margin:24px 0}
+.listing h3{font-size:16px;font-weight:600;color:var(--emerald-deep);margin-bottom:9px}
+.listing .bullets,.listing .numbered{margin:0;padding-inline-start:22px}
+/* عربية هندية كسائر أرقام الصفحة — T-75. المولِّد لا يعرف اتجاهاً فيتبع لغته. */
+.listing .numbered{list-style-type:arabic-indic}
+.listing li{font-size:14.5px;line-height:1.9;margin-bottom:7px;color:var(--ink-soft)}
+.listing li::marker{color:var(--emerald-soft);font-weight:600}
+.listing .note{margin-top:9px;font-size:13px;color:var(--ink-soft)}
+
+/* ═══ الأرقام البارزة ═══ */
+.figures-wrap{margin:28px 0}
+.figures-wrap h3{font-size:16px;font-weight:600;color:var(--emerald-deep);margin-bottom:13px}
+.figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.figure{
+  padding:20px 16px;background:var(--paper);border:1px solid var(--rule);
+  border-radius:12px;text-align:center;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.figure:hover{border-color:var(--emerald-soft);box-shadow:0 3px 12px rgba(22,26,29,.06)}
+.fig-num{
+  display:block;font-size:32px;font-weight:600;line-height:1.2;
+  color:var(--emerald);margin-bottom:5px;
+}
+.fig-label{display:block;font-size:13.5px;line-height:1.65;color:var(--ink-soft)}
+.figures-wrap .note{margin-top:11px;font-size:13px;color:var(--ink-soft);text-align:center}
+
+/* ═══ خطّ الزمن ═══ */
+.timeline{margin:28px 0}
+.timeline h3{font-size:16px;font-weight:600;color:var(--emerald-deep);margin-bottom:15px}
+.event{display:grid;grid-template-columns:80px 1fr;gap:0;align-items:start}
+.when{
+  font-size:13.5px;font-weight:600;color:var(--gold);
+  padding-top:3px;padding-inline-end:10px;text-align:left;
+}
+.what{
+  position:relative;border-inline-start:2px solid var(--rule);
+  padding-inline-start:18px;padding-bottom:20px;
+}
+.what::before{
+  content:'';position:absolute;top:5px;inset-inline-start:-6px;
+  width:10px;height:10px;border-radius:50%;
+  background:var(--emerald);border:2px solid var(--paper);
+}
+.event:last-of-type .what{border-inline-start-color:transparent;padding-bottom:0}
+.what h4{font-size:15.5px;font-weight:600;color:var(--emerald-deep);margin-bottom:4px}
+.what p{font-size:14.5px;line-height:1.85;margin:0;color:var(--ink-soft)}
+.timeline .note{margin-top:11px;font-size:13px;color:var(--ink-soft)}
+
+/* ═══ التفريع — شبكة CSS، بلا SVG ولا مكتبة ═══ */
+.tree{margin:30px 0;text-align:center}
+.tree h3{font-size:16px;font-weight:600;color:var(--emerald-deep);margin-bottom:13px}
+.root{
+  display:inline-block;padding:11px 22px;border-radius:12px;
+  background:var(--emerald);color:var(--paper);
+  font-size:15.5px;font-weight:600;
+}
+.branches{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  gap:12px;margin-top:20px;
+}
+.branch{position:relative;padding-top:16px}
+.branch::before{
+  content:'';position:absolute;top:0;inset-inline-start:calc(50% - 1px);
+  width:2px;height:16px;background:var(--rule);
+}
+.branch h4{
+  font-size:14.5px;font-weight:600;color:var(--emerald-deep);
+  background:var(--paper-2);border:1px solid var(--rule);border-radius:10px;
+  padding:10px 12px;margin-bottom:9px;
+}
+.leaf{
+  font-size:13.5px;line-height:1.7;color:var(--ink-soft);
+  background:var(--paper);border:1px solid var(--rule);border-radius:9px;
+  padding:9px 11px;margin-bottom:7px;
+}
+.tree .note{margin-top:11px;font-size:13px;color:var(--ink-soft)}
+/* فرعٌ داخل فرعٍ — T-72. نفسُ .branch متداخلاً، بلا صنفٍ جديد. */
+.branch .branch{
+  margin-top:9px;padding-top:0;background:none;
+  border-inline-start:2px solid var(--rule);padding-inline-start:12px;
+}
+.branch .branch::before{display:none}
+.branch .branch h4{font-size:13.5px;background:none;border:none;padding:0 0 6px}
+
+/* ═══ الهرم — طبقاتٌ يتدرّج عرضها بترتيبها لا بصنفٍ، T-72 ═══ */
+.pyramid{margin:30px 0}
+.pyramid h3{font-size:16px;font-weight:600;color:var(--emerald-deep);margin-bottom:13px;text-align:center}
+.tiers{display:flex;flex-direction:column;align-items:center;gap:8px}
+.tier{
+  width:100%;box-sizing:border-box;text-align:center;
+  background:var(--paper);border:1px solid var(--rule);border-radius:12px;
+  padding:13px 16px;
+}
+.tier h4{font-size:14.5px;font-weight:600;color:var(--emerald-deep);margin-bottom:4px}
+.tier p{font-size:13.5px;line-height:1.75;color:var(--ink-soft);margin:0}
+.tiers .tier:nth-child(1){max-width:40%;background:var(--emerald);border-color:var(--emerald)}
+.tiers .tier:nth-child(1) h4,.tiers .tier:nth-child(1) p{color:var(--paper)}
+.tiers .tier:nth-child(2){max-width:60%}
+.tiers .tier:nth-child(3){max-width:80%}
+.tiers .tier:nth-child(n+4){max-width:100%}
+.pyramid .note{margin-top:11px;font-size:13px;color:var(--ink-soft);text-align:center}
+
+/* ═══ العجلة — حلقةٌ متدرّجة الامتلاء بعشر درجاتٍ ثابتة، T-72 ═══ */
+.gauge{margin:30px 0;text-align:center}
+.gauge h3{font-size:16px;font-weight:600;color:var(--emerald-deep);margin-bottom:13px}
+.ring{
+  --track:var(--rule);--fill:var(--emerald);
+  width:112px;height:112px;border-radius:50%;margin:0 auto;
+  display:flex;align-items:center;justify-content:center;
+  background:conic-gradient(var(--fill) 0%,var(--track) 0%);
+}
+.ring .reading{
+  width:86px;height:86px;border-radius:50%;background:var(--paper);
+  display:flex;align-items:center;justify-content:center;
+  font-size:26px;font-weight:600;color:var(--emerald-deep);
+}
+.ring.fill-0{background:conic-gradient(var(--fill) 0%,var(--track) 0%)}
+.ring.fill-10{background:conic-gradient(var(--fill) 10%,var(--track) 10%)}
+.ring.fill-20{background:conic-gradient(var(--fill) 20%,var(--track) 20%)}
+.ring.fill-30{background:conic-gradient(var(--fill) 30%,var(--track) 30%)}
+.ring.fill-40{background:conic-gradient(var(--fill) 40%,var(--track) 40%)}
+.ring.fill-50{background:conic-gradient(var(--fill) 50%,var(--track) 50%)}
+.ring.fill-60{background:conic-gradient(var(--fill) 60%,var(--track) 60%)}
+.ring.fill-70{background:conic-gradient(var(--fill) 70%,var(--track) 70%)}
+.ring.fill-80{background:conic-gradient(var(--fill) 80%,var(--track) 80%)}
+.ring.fill-90{background:conic-gradient(var(--fill) 90%,var(--track) 90%)}
+.ring.fill-100{background:conic-gradient(var(--fill) 100%,var(--track) 100%)}
+.poles{display:flex;justify-content:space-between;max-width:210px;margin:11px auto 0;gap:10px}
+.pole{font-size:13px;color:var(--ink-soft)}
+.gauge .note{margin-top:10px;font-size:13px;color:var(--ink-soft)}
+
+/* ═══ تعريف المصطلح — لغةً واصطلاحاً، T-76 ═══ */
+.gloss{margin:26px 0;background:var(--paper);border:1px solid var(--rule);border-radius:12px;padding:16px 18px}
+.gloss-head{display:flex;align-items:baseline;gap:.6rem;margin-bottom:10px}
+.gloss-term{font-size:17px;font-weight:600;color:var(--emerald-deep)}
+.gloss-root{font-size:12.5px;color:var(--ink-soft);letter-spacing:.1em}
+.gloss-body{display:grid;grid-template-columns:max-content 1fr;column-gap:.9rem;row-gap:.5rem}
+.gloss-label{font-size:13px;color:var(--ink-soft)}
+.gloss-text{font-size:14.5px;line-height:1.8;color:var(--ink-soft);margin:0}
+.gloss .note{margin-top:11px;font-size:13px;color:var(--ink-soft)}
+
+/* ═══ سؤالٌ وجوابه، T-76 ═══ */
+.qa{margin:24px 0;counter-reset:qa}
+.qa-item{counter-increment:qa;padding-block:11px;border-block-end:1px solid var(--rule)}
+.qa-item:last-child{border-block-end:0}
+.qa-q{font-size:14.5px;font-weight:600;color:var(--emerald-deep);margin-bottom:6px}
+.qa-a{font-size:14.5px;color:var(--ink-soft)}
+.qa-q::before,.qa-a::before{
+  display:inline-grid;place-items:center;vertical-align:middle;
+  inline-size:1.8em;block-size:1.8em;border-radius:50%;
+  margin-inline-end:.55rem;font-size:.72em;
+}
+.qa-q::before{content:"س"counter(qa,arabic-indic);background:var(--emerald);color:var(--paper)}
+.qa-a::before{content:"ج";border:1px solid var(--rule);color:var(--ink-soft)}
+
+/* ═══ فائدة أو تنبيه جانبي، T-76 ═══ */
+.cnote{margin:20px 0;display:grid;grid-template-columns:max-content 1fr;column-gap:.8rem;
+  padding:13px 15px;border-radius:10px;border-inline-start:4px solid var(--rule);background:var(--paper)}
+.cn-mark{font-size:16px;line-height:1}
+.cn-benefit{border-inline-start-color:var(--emerald)}
+.cn-benefit .cn-mark::before{content:"✺"}
+.cn-warning{border-inline-start-color:var(--gold)}
+.cn-warning .cn-mark::before{content:"!"}
+.cn-subtle{border-inline-start-color:var(--rule)}
+.cn-subtle .cn-mark::before{content:"·"}
+.cn-title{font-size:14.5px;font-weight:600;color:var(--emerald-deep);margin:0 0 4px}
+.cn-text{font-size:14px;line-height:1.75;color:var(--ink-soft);margin:0}
+
+/* ═══ ما يُظنّ مقابل الصواب، T-76 ═══ */
+.mfix{margin:24px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px}
+.mfix-claim,.mfix-fix{padding:13px 15px;border-radius:12px}
+.mfix-claim{border:2px dashed var(--rule);color:var(--ink-soft)}
+.mfix-fix{border:2px solid var(--emerald);background:var(--paper)}
+.mfix-tag{display:block;font-size:11.5px;font-weight:600;letter-spacing:.05em;margin-bottom:5px}
+.mfix-claim .mfix-tag{color:var(--ink-soft)}
+.mfix-fix .mfix-tag{color:var(--emerald-deep)}
+.mfix p{margin:0;font-size:14px;line-height:1.75}
+.mfix-evidence{grid-column:1/-1;margin:9px 0 0;font-size:13px;color:var(--ink-soft)}
+
+/* ═══ الهاتف ═══ */
+@media (max-width:640px){
+  .data{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .data table{min-width:420px}
+  .event{grid-template-columns:64px 1fr}
+  .when{font-size:12.5px}
+  .fig-num{font-size:28px}
+  .branches{grid-template-columns:1fr 1fr;gap:9px}
+  .ring{width:96px;height:96px}
+  .ring .reading{width:72px;height:72px;font-size:22px}
+  .gloss-body{grid-template-columns:1fr}
+}
+
+/* ═══ الطباعة ═══ */
+@media print{
+  .data,.listing,.figures-wrap,.timeline,.tree,.pyramid,.gauge,
+  .gloss,.qa,.cnote,.mfix{break-inside:avoid;page-break-inside:avoid}
+  .event,.figure,.branch,.tier,.qa-item,.mfix-claim,.mfix-fix{break-inside:avoid;page-break-inside:avoid}
+  .figure:hover{box-shadow:none}
+  .data table{border-color:#999}
+  .data thead{background:#EEE}
+  .data th{color:#000;border-bottom-color:#999}
+  .data td{border-bottom-color:#DDD}
+  .root{background:#EEE;color:#000;border:1px solid #999}
+  .tiers .tier:nth-child(1){background:#EEE;border-color:#999}
+  .tiers .tier:nth-child(1) h4,.tiers .tier:nth-child(1) p{color:#000}
+  .ring{--track:#CCC;--fill:#666}
+  .cnote{background:none}
+  .qa-q::before{background:#DDD;color:#000;border:1px solid #999}
+  .qa-a::before{border-color:#999}
+  .mfix-fix{background:none}
+}
+
+:root{
+  --paper:#F3EEE1;
+  --paper-2:#E9E1CD;
+  --paper-3:#DED3B9;
+  --emerald:#1B4D3E;
+  --emerald-deep:#0E2C24;
+  --emerald-soft:#3A6B58;
+  --gold:#A87C33;
+  --gold-light:#D2AC63;
+  --clay:#8E3B2E;
+  --clay-soft:#B0685C;
+  --ink:#22201A;
+  --ink-soft:#565043;
+  --rule:rgba(168,124,51,.28);
+}
+</style>
+</head>
+<body>
+<div class="page">
+<h1 style="font-size:13px;letter-spacing:.08em;color:#888;margin:0 0 18px">قالب: modern</h1>
+<section><div class="sec-head"><span class="mark m-lamp"></span><h2>عنوان القسم</h2><span class="rule"></span></div><p class="lead">فقرة الافتتاح — أكبر خطاً وأبرز.</p><p>فقرة عادية من المتن.</p><p class="muted">فقرة خافتة، للتعليق الجانبي.</p><div class="sacred"><p class="text" lang="ar" dir="rtl">نصّ الآية الكريمة</p><span class="src">البقرة ٢٥٥</span></div><div class="sacred dark"><p class="text hadith" lang="ar" dir="rtl">متن الحديث</p><span class="src">رواه البخاري</span></div><div class="sacred warn"><p class="text hadith" lang="ar" dir="rtl">حديث ضعيف مبيَّن</p><span class="src">ضعيف</span></div><div class="trio"><article class="imam"><span class="ico m-book"></span><h3>بطاقة أولى</h3><p>شرحها.</p></article><article class="imam"><span class="ico m-heart"></span><h3>بطاقة ثانية</h3><p>شرحها.</p></article><article class="imam"><span class="ico m-shield"></span><h3>بطاقة ثالثة</h3><p>شرحها.</p></article></div><div class="compare"><article class="axis-card"><h4 class="axis-q">سؤال المحور؟</h4><div class="pair"><div class="side calm"><span class="tag">الصواب</span><p>الوجه الأول.</p></div><div class="side panic"><span class="tag">الخطأ</span><p>الوجه الثاني.</p></div></div></article></div><div class="quad"><a><span class="ico m-plant"></span><h3>المجال الأول</h3><span>ملاحظته.</span></a><a><span class="ico m-pillars"></span><h3>المجال الثاني</h3><span>ملاحظته.</span></a><a><span class="ico m-target"></span><h3>المجال الثالث</h3><span>ملاحظته.</span></a><a><span class="ico m-fork"></span><h3>المجال الرابع</h3><span>ملاحظته.</span></a></div><div class="pillar"><div class="pillar-title"><span class="ico m-pillars"></span><h3>عنوان الأركان</h3></div><div class="step"><div class="num">١</div><div><h4>الركن الأول</h4><p>شرحه.</p></div></div><div class="step"><div class="num">٢</div><div><h4>الركن الثاني</h4><p>شرحه.</p></div></div></div><div class="paths"><div class="path good"><h4>الطريق المحمود</h4><div class="node">خطوة</div><span class="arrow good"></span><div class="node">خطوة ثانية</div><span class="arrow good"></span><div class="node final">المآل</div></div><div class="path bad"><h4>الطريق المذموم</h4><div class="node">خطوة</div><span class="arrow bad"></span><div class="node">خطوة ثانية</div><span class="arrow bad"></span><div class="node final">المآل</div></div></div><section class="night"><h2>عنوان كتلة الليل</h2><p class="q">اقتباس بارز.</p><p class="note">ملاحظة تحت الاقتباس.</p><div class="checks"><label><input type="checkbox" />مهمّة أولى</label><label><input type="checkbox" />مهمّة ثانية</label><label><input type="checkbox" />مهمّة ثالثة</label></div></section><div class="data"><h3>عنوان الجدول</h3><table><thead><tr><th>العمود الأول</th><th>العمود الثاني</th></tr></thead><tbody><tr><td>خلية</td><td>خلية</td></tr><tr><td>خلية</td><td>خلية</td></tr></tbody></table><p class="note">ملاحظة تحت الجدول.</p></div><div class="listing"><h3>قائمة مرقّمة</h3><ol class="numbered"><li>عنصر أول</li><li>عنصر ثانٍ</li></ol></div><div class="listing"><h3>قائمة منقّطة</h3><ul class="bullets"><li>عنصر</li><li>عنصر آخر</li></ul></div><div class="figures-wrap"><h3>أرقام بارزة</h3><div class="figures"><div class="figure"><span class="fig-num">٧٠%</span><span class="fig-label">دلالة الرقم</span></div><div class="figure"><span class="fig-num">١٢</span><span class="fig-label">دلالة الرقم</span></div><div class="figure"><span class="fig-num">٣</span><span class="fig-label">دلالة الرقم</span></div></div></div><div class="timeline"><h3>خطّ الزمن</h3><div class="event"><span class="when">٦١٠</span><div class="what"><h4>الحدث الأول</h4><p>شرحه.</p></div></div><div class="event"><span class="when">٦٢٢</span><div class="what"><h4>الحدث الثاني</h4><p>شرحه.</p></div></div></div><div class="tree"><h3>التفريع</h3><div class="root">الأصل</div><div class="branches"><div class="branch"><h4>الفرع الأول</h4><div class="leaf">عنصر</div><div class="branch"><h4>فرعٌ فرعي</h4><div class="leaf">عنصر عميق</div><div class="leaf">عنصر عميق آخر</div></div></div><div class="branch"><h4>الفرع الثاني</h4><div class="leaf">عنصر</div><div class="leaf">عنصر</div></div></div></div><div class="pyramid"><h3>الهرم</h3><div class="tiers"><div class="tier"><h4>الإحسان</h4><p>أعلى المراتب.</p></div><div class="tier"><h4>الإيمان</h4><p>المرتبة الوسطى.</p></div><div class="tier"><h4>الإسلام</h4><p>قاعدتها.</p></div></div><p class="note">ملاحظة تحت الهرم.</p></div><div class="gauge"><h3>عجلة المقياس</h3><div class="ring fill-70"><span class="reading">٧٠</span></div><div class="poles"><div class="pole">غفلة</div><div class="pole">يقظة</div></div><p class="note">ملاحظة تحت العجلة.</p></div><div class="gloss"><div class="gloss-head"><span class="gloss-term">التوكّل</span><span class="gloss-root">و ك ل</span></div><div class="gloss-body"><span class="gloss-label">لغةً</span><p class="gloss-text">تفويض الأمر إلى الغير والاعتماد عليه.</p><span class="gloss-label">اصطلاحاً</span><p class="gloss-text">اعتماد القلب على الله وحده مع الأخذ بالأسباب المشروعة.</p></div><p class="note">ملاحظة تحت التعريف.</p></div><div class="qa"><div class="qa-item"><div class="qa-q">هل يجوز الجمع بين الصلاتين بلا عذر؟</div><div class="qa-a">لا يجوز إلا لعذرٍ معتبر كسفرٍ أو مرض.</div></div><div class="qa-item"><div class="qa-q">وماذا لو نسي المسافر فأتمّ الصلاة؟</div><div class="qa-a">صلاته صحيحة، والإتمام رخصة لا عزيمة.</div></div></div><div class="cnote cn-benefit"><span class="cn-mark"></span><div><h4 class="cn-title">فائدة</h4><p class="cn-text">كثرة الاستغفار سببٌ لتفريج الهمّ وسعة الرزق كما في حديث ابن عباس.</p></div></div><div class="cnote cn-warning"><span class="cn-mark"></span><div><h4 class="cn-title">تنبيه</h4><p class="cn-text">هذا الأثر لا يصحّ مرفوعاً، وإنما يُروى عن بعض السلف موقوفاً.</p></div></div><div class="cnote cn-subtle"><span class="cn-mark"></span><div><p class="cn-text">واستطراداً، هذا المعنى ورد بألفاظ متقاربة في غير هذا الموضع.</p></div></div><div class="mfix"><div class="mfix-claim"><span class="mfix-tag">يُظنّ</span><p>يُظنّ أنّ التوكّل يعني ترك الأسباب بالكلّية.</p></div><div class="mfix-fix"><span class="mfix-tag">والصواب</span><p>والصواب أنّ التوكّل اعتمادٌ قلبيّ على الله مع الأخذ التامّ بالأسباب المشروعة.</p></div><p class="mfix-evidence">دليله حديث «اعقلها وتوكّل».</p></div></section><p class="closing">جملة الختام.</p>
+</div>
+</body>
+</html>

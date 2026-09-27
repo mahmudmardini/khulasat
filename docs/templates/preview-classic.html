@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>معاينة الكتل — classic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+body{background:#ddd;margin:0;padding:24px 0}
+.page{max-width:640px;margin:0 auto;background:var(--paper,#fff);padding:28px;box-shadow:0 2px 18px rgba(0,0,0,.15)}
+:root{
+  --paper:#F3EEE1;
+  --paper-2:#E9E1CD;
+  --paper-3:#DED3B9;
+  --emerald:#1B4D3E;
+  --emerald-deep:#0E2C24;
+  --emerald-soft:#3A6B58;
+  --gold:#A87C33;
+  --gold-light:#D2AC63;
+  --clay:#8E3B2E;
+  --clay-soft:#B0685C;
+  --ink:#22201A;
+  --ink-soft:#565043;
+  --rule:rgba(168,124,51,.28);
+  --maxw:860px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"IBM Plex Sans Arabic",system-ui,sans-serif;
+  font-size:17px;
+  font-weight:300;
+  line-height:2;
+  -webkit-font-smoothing:antialiased;
+}
+/* ورقة المخطوطة: زخرفة نجمية خفيفة خلف كل شيء */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'><g fill='none' stroke='%23A87C33' stroke-width='1' opacity='0.16'><path d='M42 6 51 24 69 15 60 33 78 42 60 51 69 69 51 60 42 78 33 60 15 69 24 51 6 42 24 33 15 15 33 24Z'/><circle cx='42' cy='42' r='9'/></g></svg>");
+  opacity:.5;
+  pointer-events:none;
+  z-index:0;
+}
+.wrap{position:relative;z-index:1;max-width:var(--maxw);margin:0 auto;padding:0 22px 90px}
+
+/* ── الطباعة ── */
+h1,h2,h3,h4{font-family:"Amiri",serif;font-weight:700;line-height:1.4;margin:0}
+.ruqaa{font-family:"Aref Ruqaa",serif}
+p{margin:0 0 1em}
+.lead{font-size:19px;line-height:2.1}
+.muted{color:var(--ink-soft)}
+
+/* ── العنوان المذهّب (سرلوح) ── */
+.unwan{
+  margin:34px 0 0;
+  background:linear-gradient(165deg,var(--emerald) 0%,var(--emerald-deep) 100%);
+  border:1px solid var(--gold);
+  border-radius:4px 4px 60px 60px/4px 4px 30px 30px;
+  padding:0 0 44px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 18px 40px -28px rgba(14,44,36,.9);
+}
+.unwan .crest{display:block;width:100%;height:auto}
+.unwan .inner{padding:0 26px;text-align:center;color:var(--paper)}
+.unwan h1{
+  font-family:"Aref Ruqaa",serif;
+  font-size:clamp(40px,11vw,74px);
+  color:#F6EBD2;
+  letter-spacing:0;
+  margin:6px 0 14px;
+  text-shadow:0 2px 0 rgba(0,0,0,.25);
+}
+.unwan .sub{
+  font-family:"Amiri",serif;
+  font-size:clamp(17px,4.4vw,23px);
+  color:var(--gold-light);
+  line-height:1.7;
+  margin:0 auto 26px;
+  max-width:30ch;
+}
+.unwan .divider{width:150px;height:14px;margin:0 auto 24px;opacity:.85}
+.ayah-hero{
+  font-family:"Amiri",serif;
+  font-size:clamp(19px,5vw,26px);
+  line-height:2.15;
+  color:#F1E3C4;
+  max-width:34ch;
+  margin:0 auto 10px;
+}
+.ayah-hero .src{
+  display:block;
+  font-family:"IBM Plex Sans Arabic",sans-serif;
+  font-size:13px;
+  color:var(--gold-light);
+  letter-spacing:.03em;
+  margin-top:10px;
+  font-weight:400;
+}
+
+/* ── الأقسام ── */
+section{margin:64px 0 0;scroll-margin-top:70px}
+.sec-head{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.sec-head .mark{flex:0 0 auto;width:34px;height:34px}
+.sec-head h2{font-size:clamp(24px,6vw,32px);color:var(--emerald)}
+.sec-head .rule{flex:1;height:1px;background:linear-gradient(to left,var(--rule),transparent)}
+
+/* ── كتلة النص المقدّس ── */
+.sacred{
+  background:var(--paper-2);
+  border:1px solid var(--rule);
+  border-right:4px solid var(--gold);
+  border-radius:3px;
+  padding:20px 22px 16px;
+  margin:22px 0;
+}
+.sacred .text{
+  font-family:"Amiri",serif;
+  font-size:clamp(18px,4.6vw,22px);
+  line-height:2.25;
+  color:#1A2B24;
+  margin:0;
+}
+.sacred .text.hadith{font-size:clamp(17px,4.3vw,20px)}
+.sacred .src{
+  display:block;
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px dotted var(--rule);
+  font-size:13.5px;
+  color:var(--gold);
+  font-weight:500;
+  line-height:1.8;
+}
+.sacred.dark{background:rgba(27,77,62,.06)}
+
+/* ── علامة رقم الآية (نجمة ثمانية مرسومة والرقم داخلها) ── */
+.ayah-no{
+  font-family:"Amiri","Amiri Quran",serif;
+  font-size:1.06em;
+  font-weight:400;
+  margin:0 .1em;
+  color:inherit;
+}
+.sacred.warn{border-right-color:var(--clay);background:rgba(142,59,46,.05)}
+.sacred.warn .src{color:var(--clay)}
+
+/* ── بطاقات الأئمة ── */
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+.imam{
+  background:#FBF8F0;
+  border:1px solid var(--rule);
+  border-radius:3px 3px 26px 26px/3px 3px 16px 16px;
+  padding:22px 18px 20px;
+  text-align:center;
+}
+.imam .ico{width:42px;height:42px;margin:0 auto 12px;display:block}
+.imam h3{font-size:21px;color:var(--emerald);margin-bottom:8px}
+.imam p{font-size:15.5px;line-height:1.95;margin:0;color:var(--ink-soft)}
+
+/* ── الميزان: سكينة × هلع ── */
+.compare{display:grid;gap:16px;margin-top:24px}
+.axis-card{border:1px solid var(--rule);border-radius:3px;overflow:hidden;background:#FBF8F0}
+.axis-q{
+  font-family:"Amiri",serif;
+  font-size:19px;
+  color:var(--emerald-deep);
+  background:var(--paper-3);
+  padding:12px 16px;
+  text-align:center;
+}
+.pair{display:grid;grid-template-columns:1fr 1fr}
+.side{padding:16px}
+.side + .side{border-right:1px solid var(--rule)}
+.side.calm{background:rgba(27,77,62,.055)}
+.side.panic{background:rgba(142,59,46,.055)}
+.tag{
+  display:inline-block;
+  font-size:12.5px;font-weight:500;
+  padding:3px 12px;border-radius:20px;
+  margin-bottom:9px;color:#FBF8F0;
+}
+.side.calm .tag{background:var(--emerald)}
+.side.panic .tag{background:var(--clay)}
+.side p{margin:0;font-size:15.5px;line-height:1.9}
+
+/* ── المجالات الأربعة ── */
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:24px}
+.quad a{
+  display:block;
+  text-decoration:none;
+  color:inherit;
+  background:linear-gradient(160deg,#FBF8F0,#F1EADA);
+  border:1px solid var(--rule);
+  border-radius:3px;
+  padding:20px 18px;
+  text-align:center;
+  transition:background .25s ease,border-color .25s ease;
+}
+.quad a:hover,.quad a:focus-visible{background:var(--paper-2);border-color:var(--gold)}
+.quad .ico{width:40px;height:40px;margin:0 auto 10px;display:block}
+.quad h3{font-size:20px;color:var(--emerald);margin-bottom:4px}
+.quad span{font-size:14px;color:var(--ink-soft);line-height:1.7;display:block}
+
+/* ── الركن الواحد ── */
+.pillar{margin-top:44px;padding-top:26px;border-top:1px solid var(--rule)}
+.pillar-title{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.pillar-title .ico{width:32px;height:32px;flex:0 0 auto}
+.pillar-title h3{font-size:24px;color:var(--emerald)}
+.step{
+  display:grid;
+  grid-template-columns:44px 1fr;
+  gap:16px;
+  align-items:start;
+  margin:22px 0;
+}
+.step .num{
+  width:44px;height:44px;border-radius:50%;
+  background:var(--emerald);color:#F6EBD2;
+  display:grid;place-items:center;
+  font-family:"Amiri",serif;font-size:20px;
+}
+.step h4{font-size:19px;color:var(--emerald-deep);margin-bottom:6px}
+.step p{font-size:16px;margin-bottom:0}
+
+/* ── مسار المداومة ── */
+.paths{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:26px}
+.path{border:1px solid var(--rule);border-radius:3px;padding:18px 16px}
+.path.good{background:rgba(27,77,62,.05);border-color:rgba(27,77,62,.3)}
+.path.bad{background:rgba(142,59,46,.05);border-color:rgba(142,59,46,.28)}
+.path h4{font-family:"Amiri",serif;font-size:19px;text-align:center;margin-bottom:14px}
+.path.good h4{color:var(--emerald)}
+.path.bad h4{color:var(--clay)}
+.node{
+  background:#FBF8F0;
+  border:1px solid var(--rule);
+  border-radius:3px;
+  padding:10px 12px;
+  font-size:15px;
+  line-height:1.75;
+  text-align:center;
+}
+.path.bad .node{transform:rotate(-.5deg)}
+.path.bad .node:nth-child(4){transform:rotate(.6deg)}
+.arrow{display:block;margin:8px auto;width:14px;height:22px}
+.node.final{font-family:"Amiri",serif;font-size:18px;color:#FBF8F0;border:none}
+.path.good .node.final{background:var(--emerald)}
+.path.bad .node.final{background:var(--clay);transform:none}
+
+/* ── بطاقة الليل ── */
+.night{
+  margin-top:64px;
+  background:linear-gradient(170deg,#123028,#0A1F19);
+  border:1px solid var(--gold);
+  border-radius:3px;
+  padding:34px 26px 30px;
+  color:#EFE6D0;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.night .moon{width:46px;height:46px;margin:0 auto 16px;display:block}
+.night h2{font-family:"Amiri",serif;font-size:clamp(22px,5.5vw,28px);color:#F6EBD2;margin-bottom:18px}
+.night .q{
+  font-family:"Amiri",serif;
+  font-size:clamp(19px,4.9vw,24px);
+  line-height:2.1;
+  color:var(--gold-light);
+  max-width:32ch;
+  margin:0 auto 8px;
+}
+.night .note{font-size:15px;color:rgba(239,230,208,.72);margin-bottom:24px}
+.checks{display:grid;gap:10px;max-width:330px;margin:0 auto;text-align:right}
+.checks label{
+  display:flex;align-items:center;gap:12px;
+  background:rgba(246,235,210,.07);
+  border:1px solid rgba(210,172,99,.35);
+  border-radius:3px;
+  padding:11px 14px;
+  font-size:15.5px;
+  cursor:pointer;
+  transition:background .2s ease;
+}
+.checks label:hover{background:rgba(246,235,210,.13)}
+.checks input{
+  appearance:none;-webkit-appearance:none;
+  width:19px;height:19px;flex:0 0 auto;
+  border:1.5px solid var(--gold-light);
+  border-radius:2px;background:transparent;cursor:pointer;
+  display:grid;place-items:center;
+}
+.checks input:checked{background:var(--gold);border-color:var(--gold)}
+.checks input:checked::after{content:"✓";color:#0A1F19;font-size:14px;line-height:1}
+.checks input:focus-visible{outline:2px solid var(--gold-light);outline-offset:2px}
+.checks label:has(input:checked){background:rgba(210,172,99,.18)}
+
+/* ── الخاتمة والتخريج ── */
+.closing{
+  margin-top:56px;text-align:center;
+  font-family:"Amiri",serif;
+  font-size:clamp(19px,4.8vw,24px);
+  line-height:2.1;color:var(--emerald);
+  max-width:32ch;margin-inline:auto;
+}
+
+/* ── شريط نسبة المجلس ── */
+.attrib{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:center;
+  gap:7px 14px;
+  margin:20px auto 0;padding:12px 20px;
+  max-width:640px;
+  background:rgba(27,77,62,.05);
+  border-top:1px solid var(--rule);
+  border-bottom:1px solid var(--rule);
+  font-size:14px;color:var(--ink-soft);text-align:center;line-height:1.8;
+}
+.attrib b{color:var(--emerald);font-weight:500}
+.attrib .dot{width:4px;height:4px;border-radius:50%;background:var(--gold);opacity:.65;flex:0 0 auto}
+
+/* ── بطاقة المجلس (الكولوفون) ── */
+.colophon{
+  margin-top:60px;
+  position:relative;overflow:hidden;
+  background:linear-gradient(160deg,var(--emerald) 0%,var(--emerald-deep) 100%);
+  border:1px solid var(--gold);
+  border-radius:30px 30px 4px 4px/16px 16px 4px 4px;
+  color:#D9CFB4;
+  padding:34px 26px 30px;
+  text-align:center;
+}
+.colophon::before{
+  content:"";position:absolute;inset:0;z-index:0;
+  background:linear-gradient(118deg,rgba(246,235,210,.05) 0 34%,transparent 34%);
+}
+.colophon > *{position:relative;z-index:1}
+.mosque-name{
+  font-family:"Amiri",serif;font-weight:700;
+  font-size:clamp(26px,6.6vw,38px);
+  color:#F6EBD2;line-height:1.6;margin:0 0 6px;
+}
+.mosque-latin{
+  font-size:12.5px;color:var(--gold-light);
+  letter-spacing:.14em;margin:0 0 22px;
+}
+.colophon .sep{
+  width:190px;height:1px;margin:0 auto 24px;
+  background:linear-gradient(to left,transparent,var(--gold-light),transparent);
+}
+.majlis{
+  display:grid;gap:14px;
+  max-width:430px;margin:0 auto 26px;
+  text-align:right;
+}
+.majlis .row{display:grid;grid-template-columns:22px 1fr;gap:12px;align-items:start}
+.majlis svg{width:20px;height:20px;margin-top:4px;stroke:var(--gold-light);fill:none;stroke-width:1.5}
+.majlis .k{font-size:12.5px;color:rgba(217,207,180,.6);display:block;line-height:1.7}
+.majlis .v{font-size:15.5px;color:#F1E3C4;line-height:1.85}
+.majlis .v em{font-style:normal;color:var(--gold-light);font-size:13.5px}
+.links{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+.links a{
+  display:inline-flex;align-items:center;gap:9px;
+  text-decoration:none;font-size:14.5px;
+  padding:11px 20px;border-radius:3px;
+  border:1px solid rgba(210,172,99,.5);
+  color:#F1E3C4;
+  transition:background .2s ease,border-color .2s ease;
+}
+.links a:hover,.links a:focus-visible{background:rgba(210,172,99,.16);border-color:var(--gold-light)}
+.links svg{width:17px;height:17px;flex:0 0 auto}
+.colophon .note{margin:24px 0 0;font-size:13px;color:rgba(217,207,180,.62);line-height:1.9}
+@media (max-width:640px){
+  .attrib{font-size:13px;gap:6px 12px}
+  .links a{flex:1 1 100%;justify-content:center}
+}
+.sources{margin-top:52px;padding-top:22px;border-top:1px solid var(--rule);font-size:14px;color:var(--ink-soft);line-height:2}
+.sources h3{font-size:18px;color:var(--emerald);margin-bottom:12px}
+.sources ol{padding-right:20px;margin:0}
+.sources li{margin-bottom:6px}
+
+/* ── نافذة إعدادات الحفظ PDF ── */
+.print-tip{
+  position:fixed;inset:0;z-index:50;
+  display:none;place-items:center;
+  background:rgba(14,44,36,.55);
+  padding:20px;
+}
+.print-tip.open{display:grid}
+.print-tip .box{
+  background:var(--paper);
+  border:1px solid var(--gold);
+  border-radius:4px;
+  max-width:420px;width:100%;
+  padding:26px 24px 22px;
+  box-shadow:0 24px 60px -30px rgba(0,0,0,.6);
+}
+.print-tip h3{font-size:21px;color:var(--emerald);margin-bottom:12px}
+.print-tip p{font-size:14.5px;line-height:1.95;color:var(--ink-soft);margin-bottom:14px}
+.print-tip ol{margin:0 0 20px;padding-right:20px;font-size:14.5px;line-height:2.05}
+.print-tip ol b{color:var(--emerald-deep);font-weight:500}
+.print-tip .acts{display:flex;gap:10px;flex-wrap:wrap}
+.print-tip button{
+  flex:1 1 140px;
+  font-family:"IBM Plex Sans Arabic",sans-serif;font-size:15px;
+  padding:11px 18px;border-radius:3px;cursor:pointer;
+  border:1px solid var(--gold);
+}
+.print-tip .go{background:var(--emerald);border-color:var(--emerald);color:#F6EBD2}
+.print-tip .go:hover{background:var(--emerald-deep)}
+.print-tip .cancel{background:transparent;color:var(--gold)}
+.print-tip .cancel:hover{background:rgba(168,124,51,.12)}
+.actions{
+  display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+  margin:36px auto 0;max-width:460px;
+}
+.act{
+  flex:1 1 190px;
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  font-family:"IBM Plex Sans Arabic",sans-serif;font-size:15px;
+  padding:12px 20px;border-radius:3px;cursor:pointer;
+  border:1px solid var(--gold);
+  background:transparent;color:var(--gold);
+  transition:background .2s ease,color .2s ease;
+}
+.act:hover,.act:focus-visible{background:var(--gold);color:#FBF8F0}
+.act.primary{background:var(--emerald);border-color:var(--emerald);color:#F6EBD2}
+.act.primary:hover,.act.primary:focus-visible{background:var(--emerald-deep);border-color:var(--emerald-deep)}
+.act svg{width:18px;height:18px;flex:0 0 auto}
+.toast{
+  position:fixed;z-index:60;
+  right:50%;transform:translateX(50%) translateY(14px);
+  bottom:26px;
+  background:var(--emerald-deep);color:#F1E3C4;
+  border:1px solid var(--gold);border-radius:3px;
+  padding:12px 22px;font-size:14.5px;
+  opacity:0;pointer-events:none;
+  transition:opacity .25s ease,transform .25s ease;
+}
+.toast.show{opacity:1;transform:translateX(50%) translateY(0)}
+
+/* ── الحركة الوحيدة: رسم التذهيب عند الفتح ── */
+.draw{stroke-dasharray:1400;stroke-dashoffset:1400;animation:draw 2.4s ease forwards .25s}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+@media (max-width:640px){
+  body{font-size:16px}
+  .trio,.quad,.paths{grid-template-columns:1fr}
+  .pair{grid-template-columns:1fr}
+  .side + .side{border-right:none;border-top:1px solid var(--rule)}
+  .axis-q{font-size:17.5px}
+  .step{grid-template-columns:36px 1fr;gap:12px}
+  .step .num{width:36px;height:36px;font-size:17px}
+}
+@media (prefers-reduced-motion:reduce){
+  .draw{animation:none;stroke-dashoffset:0}
+  *{transition:none!important}
+}
+@media print{
+  /* إبقاء الألوان كما هي على الورق وفي ملف PDF */
+  html,body,.unwan,.night,.colophon,.attrib,.sacred,.axis-card,.side,
+  .imam,.quad a,.step .num,.path,.node,.axis-q,.checks label{
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  @page{size:A4;margin:12mm 11mm}
+
+  body{
+    background:var(--paper);
+    position:relative;
+    font-size:11.4pt;
+    line-height:1.95;
+  }
+  /* الزخرفة تمتدّ على كل الصفحات بدل أن تثبت على الأولى */
+  body::before{position:absolute;height:100%;opacity:.34}
+
+  .wrap{max-width:none;width:100%;padding:0 2mm 0}
+  .actions,.print-tip,.toast{display:none!important}
+  .draw{stroke-dashoffset:0;animation:none}
+
+  /* منع تقطيع الكتل في منتصفها */
+  .sacred,.imam,.axis-card,.step,.path,.night,.colophon,.quad a,
+  .attrib,.trio,.quad,.sources,.closing,.unwan{
+    break-inside:avoid;page-break-inside:avoid;
+  }
+  .sec-head,.pillar-title,.axis-q,h2,h3,h4{
+    break-after:avoid;page-break-after:avoid;
+  }
+  section{margin-top:26px}
+  .pillar{margin-top:24px;padding-top:16px}
+  .sacred{margin:14px 0}
+
+  /* الخاتمة تبدأ بصفحة مستقلة */
+  .colophon{break-before:page;page-break-before:always;margin-top:0}
+  .sources{break-before:auto}
+
+  /* إظهار الروابط لمن يقرأ على الورق */
+  .links a::after{
+    content:" (" attr(data-url) ")";
+    font-size:9.5pt;color:var(--gold-light);
+  }
+}
+
+
+/* ═══ جدول البيانات ═══ */
+.data{margin:26px 0}
+.data h3{font-family:"Aref Ruqaa",serif;font-size:22px;color:var(--emerald);margin-bottom:12px}
+/* الجدول أعرضُ من الهاتف غالباً، فيُمرَّر داخل غلافه ولا يُفيض بالصفحة. */
+.data table{
+  width:100%;border-collapse:collapse;
+  background:var(--paper);border:1px solid var(--rule);border-radius:3px;
+  font-size:16px;
+}
+.data thead{background:var(--emerald)}
+.data th{
+  font-family:"Amiri",serif;font-size:17px;font-weight:700;
+  color:var(--paper);padding:12px 14px;text-align:right;
+}
+.data td{padding:11px 14px;border-top:1px solid var(--rule);color:var(--ink);line-height:1.8}
+.data tbody tr:nth-child(even){background:var(--paper-2)}
+.data .note{margin-top:10px;font-size:14px;color:var(--ink-soft)}
+
+/* ═══ القائمة ═══ */
+.listing{margin:24px 0}
+.listing h3{font-family:"Aref Ruqaa",serif;font-size:22px;color:var(--emerald);margin-bottom:10px}
+.listing .bullets,.listing .numbered{margin:0;padding-inline-start:26px}
+/* عربية هندية كسائر أرقام الصفحة — T-75. المولِّد لا يعرف اتجاهاً فيتبع لغته. */
+.listing .numbered{list-style-type:arabic-indic}
+.listing li{font-size:16.5px;line-height:1.95;margin-bottom:8px;color:var(--ink)}
+.listing li::marker{color:var(--gold)}
+.listing .numbered li::marker{font-family:"Amiri",serif;font-weight:700}
+.listing .note{margin-top:10px;font-size:14px;color:var(--ink-soft)}
+
+/* ═══ الأرقام البارزة ═══ */
+.figures-wrap{margin:28px 0}
+.figures-wrap h3{font-family:"Aref Ruqaa",serif;font-size:22px;color:var(--emerald);margin-bottom:14px}
+.figures{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+.figure{
+  background:linear-gradient(160deg,var(--paper),var(--paper-2));
+  border:1px solid var(--rule);
+  border-radius:3px 3px 26px 26px/3px 3px 16px 16px;
+  padding:20px 14px 18px;text-align:center;
+}
+.fig-num{
+  display:block;font-family:"Amiri",serif;font-size:38px;line-height:1.2;
+  color:var(--emerald);margin-bottom:6px;
+}
+.fig-label{display:block;font-size:14.5px;line-height:1.7;color:var(--ink-soft)}
+.figures-wrap .note{margin-top:12px;font-size:14px;color:var(--ink-soft);text-align:center}
+
+/* ═══ خطّ الزمن — رأسيٌّ ليُقرأ على الهاتف ويُطبع بلا قصّ ═══ */
+.timeline{margin:28px 0;padding-top:6px}
+.timeline h3{font-family:"Aref Ruqaa",serif;font-size:22px;color:var(--emerald);margin-bottom:16px}
+.event{display:grid;grid-template-columns:92px 1fr;gap:0;align-items:start}
+.when{
+  font-family:"Amiri",serif;font-size:19px;color:var(--gold);
+  padding-top:2px;padding-inline-end:12px;text-align:left;
+}
+/* الخطّ على الحافّة الداخلية — في RTL هي اليمنى، ملاصقةً لعمود التاريخ. */
+.what{
+  position:relative;border-inline-start:1px solid var(--rule);
+  padding-inline-start:20px;padding-bottom:22px;
+}
+.what::before{
+  content:'';position:absolute;top:6px;inset-inline-start:-5px;
+  width:9px;height:9px;border-radius:50%;
+  background:var(--emerald);border:2px solid var(--paper);
+}
+.event:last-of-type .what{border-inline-start-color:transparent;padding-bottom:0}
+.what h4{font-size:19px;color:var(--emerald-deep);margin-bottom:5px}
+.what p{font-size:16px;line-height:1.85;margin:0;color:var(--ink-soft)}
+.timeline .note{margin-top:12px;font-size:14px;color:var(--ink-soft)}
+
+/* ═══ التفريع — مستويان بشبكة CSS، بلا SVG ولا مكتبة ═══ */
+.tree{margin:30px 0;text-align:center}
+.tree h3{font-family:"Aref Ruqaa",serif;font-size:22px;color:var(--emerald);margin-bottom:14px}
+.root{
+  display:inline-block;
+  background:var(--emerald);color:var(--paper);
+  font-family:"Amiri",serif;font-size:20px;
+  padding:10px 22px;border-radius:3px;margin-bottom:0;
+}
+.branches{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:14px;margin-top:20px;
+}
+/* واصلٌ رأسيّ من الجذر إلى كل فرع — حدودٌ لا رسمَ متجهيّ. */
+.branch{position:relative;padding-top:16px}
+.branch::before{
+  content:'';position:absolute;top:0;inset-inline-start:calc(50% - 1px);
+  width:1px;height:16px;background:var(--rule);
+}
+.branch h4{
+  font-family:"Amiri",serif;font-size:18px;color:var(--emerald-deep);
+  background:var(--paper-2);border:1px solid var(--rule);border-radius:3px;
+  padding:9px 12px;margin-bottom:10px;
+}
+.leaf{
+  font-size:15px;line-height:1.75;color:var(--ink-soft);
+  background:var(--paper);border:1px solid var(--rule);border-radius:3px;
+  padding:8px 10px;margin-bottom:7px;
+}
+.tree .note{margin-top:12px;font-size:14px;color:var(--ink-soft)}
+/* فرعٌ داخل فرعٍ — T-72. يتراجع قليلاً ويتّخذ حدّاً جانبياً فيُقرأ تابعاً
+   لا شقيقاً، بلا صنفٍ جديد: نفس .branch متداخلاً. */
+.branch .branch{
+  margin-top:10px;padding-top:0;background:none;
+  border-inline-start:2px solid var(--rule);padding-inline-start:12px;
+}
+.branch .branch::before{display:none}
+.branch .branch h4{font-size:16px;background:none;border:none;padding:0 0 6px}
+
+/* ═══ الهرم — طبقاتٌ يتدرّج عرضها بترتيبها لا بصنفٍ، T-72 ═══ */
+.pyramid{margin:30px 0}
+.pyramid h3{font-family:"Aref Ruqaa",serif;font-size:22px;color:var(--emerald);margin-bottom:14px;text-align:center}
+.tiers{display:flex;flex-direction:column;align-items:center;gap:8px}
+.tier{
+  width:100%;box-sizing:border-box;text-align:center;
+  background:var(--paper-2);border:1px solid var(--rule);border-radius:3px;
+  padding:12px 16px;
+}
+.tier h4{font-family:"Amiri",serif;font-size:18px;color:var(--emerald-deep);margin-bottom:4px}
+.tier p{font-size:15px;line-height:1.75;color:var(--ink-soft);margin:0}
+/* أوّل الطبقات قمّةُ الهرم وأضيقُها، وآخرُها قاعدتُه. */
+.tiers .tier:nth-child(1){max-width:40%;background:var(--emerald);border-color:var(--emerald)}
+.tiers .tier:nth-child(1) h4,.tiers .tier:nth-child(1) p{color:var(--paper)}
+.tiers .tier:nth-child(2){max-width:60%}
+.tiers .tier:nth-child(3){max-width:80%}
+.tiers .tier:nth-child(n+4){max-width:100%}
+.pyramid .note{margin-top:12px;font-size:14px;color:var(--ink-soft);text-align:center}
+
+/* ═══ العجلة — حلقةٌ متدرّجة الامتلاء بعشر درجاتٍ ثابتة، T-72 ═══ */
+.gauge{margin:30px 0;text-align:center}
+.gauge h3{font-family:"Aref Ruqaa",serif;font-size:22px;color:var(--emerald);margin-bottom:14px}
+.ring{
+  --track:var(--rule);--fill:var(--emerald);
+  width:120px;height:120px;border-radius:50%;margin:0 auto;
+  display:flex;align-items:center;justify-content:center;
+  background:conic-gradient(var(--fill) 0%,var(--track) 0%);
+}
+.ring .reading{
+  width:92px;height:92px;border-radius:50%;background:var(--paper);
+  display:flex;align-items:center;justify-content:center;
+  font-family:"Amiri",serif;font-size:30px;color:var(--emerald-deep);
+}
+.ring.fill-0{background:conic-gradient(var(--fill) 0%,var(--track) 0%)}
+.ring.fill-10{background:conic-gradient(var(--fill) 10%,var(--track) 10%)}
+.ring.fill-20{background:conic-gradient(var(--fill) 20%,var(--track) 20%)}
+.ring.fill-30{background:conic-gradient(var(--fill) 30%,var(--track) 30%)}
+.ring.fill-40{background:conic-gradient(var(--fill) 40%,var(--track) 40%)}
+.ring.fill-50{background:conic-gradient(var(--fill) 50%,var(--track) 50%)}
+.ring.fill-60{background:conic-gradient(var(--fill) 60%,var(--track) 60%)}
+.ring.fill-70{background:conic-gradient(var(--fill) 70%,var(--track) 70%)}
+.ring.fill-80{background:conic-gradient(var(--fill) 80%,var(--track) 80%)}
+.ring.fill-90{background:conic-gradient(var(--fill) 90%,var(--track) 90%)}
+.ring.fill-100{background:conic-gradient(var(--fill) 100%,var(--track) 100%)}
+.poles{display:flex;justify-content:space-between;max-width:220px;margin:12px auto 0;gap:10px}
+.pole{font-size:14px;color:var(--ink-soft)}
+.gauge .note{margin-top:10px;font-size:14px;color:var(--ink-soft)}
+
+/* ═══ تعريف المصطلح — لغةً واصطلاحاً، T-76 ═══ */
+.gloss{margin:30px 0;border-inline-start:3px solid var(--gold);padding-inline-start:1rem}
+.gloss-head{display:flex;align-items:baseline;gap:.6rem;margin-bottom:10px}
+.gloss-term{font-family:"Amiri",serif;font-size:20px;color:var(--emerald-deep)}
+.gloss-root{font-size:13px;color:var(--ink-soft);letter-spacing:.12em}
+.gloss-body{display:grid;grid-template-columns:max-content 1fr;column-gap:.9rem;row-gap:.55rem}
+.gloss-label{font-size:14px;color:var(--ink-soft)}
+.gloss-text{font-size:16px;line-height:1.85;color:var(--ink);margin:0}
+.gloss .note{margin-top:12px;font-size:14px;color:var(--ink-soft)}
+
+/* ═══ سؤالٌ وجوابه — شارةٌ عربية هندية بعدّاد CSS، T-76 ═══ */
+.qa{margin:28px 0;counter-reset:qa}
+.qa-item{counter-increment:qa;padding-block:12px;border-block-end:1px solid var(--rule)}
+.qa-item:last-child{border-block-end:0}
+.qa-q{font-weight:700;color:var(--emerald-deep);margin-bottom:6px}
+.qa-a{color:var(--ink)}
+.qa-q::before,.qa-a::before{
+  display:inline-grid;place-items:center;vertical-align:middle;
+  inline-size:1.9em;block-size:1.9em;border-radius:50%;
+  margin-inline-end:.6rem;font-size:.75em;
+}
+.qa-q::before{content:"س"counter(qa,arabic-indic);background:var(--emerald);color:var(--paper)}
+.qa-a::before{content:"ج";border:1px solid var(--rule);color:var(--ink-soft)}
+
+/* ═══ فائدة أو تنبيه جانبي، T-76 ═══ */
+.cnote{margin:22px 0;display:grid;grid-template-columns:max-content 1fr;column-gap:.8rem;
+  padding:14px 16px;border-inline-start:4px solid var(--rule);background:var(--paper-2)}
+.cn-mark{font-size:18px;line-height:1}
+.cn-benefit{border-inline-start-color:var(--emerald)}
+.cn-benefit .cn-mark::before{content:"✺"}
+.cn-warning{border-inline-start-color:var(--gold)}
+.cn-warning .cn-mark::before{content:"!"}
+.cn-subtle{border-inline-start-color:var(--rule)}
+.cn-subtle .cn-mark::before{content:"·"}
+.cn-title{font-family:"Amiri",serif;font-size:16px;color:var(--emerald-deep);margin:0 0 4px}
+.cn-text{font-size:15px;line-height:1.8;color:var(--ink-soft);margin:0}
+
+/* ═══ ما يُظنّ مقابل الصواب، T-76 ═══ */
+.mfix{margin:28px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.mfix-claim,.mfix-fix{padding:14px 16px}
+.mfix-claim{border:2px dashed var(--rule);color:var(--ink-soft)}
+.mfix-fix{border:2px solid var(--emerald);background:var(--paper-2)}
+.mfix-tag{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;margin-bottom:6px}
+.mfix-claim .mfix-tag{color:var(--ink-soft)}
+.mfix-fix .mfix-tag{color:var(--emerald-deep)}
+.mfix p{margin:0;font-size:15px;line-height:1.8}
+.mfix-evidence{grid-column:1/-1;margin:10px 0 0;font-size:14px;color:var(--ink-soft)}
+
+/* ═══ الهاتف ═══ */
+@media (max-width:640px){
+  /* الجدول وحده يُمرَّر أفقياً؛ وبقيّة الصفحة لا تفيض. */
+  .data{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .data table{min-width:420px}
+  .event{grid-template-columns:70px 1fr}
+  .when{font-size:17px}
+  .fig-num{font-size:32px}
+  .branches{grid-template-columns:1fr 1fr;gap:10px}
+  .ring{width:100px;height:100px}
+  .ring .reading{width:76px;height:76px;font-size:25px}
+  .gloss-body{grid-template-columns:1fr}
+}
+
+/* ═══ الطباعة — ولا تُقطع كتلةٌ بين صفحتين ═══ */
+@media print{
+  .data,.listing,.figures-wrap,.timeline,.tree,.pyramid,.gauge,
+  .gloss,.qa,.cnote,.mfix{break-inside:avoid;page-break-inside:avoid}
+  .event,.figure,.branch,.tier,.qa-item,.mfix-claim,.mfix-fix{break-inside:avoid;page-break-inside:avoid}
+  .data table{border-color:#999}
+  .data thead{background:#EEE}
+  .data th{color:#000}
+  .data td{border-top-color:#CCC}
+  .root{background:#EEE;color:#000;border:1px solid #999}
+  .figure{background:none;border-color:#CCC}
+  .tiers .tier:nth-child(1){background:#EEE;border-color:#999}
+  .tiers .tier:nth-child(1) h4,.tiers .tier:nth-child(1) p{color:#000}
+  .ring{--track:#CCC;--fill:#666}
+  .cnote{background:none}
+  .qa-q::before{background:#DDD;color:#000;border:1px solid #999}
+  .qa-a::before{border-color:#999}
+  .mfix-fix{background:none}
+}
+
+:root{
+  --paper:#F3EEE1;
+  --paper-2:#E9E1CD;
+  --paper-3:#DED3B9;
+  --emerald:#1B4D3E;
+  --emerald-deep:#0E2C24;
+  --emerald-soft:#3A6B58;
+  --gold:#A87C33;
+  --gold-light:#D2AC63;
+  --clay:#8E3B2E;
+  --clay-soft:#B0685C;
+  --ink:#22201A;
+  --ink-soft:#565043;
+  --rule:rgba(168,124,51,.28);
+}
+</style>
+</head>
+<body>
+<div class="page">
+<h1 style="font-size:13px;letter-spacing:.08em;color:#888;margin:0 0 18px">قالب: classic</h1>
+<section><div class="sec-head"><span class="mark m-lamp"></span><h2>عنوان القسم</h2><span class="rule"></span></div><p class="lead">فقرة الافتتاح — أكبر خطاً وأبرز.</p><p>فقرة عادية من المتن.</p><p class="muted">فقرة خافتة، للتعليق الجانبي.</p><div class="sacred"><p class="text" lang="ar" dir="rtl">نصّ الآية الكريمة</p><span class="src">البقرة ٢٥٥</span></div><div class="sacred dark"><p class="text hadith" lang="ar" dir="rtl">متن الحديث</p><span class="src">رواه البخاري</span></div><div class="sacred warn"><p class="text hadith" lang="ar" dir="rtl">حديث ضعيف مبيَّن</p><span class="src">ضعيف</span></div><div class="trio"><article class="imam"><span class="ico m-book"></span><h3>بطاقة أولى</h3><p>شرحها.</p></article><article class="imam"><span class="ico m-heart"></span><h3>بطاقة ثانية</h3><p>شرحها.</p></article><article class="imam"><span class="ico m-shield"></span><h3>بطاقة ثالثة</h3><p>شرحها.</p></article></div><div class="compare"><article class="axis-card"><h4 class="axis-q">سؤال المحور؟</h4><div class="pair"><div class="side calm"><span class="tag">الصواب</span><p>الوجه الأول.</p></div><div class="side panic"><span class="tag">الخطأ</span><p>الوجه الثاني.</p></div></div></article></div><div class="quad"><a><span class="ico m-plant"></span><h3>المجال الأول</h3><span>ملاحظته.</span></a><a><span class="ico m-pillars"></span><h3>المجال الثاني</h3><span>ملاحظته.</span></a><a><span class="ico m-target"></span><h3>المجال الثالث</h3><span>ملاحظته.</span></a><a><span class="ico m-fork"></span><h3>المجال الرابع</h3><span>ملاحظته.</span></a></div><div class="pillar"><div class="pillar-title"><span class="ico m-pillars"></span><h3>عنوان الأركان</h3></div><div class="step"><div class="num">١</div><div><h4>الركن الأول</h4><p>شرحه.</p></div></div><div class="step"><div class="num">٢</div><div><h4>الركن الثاني</h4><p>شرحه.</p></div></div></div><div class="paths"><div class="path good"><h4>الطريق المحمود</h4><div class="node">خطوة</div><span class="arrow good"></span><div class="node">خطوة ثانية</div><span class="arrow good"></span><div class="node final">المآل</div></div><div class="path bad"><h4>الطريق المذموم</h4><div class="node">خطوة</div><span class="arrow bad"></span><div class="node">خطوة ثانية</div><span class="arrow bad"></span><div class="node final">المآل</div></div></div><section class="night"><h2>عنوان كتلة الليل</h2><p class="q">اقتباس بارز.</p><p class="note">ملاحظة تحت الاقتباس.</p><div class="checks"><label><input type="checkbox" />مهمّة أولى</label><label><input type="checkbox" />مهمّة ثانية</label><label><input type="checkbox" />مهمّة ثالثة</label></div></section><div class="data"><h3>عنوان الجدول</h3><table><thead><tr><th>العمود الأول</th><th>العمود الثاني</th></tr></thead><tbody><tr><td>خلية</td><td>خلية</td></tr><tr><td>خلية</td><td>خلية</td></tr></tbody></table><p class="note">ملاحظة تحت الجدول.</p></div><div class="listing"><h3>قائمة مرقّمة</h3><ol class="numbered"><li>عنصر أول</li><li>عنصر ثانٍ</li></ol></div><div class="listing"><h3>قائمة منقّطة</h3><ul class="bullets"><li>عنصر</li><li>عنصر آخر</li></ul></div><div class="figures-wrap"><h3>أرقام بارزة</h3><div class="figures"><div class="figure"><span class="fig-num">٧٠%</span><span class="fig-label">دلالة الرقم</span></div><div class="figure"><span class="fig-num">١٢</span><span class="fig-label">دلالة الرقم</span></div><div class="figure"><span class="fig-num">٣</span><span class="fig-label">دلالة الرقم</span></div></div></div><div class="timeline"><h3>خطّ الزمن</h3><div class="event"><span class="when">٦١٠</span><div class="what"><h4>الحدث الأول</h4><p>شرحه.</p></div></div><div class="event"><span class="when">٦٢٢</span><div class="what"><h4>الحدث الثاني</h4><p>شرحه.</p></div></div></div><div class="tree"><h3>التفريع</h3><div class="root">الأصل</div><div class="branches"><div class="branch"><h4>الفرع الأول</h4><div class="leaf">عنصر</div><div class="branch"><h4>فرعٌ فرعي</h4><div class="leaf">عنصر عميق</div><div class="leaf">عنصر عميق آخر</div></div></div><div class="branch"><h4>الفرع الثاني</h4><div class="leaf">عنصر</div><div class="leaf">عنصر</div></div></div></div><div class="pyramid"><h3>الهرم</h3><div class="tiers"><div class="tier"><h4>الإحسان</h4><p>أعلى المراتب.</p></div><div class="tier"><h4>الإيمان</h4><p>المرتبة الوسطى.</p></div><div class="tier"><h4>الإسلام</h4><p>قاعدتها.</p></div></div><p class="note">ملاحظة تحت الهرم.</p></div><div class="gauge"><h3>عجلة المقياس</h3><div class="ring fill-70"><span class="reading">٧٠</span></div><div class="poles"><div class="pole">غفلة</div><div class="pole">يقظة</div></div><p class="note">ملاحظة تحت العجلة.</p></div><div class="gloss"><div class="gloss-head"><span class="gloss-term">التوكّل</span><span class="gloss-root">و ك ل</span></div><div class="gloss-body"><span class="gloss-label">لغةً</span><p class="gloss-text">تفويض الأمر إلى الغير والاعتماد عليه.</p><span class="gloss-label">اصطلاحاً</span><p class="gloss-text">اعتماد القلب على الله وحده مع الأخذ بالأسباب المشروعة.</p></div><p class="note">ملاحظة تحت التعريف.</p></div><div class="qa"><div class="qa-item"><div class="qa-q">هل يجوز الجمع بين الصلاتين بلا عذر؟</div><div class="qa-a">لا يجوز إلا لعذرٍ معتبر كسفرٍ أو مرض.</div></div><div class="qa-item"><div class="qa-q">وماذا لو نسي المسافر فأتمّ الصلاة؟</div><div class="qa-a">صلاته صحيحة، والإتمام رخصة لا عزيمة.</div></div></div><div class="cnote cn-benefit"><span class="cn-mark"></span><div><h4 class="cn-title">فائدة</h4><p class="cn-text">كثرة الاستغفار سببٌ لتفريج الهمّ وسعة الرزق كما في حديث ابن عباس.</p></div></div><div class="cnote cn-warning"><span class="cn-mark"></span><div><h4 class="cn-title">تنبيه</h4><p class="cn-text">هذا الأثر لا يصحّ مرفوعاً، وإنما يُروى عن بعض السلف موقوفاً.</p></div></div><div class="cnote cn-subtle"><span class="cn-mark"></span><div><p class="cn-text">واستطراداً، هذا المعنى ورد بألفاظ متقاربة في غير هذا الموضع.</p></div></div><div class="mfix"><div class="mfix-claim"><span class="mfix-tag">يُظنّ</span><p>يُظنّ أنّ التوكّل يعني ترك الأسباب بالكلّية.</p></div><div class="mfix-fix"><span class="mfix-tag">والصواب</span><p>والصواب أنّ التوكّل اعتمادٌ قلبيّ على الله مع الأخذ التامّ بالأسباب المشروعة.</p></div><p class="mfix-evidence">دليله حديث «اعقلها وتوكّل».</p></div></section><p class="closing">جملة الختام.</p>
+</div>
+</body>
+</html>

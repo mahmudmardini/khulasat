@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>og — خُلاصات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Reem+Kufi:wght@600&display=swap" rel="stylesheet">
+<!--
+  مصدرُ بطاقات المشاركة — public/landing/og-{ar,en,tr,ru}.png، و og.png نسخةُ العربية.
+  يُلتقط بمقاس 1200×630 بالضبط، واللغةُ من `?l=`:
+
+    chrome --headless --hide-scrollbars --window-size=1200,630 \
+      --screenshot=public/landing/og-en.png "file://…/og-source.html?l=en"
+
+  ★ T-143: كانت og.png تطبع khulasat.ai وهذا الملفّ يقول khulasat.io — التُقطت
+  قبل تصحيح النطاق ولم تُعَد. **فمن عدّل هنا أعاد الالتقاط للأربع.**
+  والشعارُ يقول ما يفعله المنتج لا اسمَه وحده: البطاقةُ تُرى قبل الصفحة.
+-->
+<style>
+*{box-sizing:border-box}
+html,body{margin:0}
+body{width:1200px; height:630px; background:#243B6B; color:#fff;
+  font-family:"IBM Plex Sans Arabic",system-ui,sans-serif; overflow:hidden; position:relative}
+.rule{position:absolute; inset-inline:0; height:2px; background:linear-gradient(90deg,transparent,#A87C33,transparent)}
+.rule.t{top:56px} .rule.b{bottom:56px}
+.box{position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:22px; padding:0 110px 30px; text-align:center}
+.mark{color:#F2F1EC}
+.wm{font-family:"Reem Kufi",serif; font-weight:600; font-size:96px; line-height:1.1; letter-spacing:-.02em}
+html[dir="ltr"] .wm{font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:84px; letter-spacing:-.025em}
+.tag{font-size:40px; font-weight:500; line-height:1.35; color:#F2F1EC; margin:6px 0 0}
+html[dir="ltr"] .tag{font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:38px; letter-spacing:-.01em}
+.sub{font-size:24px; font-weight:400; color:#AFBBD6; margin:0}
+html[dir="ltr"] .sub{font-family:"IBM Plex Sans",system-ui,sans-serif; font-size:23px}
+.lat{font-family:"IBM Plex Sans",system-ui,sans-serif; direction:ltr; letter-spacing:.24em;
+  font-size:17px; font-weight:500; color:#8E9CC0; position:absolute; bottom:84px; inset-inline:0; text-align:center}
+</style>
+</head>
+<body>
+<span class="rule t"></span>
+<span class="rule b"></span>
+<div class="box">
+  <svg class="mark" width="76" height="76" viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M23 14H14V50H23" fill="none" stroke="currentColor" stroke-width="6"/>
+    <path d="M41 14H50V50H41" fill="none" stroke="currentColor" stroke-width="6"/>
+    <circle cx="32" cy="32" r="6" fill="#C6A468"/>
+  </svg>
+  <div class="wm" id="wm">خُلاصات</div>
+  <p class="tag" id="tag">من محاضرةٍ مسموعة إلى صحيفةٍ موثَّقة</p>
+  <p class="sub" id="sub">كلُّ آيةٍ وحديثٍ فيها إلى مصدره</p>
+</div>
+<div class="lat">khulasat.io</div>
+<script>
+// النصُّ مطابقٌ لـ`hero.h1` في lang/*/landing.php — والبطاقةُ وعدُ الصفحة نفسُه.
+var T = {
+  en: ['Khulasat', 'Turn any lecture into a readable, fully sourced page', 'Every verse and hadith traced to its source'],
+  tr: ['Khulasat', 'Dersinizi kaynaklı, okunur bir sayfaya dönüştürün', 'Her ayet ve hadis kaynağına bağlı'],
+  ru: ['Khulasat', 'Лекция — в страницу с источниками', 'Каждый аят и хадис возведён к источнику']
+};
+var l = new URLSearchParams(location.search).get('l');
+if (T[l]) {
+  document.documentElement.lang = l;
+  document.documentElement.dir = 'ltr';
+  document.getElementById('wm').textContent = T[l][0];
+  document.getElementById('tag').textContent = T[l][1];
+  document.getElementById('sub').textContent = T[l][2];
+}
+</script>
+</body>
+</html>

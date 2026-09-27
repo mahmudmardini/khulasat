@@ -1,0 +1,379 @@
+@import 'tailwindcss';
+
+/*
+ * نظام التصميم — SCREENS.md §القسم الأول. T-15ب.
+ *
+ * الرموز تُكتب في `:root` **بأسمائها في SCREENS.md حرفاً بحرف**، وهي مصدر
+ * الحقيقة. ثم يُشتقّ منها ثيم Tailwind بـ `@theme inline` — و`inline` تجعل
+ * الأداة تُصدر `var(--bg)` لا نسخةً من القيمة، فلا يوجد تعريفان يفترقان.
+ *
+ * ولا `tailwind.config.js` هنا: الإصدار الرابع يضبط الثيم من CSS، وهذا
+ * مكافئُ ما تطلبه المهمّة لا مخالفتُه.
+ */
+
+:root {
+  /* الأسطح */
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface-alt: #f4f2ec;
+  --border: #e4e0d6;
+  --border-strong: #cfc9ba;
+
+  /* النصّ */
+  --text: #22201a;
+  --text-muted: #6b6559;
+
+  /*
+   * ★ خروجٌ مقصود عن حرف SCREENS.md — T-15ب، 7 أيلول 2026.
+   *
+   * القيمة هناك `#9B9488`، وتباينها على الخلفية **٢٫٨٨:١** — وSCREENS.md
+   * نفسها تشترط في §إتاحة «تباين 4.5:1 على الأقل». فالوثيقة تناقض نفسها،
+   * والقاعدة أولى من القيمة: القاعدة شرطٌ يُقاس، والقيمة تعبيرٌ عن نيّة.
+   *
+   * و`--text-faint` نصٌّ يُقرأ لا زينة — بها تُكتب حالة `unpublished`
+   * وتلميحات الحقول. فخفوتُها لا يُعفيها.
+   *
+   * وهذه أقلّ قيمة تمرّ على الأسطح الثلاثة: bg ٥٫٠٢ · surface ٥٫٢٤ ·
+   * surface-alt ٤٫٦٨. ويحرسها `DesignSystemTest`.
+   */
+  --text-faint: #706c62;
+
+  /*
+   * الهوية — الإصدار الثاني، T-100 (الهوية البصرية §٠٢).
+   *
+   * **الحبريّ لونُ المنتج، والأخضر يعود لوحةَ مستأجر.** الأخضر أكثر ألوان
+   * هويّات المؤسّسات الإسلامية شيوعاً، وشطرٌ من الجهات المشتركة لونُها أخضر
+   * أصلاً — فعلامةٌ خضراء إمّا تذوب في لون الجهة أو تزاحمه. والحبريّ يُقرأ
+   * فوراً «ليس لون الجهة»، وهو ما يقوله منتجٌ ليس صاحبَ المحتوى.
+   *
+   * وتباينه على الخلفية ١٠٫٥١:١ مقابل ٩٫٣٣ للأخضر، فلا خسارة في الإتاحة.
+   * والأخضر لم يُحذف: `--success` باقٍ، ولوحة المستأجر «أ» زمرّديةٌ كما هي.
+   */
+  --primary: #243b6b;
+  --primary-hover: #152444;
+  /* خلفيةُ الحالة النشطة — §٠٢. قيمةٌ مسمّاة أثبتُ من شفافيةٍ تتبدّل بسطحها. */
+  --primary-tint: #e9edf5;
+  /* ذهبٌ للتمييز لا للأفعال ولا للنصّ: ٣٫٦٣:١ على الخلفية، دون حدّ النصّ. */
+  --accent: #a87c33;
+
+  /*
+   * الليليّ — شريط لوحة المشرف، وهو `night-deep` في الهوية (§١١: الأيقونة
+   * الداكنة). داكنٌ يُرى قبل أن يُقرأ كما يطلب SCREENS.md §القسم الثالث،
+   * ومن عائلة الحبريّ لا غريبٌ عنها. و`--night-mark` لون القوسين عليه.
+   */
+  --night: #0f192f;
+  --night-mark: #8aa8dc;
+
+  /* الحالات */
+  --info: #2e5a8a;
+  --success: #2f6b4f;
+  /*
+   * ★ خروجٌ مقصود ثانٍ. القيمة في SCREENS.md `#A8701F`، والنصّ الأبيض
+   * عليها **٤٫٢٠:١**. وشارة `needs_review` هي وحدها ذات الخلفية الملوّنة
+   * (§الحالات وألوانها)، فنصُّها الأبيض يقع تحت الحدّ.
+   *
+   * وهذه تمرّ في الاستعمالين معاً: أبيضَ عليها ٤٫٧٦، ونصّاً على الخلفية
+   * ٤٫٥٦. والفرق عن الأصل لا تكاد العين تميّزه.
+   */
+  --warning: #9c681d;
+  --danger: #8e3b2e;
+
+  /* المسافات — سلّم 4px */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s6: 24px;
+  --s8: 32px;
+  --s12: 48px;
+
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow: 0 1px 3px rgb(34 32 26 / 7%), 0 4px 12px rgb(34 32 26 / 5%);
+
+  /* الهيكل — SCREENS.md §هيكل الصفحة */
+  --sidebar-width: 240px;
+  --sidebar-collapsed: 64px;
+  --content-max: 1120px;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-tint: var(--primary-tint);
+  --color-accent: var(--accent);
+  --color-night: var(--night);
+  --color-night-mark: var(--night-mark);
+
+  --color-info: var(--info);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --radius-DEFAULT: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --shadow-card: var(--shadow);
+
+  /* IBM Plex Sans Arabic للواجهة، وAmiri للنصوص الشرعية — §الخطوط */
+  --font-sans: 'IBM Plex Sans Arabic', ui-sans-serif, system-ui, sans-serif;
+  --font-quran: 'Amiri', Georgia, serif;
+}
+
+@layer base {
+  /*
+   * 15px بارتفاع 1.8 — §الخطوط. والمقاس على `html` لا على `body` كي ترثه
+   * العناصر المستنسخة خارج الجسد (الحوارات في `dialog`).
+   */
+  html {
+    font-size: 15px;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.8;
+  }
+
+  h1, h2, h3 {
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  /*
+   * حلقة تركيز ظاهرة على كل ما يُركَّز — §القواعد العامّة «تركيز ظاهر».
+   * تُكتب هنا مرّةً بدل أن يتذكّرها كلّ مكوّن، ولا تُحذف من مكوّن بعينه.
+   */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  /* لا حلقة على النقر بالفأرة، والحلقة تبقى كاملةً لمن ينقّل بلوحة المفاتيح. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+}
+
+@layer utilities {
+  /*
+   * الأرقام في الجداول والحقول **لاتينية بـ tabular-nums** لأنّها تُقارن
+   * وتُحاذى — §الخطوط. وفي الجُمل النثرية عربية هندية، وتلك تُولَّد في
+   * `resources/js/lib/numerals.ts` لا هنا.
+   */
+  .nums-tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  .font-quran {
+    font-family: var(--font-quran);
+    font-size: 19px;
+    line-height: 2.1;
+  }
+
+  .content-shell {
+    max-width: var(--content-max);
+    margin-inline: auto;
+  }
+}
+
+/*
+ * ─── T-27 · إعادة تصميم الواجهة ──────────────────────────────────────
+ *
+ * إضافاتٌ **فوق** رموز T-15ب لا بدلاً منها: القيم أعلاه محسوبةٌ بـ WCAG
+ * ويحرسها `DesignSystemTest`، فلا تُمسّ. وما هنا أشكالٌ متكرّرة كانت
+ * تُنسخ في كلّ شاشة — والنسخةُ العاشرة هي التي تفترق عن أخواتها.
+ */
+
+@layer components {
+  /*
+   * الحقل. كان `w-full rounded-md border …` مكتوباً اثنتي عشرة مرّة في
+   * `Create.tsx` وحدها، فاختلفت حالةُ التركيز بين حقلٍ وآخر.
+   */
+  .field {
+    inline-size: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--surface);
+    padding: 9px 12px;
+    font-size: 15px;
+    color: var(--text);
+    transition: border-color 120ms, box-shadow 120ms;
+  }
+
+  .field::placeholder {
+    color: var(--text-faint);
+  }
+
+  .field:hover:not(:disabled) {
+    border-color: var(--border-strong);
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+  }
+
+  .field:disabled {
+    background-color: var(--surface-alt);
+    color: var(--text-faint);
+    cursor: not-allowed;
+  }
+
+  .field[aria-invalid='true'] {
+    border-color: var(--danger);
+  }
+
+  .field[aria-invalid='true']:focus {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 15%, transparent);
+  }
+
+  /*
+   * سهمُ `select` — T-111: كان يرسمه المتصفّح نفسه، فيلتصق بحافّة الحقل
+   * بلا حشوةٍ حوله مهما فُرِّغ له المكان (السهمُ المرسوم لا يحترم `padding`
+   * كنصٍّ عاديّ، وشكلُه يتبع نظام التشغيل لا لغة تصميم المنتج). فصار
+   * `appearance:none` يُسقط رسمَ المتصفّح، ويحلّ محلَّه سهمُ الأيقونات نفسه
+   * (`chevron` من `Icon.tsx`، مُدوَّراً للأسفل) بلون `--text-faint` مثبَّتاً
+   * — صنفُ المكوّن لا يقرأ متغيّرات CSS داخل SVG كخلفية.
+   *
+   * والمكانُ على الحافّة المنطقية النهائية — أي اليسار في RTL، كما كان.
+   *
+   * ★★ **ولا منطقيّةَ في `background-position`** (T-133): كُتبت `left`
+   * حرفاً، وكان ذلك صحيحاً يومَ كانت اللوحةُ عربيةً وحدها. فلمّا تُرجمت
+   * بقي السهمُ يساراً في الإنجليزية — **والحشوةُ `padding-inline-end`
+   * منطقيةٌ فانفرجت يميناً**، فصار الفراغُ في جهةٍ والسهمُ في أخرى.
+   *
+   * وCSS لا تعرف `background-position-inline-end`، فيُقلب بالاتّجاه
+   * صراحةً. والقاعدةُ العربية تُركت كما هي، والإضافةُ للاتينية وحدها.
+   */
+  select.field {
+    padding-inline-end: 30px;
+    padding-inline-start: 12px;
+    appearance: none;
+    background-repeat: no-repeat;
+    background-position: left 10px center;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23706c62' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-size: 16px 16px;
+  }
+
+  [dir='ltr'] select.field {
+    background-position: right 10px center;
+  }
+
+  /*
+   * الكلمة المرسومة «خُلاصات» — T-100، الهوية البصرية الثانية §٠٣ و§٠٨.
+   *
+   * Reem Kufi للشعار وحده، ويُحمَّل مقصوراً على أحرفه في `app.blade.php`.
+   * وسعةُ السطر ١٫٤٥ للضمّة فوق الخاء، فلا تقصّها حافّةُ شريطٍ بارتفاعٍ
+   * ثابت. و`nowrap`: الشعار كتلةٌ واحدة لا تنكسر على سطرين.
+   */
+  .wordmark {
+    font-family: 'Reem Kufi', 'IBM Plex Sans Arabic', ui-sans-serif, sans-serif;
+    font-weight: 600;
+    line-height: 1.45;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+}
+
+@layer utilities {
+  /*
+   * الظلّ المرفوع — للبطاقة التي تُنقر: تدرّجٌ خفيف يقول «هذه سطحٌ فعّال»
+   * بلا حركةٍ ولا تكبير. §القواعد العامّة: «الحركة وظيفية لا زخرفية».
+   */
+  .shadow-lifted {
+    box-shadow: 0 1px 2px rgb(34 32 26 / 6%), 0 8px 24px rgb(34 32 26 / 8%);
+  }
+
+  /*
+   * التفافُ العنوان الطويل بلا مدّ الصفحة أفقياً. `anywhere` لا `break-all`
+   * كي تُكسر الكلمةُ الطويلة وحدها ويبقى غيرها سليماً — والعربية تُقطَّع
+   * قبيحاً بـ `break-all`.
+   */
+  .wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+}
+
+/*
+ * ─── T-83 · شاشة المتابعة الحيّة ───────────────────────────────────
+ *
+ * **حركةٌ تقول «يجري الآن» ولا تقول «كم بقي».** الضوءُ في شريط المرحلة
+ * يمرّ ولا يمتلئ — لا نسبة مخترعة (SCREENS.md §4). و`inset-inline-start`
+ * لا `left`: يمرّ من اليمين إلى اليسار في RTL بلا قاعدةٍ ثانية.
+ */
+@keyframes khl-sweep {
+  from { inset-inline-start: -40%; }
+  to { inset-inline-start: 100%; }
+}
+
+@keyframes khl-rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes khl-caret {
+  50% { opacity: 0; }
+}
+
+@keyframes khl-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@layer utilities {
+  .animate-sweep {
+    animation: khl-sweep 1.6s ease-in-out infinite;
+  }
+
+  .animate-rise {
+    animation: khl-rise 420ms ease-out both;
+  }
+
+  .typing-caret {
+    display: inline-block;
+    inline-size: 2px;
+    block-size: 1.1em;
+    margin-inline-start: 2px;
+    vertical-align: text-bottom;
+    background-color: var(--primary);
+    animation: khl-caret 1s steps(1) infinite;
+  }
+
+  /* هيكلُ ما لم يصل بعد — مكانُه محفوظ فلا تقفز الصفحة حين يصل. */
+  .skeleton {
+    border-radius: var(--radius);
+    background: linear-gradient(90deg, var(--surface-alt) 25%, var(--border) 50%, var(--surface-alt) 75%);
+    background-size: 200% 100%;
+    animation: khl-shimmer 1.8s linear infinite;
+  }
+}
+
+/*
+ * من يطلب تقليل الحركة يُعطى ما طلب — §إتاحة. والنبضُ في StepTracker
+ * والدوّار في الزرّ كلاهما حركةٌ متكرّرة بلا توقّف.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

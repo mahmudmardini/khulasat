@@ -1,0 +1,54 @@
+{
+  "source": {
+    "repository": "https://github.com/fawazahmed0/hadith-api",
+    "commit": "df57907be35291c91ad6a6691180e22ca9920784",
+    "branch": "1",
+    "license": "Unlicense (public domain)",
+    "url_template": "https://raw.githubusercontent.com/fawazahmed0/hadith-api/df57907be35291c91ad6a6691180e22ca9920784/editions/ara-{book}.min.json"
+  },
+  "prepared_at": "2026-09-07",
+  "books": {
+    "bukhari": {
+      "rows": 7580,
+      "skipped_empty": 9,
+      "bytes": 1386642,
+      "sha256": "22cb6276ca1b32b34096a67648924adb499f3840547f5978c917a89f6c107d62"
+    },
+    "muslim": {
+      "rows": 7360,
+      "skipped_empty": 203,
+      "bytes": 1102830,
+      "sha256": "e92150d290aad6a5c5f344861b7cd5a9d832cbabaeb9509a9c1399c5b60fc65c"
+    },
+    "abudawud": {
+      "rows": 5272,
+      "skipped_empty": 2,
+      "bytes": 907102,
+      "sha256": "9f6b17d2824d607a4d5a090d70f33d7c1a24258c9a47558ac9b18f3c102f435c"
+    },
+    "tirmidhi": {
+      "rows": 3924,
+      "skipped_empty": 74,
+      "bytes": 859227,
+      "sha256": "751f1da07c4d93ee6007ed5a342fc6d96600ab5649be8f216e97a85a388f0ca4"
+    },
+    "nasai": {
+      "rows": 5679,
+      "skipped_empty": 86,
+      "bytes": 757284,
+      "sha256": "882e1f0dd48372d27bdd7fdad68805f507d380a303a4698585b7a72771ada8ab"
+    },
+    "ibnmajah": {
+      "rows": 4338,
+      "skipped_empty": 5,
+      "bytes": 623396,
+      "sha256": "17bd0654288706f96412b8bed8f056150551f1985611087257dc0a38ce5235be"
+    },
+    "malik": {
+      "rows": 1829,
+      "skipped_empty": 29,
+      "bytes": 284587,
+      "sha256": "6be5b236b4630a67b1172b44cee17dea116238b413106ae52b58654c29e433c4"
+    }
+  }
+}

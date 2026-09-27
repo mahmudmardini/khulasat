@@ -1,0 +1,59 @@
+# ── التبعيات والبناء ───────────────────────────────────────────
+/vendor
+/node_modules
+node_modules/
+/public/build
+/public/hot
+/public/storage
+public_html/storage
+public_html/hot
+
+# ── الأسرار ────────────────────────────────────────────────────
+# .env يحوي مفاتيح الواجهات. لا يُتابَع أبداً — انظر CLAUDE.md §2 القاعدة السادسة.
+.env
+.env.backup
+.env.production
+auth.json
+/auth.json
+/storage/*.key
+storage/*.key
+
+# ── التخزين والسجلّات ──────────────────────────────────────────
+*.log
+npm-debug.log
+yarn-error.log
+/storage/pail
+bootstrap/compiled.php
+app/storage/
+
+# ── الاختبارات والأدوات ────────────────────────────────────────
+.phpunit.result.cache
+/.phpunit.cache
+.phpactor.json
+/.phpactor.json
+
+# ── بيئات المحرّرين والأجهزة ───────────────────────────────────
+/.fleet
+/.idea
+/.nova
+/.vscode
+/.zed
+/.vagrant
+Homestead.json
+Homestead.yaml
+.DS_Store
+Thumbs.db
+
+# ── خُلاصة ────────────────────────────────────────────────────
+# سكربت القياس في T-00 خارج التطبيق، **ومخرجاته وحدها** لا تُتابَع.
+# والسكربت نفسه يُتابَع: هو معيار قبول T-00، ويشتغل عليه اثنان.
+/bench/RESULTS.md
+# تفريغات المحاضرات مادّةُ عملاء، ولا تدخل المستودع.
+/bench/lectures/*
+!/bench/lectures/EXAMPLE.json
+/storage/app/transcripts
+/.vite
+
+# شجرات عملٍ معزولة — تُستعمل عند العمل بالتوازي على المستودع نفسه،
+# فلا تتصادم الفروع المُخرَجة فعلياً. T-60.
+.worktrees/

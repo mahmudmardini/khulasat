@@ -1,0 +1,244 @@
+{
+  "_meta": {
+    "purpose": "عيّنة القبول الحاكمة لطبقة التحقّق. يعمل هذا الملف في CI ويمنع الدمج عند الفشل.",
+    "warning": "الألفاظ والأحكام أدناه مكتوبة للاختبار ويجب تثبيتها من المصادر قبل الاعتماد. شغّل php artisan khulasah:verify-fixtures بعد بذر المصحف وربط مزوّد الأحاديث، وصحّح أي لفظ أو تخريج لا يطابق المصدر. لا تعتمدها بلا هذا التثبيت.",
+    "version": "2.0",
+    "policy": "سياسة البيان — المواصفة §7-5، قرار مالك المنتج 6 أيلول 2026: يُنشر ما عُرف مصدره مقروناً بدرجته، ولا يُنشر ما جُهل مصدره. وحالات الحديث أدناه مقيسةٌ على المدوّنة المبذورة فعلاً (T-05ب)، لا على مزوّد وهمي."
+  },
+  "quran": [
+    {
+      "id": "Q-EXACT-01",
+      "note": "آية كاملة بلفظها",
+      "input": "من عمل صالحا من ذكر أو أنثى وهو مؤمن فلنحيينه حياة طيبة ولنجزينهم أجرهم بأحسن ما كانوا يعملون",
+      "expect": {
+        "match_status": "exact",
+        "surah_number": 16,
+        "ayah_number": 97,
+        "review_status": "auto_passed",
+        "published": true
+      }
+    },
+    {
+      "id": "Q-EXACT-02",
+      "note": "آية بلا تشكيل وبهمزات مختلفة — يختبر التطبيع",
+      "input": "انما يخشى الله من عباده العلماء",
+      "expect": {
+        "match_status": "exact",
+        "surah_number": 35,
+        "ayah_number": 28,
+        "review_status": "auto_passed",
+        "published": true
+      }
+    },
+    {
+      "id": "Q-EXACT-03",
+      "note": "آيتان متتاليتان في سياق واحد — يختبر المطابقة عبر صفّين",
+      "input": "إن الإنسان خلق هلوعا إذا مسه الشر جزوعا",
+      "expect": {
+        "match_status": "exact",
+        "surah_number": 70,
+        "ayah_number": 19,
+        "spans_multiple": true,
+        "review_status": "auto_passed",
+        "published": true
+      }
+    },
+    {
+      "id": "Q-STITCHED-01",
+      "note": "مركّبة من آيتين من سورتين مختلفتين — يجب ألا تُطابَق",
+      "input": "إن الإنسان خلق هلوعا وهو مؤمن فلنحيينه حياة طيبة",
+      "expect": {
+        "match_status": "none",
+        "review_status": "removed",
+        "published": false
+      }
+    },
+    {
+      "id": "Q-ALTERED-01",
+      "note": "كلمة واحدة مبدَّلة — يجب ألا تمرّ مرور المطابق التام",
+      "input": "من عمل صالحا من ذكر أو أنثى وهو مسلم فلنحيينه حياة طيبة",
+      "expect": {
+        "match_status": "none",
+        "review_status": "removed",
+        "published": false
+      }
+    },
+    {
+      "id": "Q-PARTIAL-01",
+      "note": "جزء من آية — يُقبل مطابقةً مع وسم أنه جزء",
+      "input": "ولنجزينهم أجرهم بأحسن ما كانوا يعملون",
+      "expect": {
+        "match_status": "exact",
+        "surah_number": 16,
+        "ayah_number": 97,
+        "is_fragment": true
+      }
+    }
+  ],
+  "hadith": [
+    {
+      "id": "H-EXACT-01",
+      "note": "حديث صحيح بلفظ مصدره — يُنشر بتخريجه",
+      "input": "أحب الأعمال أدومها إلى الله وإن قل",
+      "claimed_narrator": "عائشة",
+      "expect": {
+        "match_status": "exact",
+        "grade_class": "sahih",
+        "review_status": "auto_passed",
+        "published": true,
+        "expected_takhrij": "رواه البخاري"
+      }
+    },
+    {
+      "id": "H-EXACT-02",
+      "note": "حديث في الصحيحين — التخريج يُحسب «متّفقٌ عليه» من فهرسنا",
+      "input": "من سلم المسلمون من لسانه ويده",
+      "claimed_narrator": "أبو موسى الأشعري",
+      "expect": {
+        "match_status": "exact",
+        "grade_class": "sahih",
+        "review_status": "auto_passed",
+        "published": true,
+        "expected_takhrij": "متّفقٌ عليه: رواه البخاري ومسلم"
+      }
+    },
+    {
+      "id": "H-NEARMISS-01",
+      "note": "لفظ قريب من المصدر بلا تحريف معنى — يُنشر بلفظ المصدر لا بلفظ المحاضرة",
+      "input": "أحب الأعمال إلى الله أدومها وإن قل",
+      "claimed_narrator": "عائشة",
+      "expect": {
+        "match_status": "partial",
+        "grade_class": "sahih",
+        "review_status": "auto_passed",
+        "published": true,
+        "must_show_correct_wording": true,
+        "expected_takhrij": "رواه مسلم"
+      }
+    },
+    {
+      "id": "H-ALTERED-01",
+      "note": "صحيح محرَّف كلمةً مع اختلاف ترتيب — لا يُطابَق فلا يُنشر",
+      "input": "أحب الأعمال إلى الله أكثرها وإن قل",
+      "claimed_narrator": "عائشة",
+      "expect": {
+        "match_status": "none",
+        "review_status": "removed",
+        "published": false,
+        "must_not_auto_pass": true
+      }
+    },
+    {
+      "id": "H-ALTERED-02",
+      "note": "صحيح بزيادة مقحمة — يُنشر بلفظ مصدره لا بالزيادة",
+      "input": "من سلم المسلمون من لسانه ويده وقلبه ونيته",
+      "claimed_narrator": "أبو موسى الأشعري",
+      "expect": {
+        "match_status": "partial",
+        "grade_class": "sahih",
+        "review_status": "auto_passed",
+        "published": true,
+        "must_show_correct_wording": true
+      }
+    },
+    {
+      "id": "H-DAIF-01",
+      "note": "ضعيف مطابق موصوف بالضعف في المدوّنة — يُنشر مبيَّناً",
+      "input": "طلب العلم فريضة على كل مسلم",
+      "expect": {
+        "match_status": "exact",
+        "grade_class": "daif",
+        "review_status": "auto_passed",
+        "published": true,
+        "must_show_grade": true,
+        "expected_takhrij": "رواه ابن ماجه — وإسناده ضعيف"
+      }
+    },
+    {
+      "id": "H-MAWDU-01",
+      "note": "موضوع مطابق محكوم عليه بالوضع في المدوّنة — يُنشر مبيَّناً لا يُحذف",
+      "input": "الوقت الأول من الصلاة رضوان الله والوقت الآخر عفو الله",
+      "expect": {
+        "match_status": "exact",
+        "grade_class": "mawdu",
+        "review_status": "auto_passed",
+        "published": true,
+        "must_show_grade": true,
+        "expected_takhrij": "رواه الترمذي — ولا يصحّ، حكم عليه أهل العلم بالوضع"
+      }
+    },
+    {
+      "id": "H-FABRICATED-01",
+      "note": "لا أصل له — مشهور على الألسنة وليس في الكتب. يُحذف صامتاً ولا يُوصَف بشيء",
+      "input": "حب الوطن من الإيمان",
+      "expect": {
+        "match_status": "none",
+        "review_status": "removed",
+        "published": false,
+        "must_not_auto_pass": true,
+        "must_not_guess_nearest": true
+      }
+    },
+    {
+      "id": "H-FABRICATED-02",
+      "note": "لا يصح مرفوعاً — مشهور على الألسنة وليس في الكتب",
+      "input": "من عرف نفسه فقد عرف ربه",
+      "expect": {
+        "match_status": "none",
+        "review_status": "removed",
+        "published": false,
+        "must_not_auto_pass": true,
+        "must_not_guess_nearest": true
+      }
+    },
+    {
+      "id": "H-WEAK-01",
+      "note": "ضعيف مشهور خارج الكتب السبعة — يُحذف لا يُبيَّن. عجزُنا عن التخريج ليس حكماً بالوضع",
+      "input": "اطلبوا العلم ولو بالصين",
+      "expect": {
+        "match_status": "none",
+        "review_status": "removed",
+        "published": false,
+        "must_not_auto_pass": true
+      }
+    },
+    {
+      "id": "H-MISATTRIBUTED-01",
+      "note": "لفظ صحيح منسوب إلى راوٍ آخر — يُنشر بتخريج مصدره. وفحصُ الراوي مؤجَّل إلى T-05ج",
+      "input": "أحب الأعمال أدومها إلى الله وإن قل",
+      "claimed_narrator": "أبو هريرة",
+      "expect": {
+        "match_status": "exact",
+        "grade_class": "sahih",
+        "review_status": "auto_passed",
+        "published": true,
+        "expected_takhrij": "رواه البخاري"
+      }
+    },
+    {
+      "id": "H-UNKNOWN-01",
+      "note": "نصّ مخترَع لا وجود له — لا يُخمَّن ولا يُقرَّب إلى أقرب حديث",
+      "input": "من داوم على قراءة سورة الكهف كل خميس رفع الله عنه هم الدنيا سبعين مرة",
+      "expect": {
+        "match_status": "none",
+        "review_status": "removed",
+        "published": false,
+        "must_not_guess_nearest": true
+      }
+    }
+  ],
+  "acceptance_criteria": {
+    "must_pass_all": true,
+    "blocking_rules": [
+      "لا يُنشر شاهد بلفظ المحاضرة — كلّ منشور بلفظ مصدره.",
+      "لا يُنشر شاهد بلا درجة منصوصة — none والمجهول يُحذفان صامتَين.",
+      "لا يُنشر ضعيف ولا موضوع بلا بيان درجته في سلسلة التخريج.",
+      "لا يُستبدل نصّ غير مطابق بأقرب نصّ في المصدر. none تعني none.",
+      "المركّب من آيتين مختلفتين لا يُطابَق."
+    ],
+    "target_metrics": {
+      "published_without_stated_grade": 0,
+      "sound_evidence_auto_matched_ratio_min": 0.7
+    }
+  }
+}

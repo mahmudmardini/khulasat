@@ -17,6 +17,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Transcript\Ffmpeg;
 use App\Services\Transcript\Speech\FakeSpeechToText;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
@@ -217,6 +218,62 @@ it('checks the assembled content and deletes a file that is not audio', function
     $this->postJson("/panel/uploads/{$id}/complete")
         ->assertUnprocessable()
         ->assertJson(['message' => trans('lectures.create.source.upload_invalid')]);
+
+    expect(MediaUpload::query()->count())->toBe(0)
+        ->and(Storage::disk('local')->allFiles('uploads'))->toBe([]);
+});
+
+// T-205: **أداةٌ غائبة عطلٌ عندنا لا في الملفّ.** فلا يُقال «ملفّك تالف»، ولا يُحذف
+// ما رُفع: يُستأنف الجمعُ بعد إصلاح الخادم بلا رفعٍ ثانٍ.
+it('says a missing ffprobe is a server fault, keeps the chunks, and completes once it is back', function (): void {
+    Log::spy();
+    $installed = false;
+
+    Process::fake(function ($process) use (&$installed) {
+        return match (true) {
+            ! $installed => Process::result(errorOutput: 'exec: ffprobe: not found', exitCode: 127),
+            in_array('a:0', $process->command, true) => Process::result('1'),
+            default => Process::result('600.0'),
+        };
+    });
+    $id = startUpload(size: 100)['id'];
+
+    foreach (str_split(lessonBytes(), 40) as $index => $chunk) {
+        putChunk($id, $index, $chunk)->assertOk();
+    }
+
+    $this->postJson("/panel/uploads/{$id}/complete")
+        ->assertStatus(503)
+        ->assertJson([
+            'reason' => 'upload_unavailable',
+            'message' => trans('lectures.create.source.upload_unavailable'),
+        ]);
+
+    Log::shouldHaveReceived('error')->withArgs(fn (string $event, array $context): bool => $event === 'upload.media_tool_unavailable'
+        && str_contains($context['error'], 'ffprobe: not found'));
+
+    // الأجزاءُ باقية، والملفُّ المجموع لم يبقَ.
+    expect(MediaUpload::query()->sole()->status)->toBe(MediaUpload::RECEIVING)
+        ->and(Storage::disk('local')->allFiles("uploads/incoming/{$id}"))->toHaveCount(3)
+        ->and(Storage::disk('local')->allFiles("uploads/{$this->tenant->id}"))->toBe([]);
+
+    $installed = true;
+
+    $this->postJson("/panel/uploads/{$id}/complete")->assertOk()->assertJson(['status' => 'ready']);
+});
+
+// وffprobe الحاضرُ إذا رفض الملفّ فالعيبُ في الملفّ.
+it('still calls a file ffprobe rejects unreadable', function (): void {
+    Process::fake(['*' => Process::result(errorOutput: 'Invalid data found when processing input', exitCode: 1)]);
+    $id = startUpload(size: 100)['id'];
+
+    foreach (str_split(lessonBytes(), 40) as $index => $chunk) {
+        putChunk($id, $index, $chunk)->assertOk();
+    }
+
+    $this->postJson("/panel/uploads/{$id}/complete")
+        ->assertUnprocessable()
+        ->assertJson(['reason' => 'upload_invalid']);
 
     expect(MediaUpload::query()->count())->toBe(0)
         ->and(Storage::disk('local')->allFiles('uploads'))->toBe([]);

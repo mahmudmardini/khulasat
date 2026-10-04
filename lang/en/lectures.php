@@ -187,6 +187,7 @@ return [
             'upload_chunk_invalid' => 'A part of the file arrived incomplete; it will be sent again.',
             'upload_incomplete' => 'Not every part of the file has arrived yet.',
             'upload_failed' => 'The file could not be uploaded. Please try again.',
+            'upload_unavailable' => 'We cannot process the file right now because of a fault on our side, not in your file. What was uploaded is kept; try again shortly.',
             'upload_expired' => 'The uploaded file is no longer available. Please upload it again.',
             'upload_progress' => ':sent of :total uploaded',
             'upload_mb' => ':n MB',

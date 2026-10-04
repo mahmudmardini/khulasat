@@ -10,6 +10,7 @@ use App\Models\Hadith;
 use App\Models\ModelConfig;
 use App\Models\QuranAyah;
 use App\Models\QuranTranslation;
+use App\Services\Transcript\Ffmpeg;
 use App\Support\Model\StagePrompt;
 use App\Support\Quran\QuranSync;
 use App\Support\Verification\DomainPolicy;
@@ -261,6 +262,14 @@ class Preflight extends Command
             ? $this->pass('التفريغ', "yt-dlp حاضر على {$binary}.")
             // ولا يمنع هذا التشغيل: المسار اليدوي يبقى متاحاً دائماً — §5-أ-5.
             : $this->note('التفريغ', "yt-dlp غير موجود على {$binary} — يبقى اللصق اليدوي ورفعُ الملفّ.");
+
+        // **ويحجب غيابُ ffmpeg**: بدونه يُردّ كلُّ ملفٍّ يُرفع، ولا يُقطَّع صوتٌ للتفريغ.
+        $missing = app(Ffmpeg::class)->missingBinaries();
+
+        $missing === []
+            ? $this->pass('التفريغ', 'ffmpeg وffprobe حاضران.')
+            : $this->blocked('التفريغ', 'لا يُشغَّل: '.implode(' · ', $missing)
+                .' — رفعُ الملفّ والتفريغ الصوتي لا يعملان. ثبّت ffmpeg (وفيه ffprobe)، أو اضبط FFMPEG_BIN وFFPROBE_BIN.');
 
         $whisper = trim((string) config('khulasah.transcript.whisper.api_key', ''));
 

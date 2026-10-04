@@ -132,6 +132,14 @@ curl https://<host>/api/v1/verify/{id}
 
 المتطلّبات: PHP 8.3 وPostgreSQL 16 وNode 20 (وRedis إن أردت Horizon).
 
+وأدواتٌ على الخادم نفسه، ومساراتها في `.env`:
+
+- **ffmpeg** (وفيه ffprobe): لا غنى عنه لرفع ملفّ الصوت أو الفيديو وللتفريغ الصوتي. بدونه يُردّ كلُّ ملفٍّ يُرفع.
+- **yt-dlp**: لروابط يوتيوب. وبدونه يبقى الرفع واللصق اليدوي.
+- **Chrome أو Chromium**، اختياريّ (`SHARE_CARD_CAPTURER=chrome`): لصورة مشاركةٍ لكلّ خلاصة ولقياس فيض الشرائح. وبدونه تأخذ الخلاصاتُ بطاقةَ المنصّة.
+
+و`php artisan khulasah:preflight` يقول ما ينقص منها.
+
 ```bash
 cp .env.example .env && composer install && npm install
 php artisan key:generate && php artisan migrate

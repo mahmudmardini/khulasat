@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Transcript;
 
 use App\Console\Commands\PruneUploads;
+use App\Enums\TranscriptErrorCode;
 use App\Exceptions\TranscriptFailed;
 use App\Exceptions\UploadRejected;
 use App\Models\MediaUpload;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Support\Transcript\UploadedSource;
 use App\Support\Transcript\UploadStore;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Receive a recording in chunks, assemble it, check it — المواصفة §5-أ-4-ب.
@@ -24,7 +26,7 @@ use Illuminate\Support\Facades\Cache;
  *   ٣. `complete` — تُجمع الأجزاء بترتيبها، ويُفحص المحتوى والصوت والمدّة.
  *      وما رُفض هنا يُحذف فوراً: ملفٌّ لا يصلح لا يُبقى ليُرفع غيرُه بجانبه.
  *
- * **ولا يبقى على القرص ما لا صاحب له:** الأجزاءُ تُحذف بعد الجمع، والرفعُ
+ * **ولا يبقى على القرص ما لا صاحب له:** الأجزاءُ تُحذف بعد الفحص، والرفعُ
  * الملغى يُحذف بطلب المتصفّح، والمتروكُ يُكنس بعد ساعات
  * ({@see PruneUploads}).
  */
@@ -160,10 +162,21 @@ final class ChunkedUploads
             try {
                 $seconds = $this->inspect(UploadStore::absolute($path), $tenant);
             } catch (UploadRejected $rejected) {
+                if ($rejected->reason === 'upload_unavailable') {
+                    // **عطلٌ عندنا لا في الملفّ**: تبقى الأجزاء، فيُجمع ويُفحص
+                    // من جديد حين يعود المتصفّح، ولا يُرفع بايتٌ مرّتين.
+                    UploadStore::delete($path);
+
+                    throw $rejected;
+                }
+
                 $this->discard($upload->forceFill(['path' => $path]));
 
                 throw $rejected;
             }
+
+            // الأجزاء صارت ملفّاً سليماً، فلا يبقى منها شيء.
+            UploadStore::deleteDirectory(UploadStore::incomingDirectory($upload->id));
 
             $upload->forceFill([
                 'status' => MediaUpload::READY,
@@ -267,9 +280,6 @@ final class ChunkedUploads
 
         rename($target.'.tmp', $target);
 
-        // الأجزاء صارت ملفّاً، فلا يبقى منها شيء.
-        UploadStore::deleteDirectory($directory);
-
         return $path;
     }
 
@@ -290,7 +300,14 @@ final class ChunkedUploads
             }
 
             $seconds = $this->ffmpeg->durationSeconds($absolute);
-        } catch (TranscriptFailed) {
+        } catch (TranscriptFailed $failed) {
+            if ($failed->errorCode === TranscriptErrorCode::MediaToolUnavailable) {
+                // يُكتب في السجلّ: من يرى «أعد المحاولة» لا يخبرنا أنّ ffprobe غائب.
+                Log::error('upload.media_tool_unavailable', ['error' => $failed->getMessage()]);
+
+                throw UploadRejected::because('upload_unavailable', 503);
+            }
+
             throw UploadRejected::because('upload_invalid');
         }
 

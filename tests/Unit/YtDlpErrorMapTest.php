@@ -84,10 +84,11 @@ it('hands only the operational failures to the manual path', function (): void {
 
 // المواصفة §5-أ-7: عشرة أكواد، لكلّ واحد رسالة عربية تقترح إجراءً،
 // **ولا يظهر الرمز في رسالته**.
-it('gives every one of the ten codes an Arabic message that is not its code', function (): void {
+// عشرةُ المواصفة §5-أ-7، وعطلُ الخادم (T-205).
+it('gives every code an Arabic message that is not its code', function (): void {
     $codes = TranscriptErrorCode::cases();
 
-    expect($codes)->toHaveCount(10);
+    expect($codes)->toHaveCount(11);
 
     foreach ($codes as $code) {
         expect($code->message())

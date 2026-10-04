@@ -58,6 +58,8 @@ return [
 
         'ytdlp_timeout' => 'Reading this lecture took longer than allowed, so we stopped it. Try again, or upload the lecture file from your device.',
 
+        'media_tool_unavailable' => 'We cannot process audio right now because of a fault on our side, not in your file. Try again shortly, or paste the lecture text.',
+
         'playlist_given' => 'That is a playlist link, not a link to a single lecture. Open the lecture you mean and copy its own link — each lecture gets its own summary.',
 
     ],

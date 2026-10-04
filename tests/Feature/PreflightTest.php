@@ -10,12 +10,17 @@ use App\Models\QuranAyah;
 use App\Models\QuranTranslation;
 use Database\Seeders\ModelConfigSeeder;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Process;
 
 // T-35. **ولا شبكة هنا**: الفحص نفسه يجب ألّا ينادي أحداً.
 
 beforeEach(function (): void {
     Http::preventStrayRequests();
     Http::fake();
+
+    // ffmpeg وffprobe حاضران ما لم يُغيّبهما الاختبار.
+    Process::preventStrayProcesses();
+    Process::fake();
 });
 
 /**
@@ -83,6 +88,20 @@ it('يمرّ على إعدادٍ كامل، ولا ينادي أحداً', funct
     // **وهذا أهمّ توكيدٍ في الملفّ**: فحصُ الجاهزية لو نادى نموذجاً واحداً
     // «ليتأكّد» لصار هو نفسه إنفاقاً، ولاحتاج إذناً — CLAUDE.md §0.
     Http::assertNothingSent();
+});
+
+// T-205: بلا ffprobe يُردّ كلُّ ملفٍّ يُرفع بـ«تعذّرت قراءته» وهو سليم.
+it('يحجب حين لا يُشغَّل ffprobe', function (): void {
+    readyDeployment();
+    config(['khulasah.transcript.ffprobe_bin' => '/missing/ffprobe']);
+
+    Process::fake(fn ($process) => in_array('/missing/ffprobe', $process->command, true)
+        ? Process::result(errorOutput: 'exec: /missing/ffprobe: not found', exitCode: 127)
+        : Process::result());
+
+    $this->artisan('khulasah:preflight')
+        ->expectsOutputToContain('/missing/ffprobe')
+        ->assertFailed();
 });
 
 it('يحجب حين تكون مرحلةٌ تُنادى بلا صفّ', function (): void {

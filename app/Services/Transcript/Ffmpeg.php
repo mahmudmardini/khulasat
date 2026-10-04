@@ -222,6 +222,15 @@ class Ffmpeg
             );
         }
 
+        // **الأداةُ لا تُشغَّل أصلاً** (126 لا تُنفَّذ، 127 غير موجودة): عطلٌ
+        // في الخادم لا في الملفّ، فلا يُقال للمستخدم إنّ ملفّه تالف.
+        if (in_array($result->exitCode(), [126, 127], true)) {
+            throw TranscriptFailed::because(
+                TranscriptErrorCode::MediaToolUnavailable,
+                trim($result->errorOutput()),
+            );
+        }
+
         if ($result->failed() && ! $readErrorOutput) {
             throw TranscriptFailed::because(
                 TranscriptErrorCode::TranscriptionFailed,
@@ -258,6 +267,26 @@ class Ffmpeg
         }
 
         return $silences;
+    }
+
+    /**
+     * The binaries that do not run here — what `khulasah:preflight` reports.
+     *
+     * @return list<string>
+     */
+    public function missingBinaries(): array
+    {
+        $missing = [];
+
+        foreach ([$this->ffmpeg(), $this->ffprobe()] as $binary) {
+            try {
+                $this->run([$binary, '-version']);
+            } catch (TranscriptFailed) {
+                $missing[] = $binary;
+            }
+        }
+
+        return $missing;
     }
 
     protected function ffmpeg(): string

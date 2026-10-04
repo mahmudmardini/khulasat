@@ -167,6 +167,8 @@ final class Finding
         $code = match (true) {
             $result === null => 'no_source',
             $kind === 'ayah' && $result->status === MatchStatus::None => 'ayah_none',
+            // T-169: طابق بالتسامح — يُقال ذلك، ولا يُطوى في «مطابق» وحده.
+            $kind === 'ayah' && isset($result->sourceMeta['tolerance']) => 'ayah_tolerant',
             $kind === 'ayah' && (bool) ($result->sourceMeta['spans_multiple'] ?? false) => 'ayah_two',
             $kind === 'ayah' && (bool) ($result->sourceMeta['is_fragment'] ?? false) => 'ayah_fragment',
             $kind === 'ayah' => 'ayah_exact',
@@ -193,8 +195,17 @@ final class Finding
      */
     private static function notes(string $kind, array $extracted, ?VerificationResult $result): array
     {
-        if ($result === null || ! $result->matched() || $kind === 'ayah') {
+        if ($result === null || ! $result->matched()) {
             return [];
+        }
+
+        if ($kind === 'ayah') {
+            $dropped = $result->sourceMeta['tolerance']['dropped'] ?? [];
+
+            return $dropped === [] ? [] : [[
+                'code' => 'ayah_dropped',
+                'text' => (string) __('verify.reasons.ayah_dropped', ['words' => '«'.implode(' ', $dropped).'»']),
+            ]];
         }
 
         $meta = $result->sourceMeta;

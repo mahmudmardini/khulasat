@@ -23,7 +23,7 @@ class QuranTestSeeder extends Seeder
             true,
         );
 
-        $names = [2 => 'البقرة', 16 => 'النحل', 18 => 'الكهف', 35 => 'فاطر', 70 => 'المعارج'];
+        $names = [2 => 'البقرة', 3 => 'آل عمران', 16 => 'النحل', 18 => 'الكهف', 35 => 'فاطر', 49 => 'الحجرات', 68 => 'القلم', 70 => 'المعارج'];
 
         foreach ($data['verses'] as $key => $texts) {
             [$surah, $ayah] = array_map(intval(...), explode(':', (string) $key));

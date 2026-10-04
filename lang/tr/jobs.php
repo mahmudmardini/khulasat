@@ -140,6 +140,7 @@ return [
             // Her delilin kaynağıyla kendiliğinden eşleştiği, size ihtiyaç
             // duyulmayan bir gözden geçirme — süresi olmaz.
             'skipped' => 'Kararınıza gerek kalmadı',
+            'decided' => 'Kararınızla kesinleşti',
             'seconds_one' => 'Bir saniye',
             'seconds_two' => 'İki saniye',
             'seconds_few' => ':count saniye',
@@ -168,6 +169,7 @@ return [
                 'words_pending' => 'Metin çıkarıldıktan sonra bilinir',
                 'evidence_pending' => 'Deliller çıkarıldıktan sonra bilinir',
                 'span' => ':from – :to',
+                'span_without_review' => ':from – :to, inceleme süreniz hariç',
                 'now' => 'şimdi',
             ],
         ],

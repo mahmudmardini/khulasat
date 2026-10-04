@@ -140,6 +140,7 @@ return [
             // A review where every citation matched its source automatically,
             // so you were never needed — it has no duration.
             'skipped' => 'Did not need your decision',
+            'decided' => 'Decided by you',
             'seconds_one' => 'One second',
             'seconds_two' => 'Two seconds',
             'seconds_few' => ':count seconds',
@@ -168,6 +169,7 @@ return [
                 'words_pending' => 'Known once the text is extracted',
                 'evidence_pending' => 'Known once the evidence is extracted',
                 'span' => 'from :from to :to',
+                'span_without_review' => 'from :from to :to, excluding your review',
                 'now' => 'now',
             ],
         ],

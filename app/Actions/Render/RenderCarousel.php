@@ -12,6 +12,7 @@ use App\Models\Output;
 use App\Models\SummaryJob;
 use App\Services\Render\CarouselRenderer;
 use App\Support\Render\BrandKit;
+use App\Support\Render\CarouselDesign;
 use App\Support\Render\ContentObject;
 use App\Support\Render\RenderedOutput;
 use App\Support\Render\SlideDeck;
@@ -48,7 +49,7 @@ final class RenderCarousel
 
         $output = $this->render->handle(
             $job,
-            new CarouselRenderer($this->views, $deck, $this->pageUrl($job)),
+            new CarouselRenderer($this->views, $deck, $this->pageUrl($job), CarouselDesign::forTenant($job->tenant)),
         );
 
         /*
@@ -81,7 +82,7 @@ final class RenderCarousel
             return null;
         }
 
-        return (new CarouselRenderer($this->views, $deck, $this->pageUrl($job)))
+        return (new CarouselRenderer($this->views, $deck, $this->pageUrl($job), CarouselDesign::forTenant($job->tenant)))
             ->render(ContentObject::fromJob($job), BrandKit::forTenant($job->tenant, $job->lecture))
             ->contents;
     }

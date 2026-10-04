@@ -140,6 +140,7 @@ return [
             // A review where every citation matched its source automatically,
             // so you were never needed — it has no duration.
             'skipped' => 'Did not need your decision',
+            'decided' => 'Decided by you',
             'seconds_one' => 'One second',
             'seconds_two' => 'Two seconds',
             'seconds_few' => ':count seconds',
@@ -168,6 +169,7 @@ return [
                 'words_pending' => 'Known once the text is extracted',
                 'evidence_pending' => 'Known once the evidence is extracted',
                 'span' => 'from :from to :to',
+                'span_without_review' => 'from :from to :to, excluding your review',
                 'now' => 'now',
             ],
         ],
@@ -424,5 +426,26 @@ return [
             'translating' => 'This language is being translated right now.',
             'unavailable' => 'This language is already part of the summary, or cannot be added to it.',
         ],
+    ],
+
+    // حزمةُ صور الكاروسيل — T-173.
+    'images' => [
+        'create' => 'Create images',
+        'recreate' => 'Recreate images',
+        'download' => 'Download the pack',
+        'empty' => 'No slide images yet',
+        'empty_body' => 'Each slide is captured as an Instagram-sized image (1080×1350) and packed with the post text. Free, and not counted against your quota.',
+        'rendering' => 'Creating images…',
+        'rendering_body' => 'Slides are captured one by one, which can take a minute. This page updates on its own.',
+        'ready_hint' => '1080×1350 images numbered in order, with the post text in caption.txt.',
+        'failed_title' => 'The images could not be created',
+        'needs_carousel' => 'Build the slides first',
+        'needs_carousel_body' => 'Images are captured from the slides, so the slides come first.',
+        'disabled' => 'Image capture is not enabled on this server.',
+        'no_carousel' => 'Build the slides first; the images are captured from them.',
+        'pending' => 'Images are not created while :count evidence items are unresolved.',
+        'capture_failed' => 'Slide :slide could not be captured. Try again shortly.',
+        'failed' => 'The images could not be created. Try again shortly.',
+        'slide_alt' => 'Slide :slide',
     ],
 ];

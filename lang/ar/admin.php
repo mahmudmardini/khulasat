@@ -168,6 +168,8 @@ return [
         'sort_newest' => 'رتّب بالأحدث',
         'started_at' => 'بدأت',
         'finished_at' => 'انتهت',
+        'preparation_time' => 'زمن الإعداد',
+        'review_time' => 'زمن المراجعة',
         'attempt' => 'المحاولة',
         'error_code' => 'رمز الخطأ',
         'transitions' => 'سجلّ الانتقالات',

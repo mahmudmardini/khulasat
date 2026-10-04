@@ -871,7 +871,7 @@ html[dir="ltr"] .ar{font-family:var(--amiri); direction:rtl; text-align:start; d
             <h4 class="d-srchead">{{ __('landing.demo.sources_head') }}</h4>
             @if ($showcase && $showcase->evidence !== [])
             <ol class="d-list" lang="ar" dir="rtl">
-              @foreach ($showcase->evidence as $item)
+              @foreach (\App\Support\Render\RenderedEvidence::distinct($showcase->evidence) as $item)
               <li><span class="r" lang="{{ $locale->value }}" dir="{{ $locale->direction() }}">{{ $item->citation($locale) }}</span><span class="x">{{ $item->kind === 'ayah' ? \App\Support\Quran\AyahText::decorate($item->text) : $item->text }}</span></li>
               @endforeach
             </ol>

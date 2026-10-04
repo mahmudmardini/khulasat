@@ -171,3 +171,70 @@ it('يكتب القائمة بالموضع أوّلاً وطرفِ الشاهد 
         // والنصُّ كاملاً في المتن لا هنا.
         ->not->toContain('زُجَاجَةٍ');
 });
+
+/*
+ * ═══ T-117 — الشاهدُ المكرَّر سطرٌ واحد في القائمة، قرار مالك المنتج ═══
+ *
+ * **والتمييزُ بالموضع لا باللفظ**، والمتنُ و`evidence_items` لا يُمسّان.
+ */
+function bukhari(string $number, string $text = 'إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ'): RenderedEvidence
+{
+    return new RenderedEvidence(kind: 'hadith', text: $text, book: 'bukhari', hadithNumber: $number, grade: 'sahih');
+}
+
+it('يجمع الشاهد المكرَّر بكتابه ورقمه ويُبقي ما اختلف موضعه', function (): void {
+    $first = bukhari('1');
+    $other = bukhari('54', 'الأَعْمَالُ بِالنِّيَّةِ');
+
+    $list = RenderedEvidence::distinct([
+        $first,
+        nurAyah(),
+        bukhari('1', 'إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِامْرِئٍ مَا نَوَى'),
+        $other,
+        nurAyah(),
+    ]);
+
+    expect($list)->toHaveCount(3)
+        ->and($list[0])->toBe($first)
+        ->and($list[1]->kind)->toBe('ayah')
+        ->and($list[2])->toBe($other);
+});
+
+it('يُبقي بعدده ما لا يُعرف موضعه', function (): void {
+    $unplaced = new RenderedEvidence(kind: 'athar', text: 'أثر');
+
+    expect(RenderedEvidence::distinct([$unplaced, $unplaced]))->toHaveCount(2)
+        // آيتان من سورةٍ واحدة بموضعين مختلفين شاهدان.
+        ->and(RenderedEvidence::distinct([
+            new RenderedEvidence(kind: 'ayah', text: 'أ', surah: 2, ayah: 1),
+            new RenderedEvidence(kind: 'ayah', text: 'أ', surah: 2, ayah: 1, ayahEnd: 2),
+        ]))->toHaveCount(2);
+});
+
+it('يكتب الحديث المكرَّر في القائمة مرّةً ويُبقي صفّيه', function (): void {
+    $tenant = Tenant::factory()->create();
+    $lecture = Lecture::factory()->create(['tenant_id' => $tenant->id]);
+    $job = SummaryJob::factory()->create([
+        'tenant_id' => $tenant->id,
+        'lecture_id' => $lecture->id,
+        'body_html' => '<p class="lead">فقرة.</p>',
+    ]);
+
+    foreach ([1, 2] as $_) {
+        EvidenceItem::factory()->for_($job)->create([
+            'kind' => 'hadith',
+            'matched_text' => 'إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ',
+            'source_ref' => 'صحيح البخاري، رقم ١',
+            'source_meta' => ['book' => 'bukhari', 'hadith_number' => '1', 'grade' => 'sahih'],
+        ]);
+    }
+
+    $html = app(PageRenderer::class)
+        ->render(ContentObject::fromJob($job->fresh(), Locale::Ar), BrandKit::forTenant($tenant))
+        ->contents;
+
+    $list = substr($html, (int) strpos($html, '<div class="sources">'));
+
+    expect(substr_count($list, '<li>'))->toBe(1)
+        ->and($job->evidenceItems()->count())->toBe(2);
+});

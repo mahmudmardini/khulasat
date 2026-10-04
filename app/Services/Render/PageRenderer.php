@@ -112,7 +112,8 @@ class PageRenderer implements Renderer
             'timeNote' => $majlis['time_note'] ?? '',
 
             'heroAyah' => $this->heroAyah($content),
-            'evidence' => $content->evidence,
+            // قائمةُ التخريج بلا تكرار — T-117. والمتنُ لا يُمسّ.
+            'evidence' => RenderedEvidence::distinct($content->evidence),
             'sourcesNote' => $this->sourcesNote($content),
             'translationCredit' => $this->translationCredit($content),
 

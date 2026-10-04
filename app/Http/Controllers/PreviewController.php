@@ -15,6 +15,7 @@ use App\Services\Render\PageRenderer;
 use App\Support\Publish\LocaleAdditions;
 use App\Support\Render\BrandKit;
 use App\Support\Render\ContentObject;
+use App\Support\Render\ImageSet;
 use App\Support\Render\SlideDeck;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -81,6 +82,7 @@ class PreviewController extends Controller
         [$contents, $mime, $filename] = match ($type) {
             OutputType::Page->value => [$this->pageHtml($job, $renderer, $locale), 'text/html; charset=UTF-8', "{$name}{$suffix}.html"],
             OutputType::Carousel->value => [$this->carouselText($job), 'text/plain; charset=UTF-8', "{$name}.txt"],
+            OutputType::ImageSet->value => [$this->imageZip($job), 'application/zip', "{$name}-images.zip"],
             default => abort(404),
         };
 
@@ -129,12 +131,8 @@ class PreviewController extends Controller
                     // من الشرائح لا من المحفوظ — انظر `carouselText()`.
                     'plain_text' => SlideDeck::fromArray($meta['slides'] ?? [])->toPlainText(),
                 ],
-                /*
-                 * حزمة الصور عارضٌ مؤجَّل (T-20) — §8-أ. **وتُعرض معطَّلةً
-                 * لا مخفيّة**: التبويب الغائب يُقرأ نقصاً في المنتج، والمعطَّل
-                 * المعلَّل يُقرأ وعداً معلوماً موعدُه.
-                 */
-                'images' => ['produced' => false, 'public_url' => null],
+                // حزمة الصور — T-173. تُنزَّل ولا تُنشر، فلا رابطَ عامّاً لها.
+                'images' => $this->images($job),
             ],
             /*
              * ★ **الفرق الذي يجب أن يظهر بوضوح** — SCREENS.md §6.
@@ -219,6 +217,44 @@ class PreviewController extends Controller
         return $renderer
             ->render(ContentObject::fromJob($job, $locale)->withoutBeacon(), BrandKit::forTenant($job->tenant, $job->lecture))
             ->contents;
+    }
+
+    /**
+     * حالُ حزمة الصور كما تراها الشاشة — T-173.
+     *
+     * `state`: لا شيء، أو `rendering`، أو `ready`، أو `failed` بسببه. وروابطُ
+     * الصور تحمل وقتَ إنشائها، فلا يعرض المتصفّحُ صورةً قديمةً من ذاكرته.
+     *
+     * @return array<string, mixed>
+     */
+    private function images(SummaryJob $job): array
+    {
+        $output = $this->output($job, OutputType::ImageSet);
+        $meta = (array) ($output?->meta ?? []);
+        $state = $meta['state'] ?? null;
+        $count = $state === 'ready' ? (int) ($meta['count'] ?? 0) : 0;
+        $version = $output?->rendered_at?->timestamp ?? 0;
+
+        return [
+            'produced' => $count > 0,
+            'public_url' => null,
+            'state' => $state,
+            'error' => $state === 'failed' ? ($meta['error'] ?? null) : null,
+            'enabled' => ImageSet::enabled(),
+            'urls' => array_map(
+                static fn (int $slide): string => route('jobs.images.show', ['job' => $job->id, 'slide' => $slide], false)."?v={$version}",
+                $count > 0 ? range(1, $count) : [],
+            ),
+        ];
+    }
+
+    /** الحزمةُ كما حُفظت، إن كانت. */
+    private function imageZip(SummaryJob $job): ?string
+    {
+        $disk = ImageSet::disk();
+        $path = ImageSet::zipPath($job);
+
+        return $disk->exists($path) ? (string) $disk->get($path) : null;
     }
 
     /**

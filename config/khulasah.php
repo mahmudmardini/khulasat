@@ -380,6 +380,15 @@ return [
         'disk' => env('SHARE_CARD_DISK', 'local'),
     ],
 
+    /*
+     * حزمة صور الكاروسيل — T-173. **تُنزَّل ولا تُنشر** (§9)، فقرصُها خاصٌّ
+     * لا عامّ، وتُخدَم من اللوحة لمن يملك الملخّص وحده. والتقاطُها بمتصفّح
+     * `share_card` نفسِه: مطفأً هناك فلا صور.
+     */
+    'images' => [
+        'disk' => env('IMAGES_DISK', 'local'),
+    ],
+
     'landing' => [
         'showcase' => [
             'tenant_slug' => env('LANDING_SHOWCASE_TENANT', ''),

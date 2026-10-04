@@ -172,11 +172,17 @@ final readonly class RenderedEvidence
     /**
      * رابطُ الآية في quran.com — T-81، **بترجمة الصفحة نفسها**.
      *
-     * **ولا رابطَ لغير الآية**: الحديثُ بلا مرجعٍ واحدٍ ثابتٍ لكتبه كلّها،
-     * ورابطٌ مخمَّنٌ إلى غير موضعه أسوأُ من لا رابط.
+     * ★ **والحديثُ رابطُ بحثٍ في الدرر السنية** — T-211، وثيقةُ المرجعية.
+     * لا موضعٌ مخمَّن: لا مرجعَ واحداً ثابتاً لكتب الحديث كلّها، فالرابطُ
+     * بحثٌ بمطلع المتن بلا تشكيل، يرى فيه القارئ أحكامَ المحدّثين بنفسه.
+     * **ولا يجلب الخادمُ منها شيئاً**: الدرر تحجب الطلبات الآلية.
      */
     public function url(Locale $locale = Locale::Ar): ?string
     {
+        if ($this->kind === 'hadith') {
+            return $this->dorarUrl();
+        }
+
         if ($this->kind !== 'ayah' || $this->surah === null || $this->ayah === null) {
             return null;
         }
@@ -187,6 +193,18 @@ final readonly class RenderedEvidence
         $translation = $locale->quranTranslationId();
 
         return 'https://quran.com/'.$position.($translation === null ? '' : '?translations='.$translation);
+    }
+
+    /** بحثٌ في الموسوعة الحديثية بمطلع المتن: حروفٌ وفراغاتٌ لا غير. */
+    private function dorarUrl(): ?string
+    {
+        $query = trim((string) preg_replace(
+            ['/[^\p{L}\s]/u', '/\s+/u'],
+            ['', ' '],
+            Arabic::stripDiacritics($this->excerpt(6)),
+        ));
+
+        return $query === '' ? null : 'https://dorar.net/hadith/search?q='.rawurlencode($query);
     }
 
     /**

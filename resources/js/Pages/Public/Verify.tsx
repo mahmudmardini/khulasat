@@ -628,7 +628,7 @@ function Source({ finding }: { finding: Finding }) {
             rel="noopener"
             className="inline-flex items-center gap-1 text-[13.5px] font-medium text-primary hover:underline"
           >
-            {t('verify.labels.open_quran')}
+            {t(finding.kind === 'ayah' ? 'verify.labels.open_quran' : 'verify.labels.open_dorar')}
             <Icon name="external" size={13} />
           </a>
         ) : null}

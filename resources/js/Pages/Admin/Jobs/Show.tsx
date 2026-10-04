@@ -9,6 +9,7 @@ import { ProcessWizard, type WizardStep } from '@/Components/ProcessWizard';
 import { StatusBadge, type JobStatus } from '@/Components/StatusBadge';
 import { ViewsByLocale, type LocaleViews } from '@/Components/ViewsByLocale';
 import { cn } from '@/lib/cn';
+import { durationLabel } from '@/lib/duration';
 import { t } from '@/lib/i18n';
 import { toArabicIndic } from '@/lib/numerals';
 
@@ -41,6 +42,9 @@ interface Props {
     views: number | null;
     started_at: string | null;
     finished_at: string | null;
+    /** وقتُ الإعداد بلا المراجعة، ووقتُ المراجعة وحدها — T-171. */
+    preparation_seconds: number | null;
+    review_seconds: number;
   };
   stage_costs: StageCost[];
   /** توزيعُ القراءات على ألسنة الصفحات — T-140. */
@@ -167,6 +171,11 @@ export default function AdminJobShow({
                 <Fact label={t('admin.jobs.attempt')} value={String(job.attempt)} />
                 <Fact label={t('admin.jobs.started_at')} value={job.started_at ?? '—'} />
                 <Fact label={t('admin.jobs.finished_at')} value={job.finished_at ?? '—'} />
+                <Fact
+                  label={t('admin.jobs.preparation_time')}
+                  value={job.preparation_seconds !== null ? durationLabel(job.preparation_seconds) : '—'}
+                />
+                <Fact label={t('admin.jobs.review_time')} value={job.review_seconds > 0 ? durationLabel(job.review_seconds) : '—'} />
               </dl>
             </Card>
 

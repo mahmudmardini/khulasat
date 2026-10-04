@@ -91,6 +91,10 @@ class AdminJobController extends Controller
                 'error_detail' => $job->error_detail,
                 'attempt' => (int) $job->attempt,
                 'steps' => JobProgress::steps($job),
+                // ★ وقتُ الإعداد مفصولٌ عن وقت المراجعة — T-171. وللمشرف
+                // الاثنان: الأوّلُ أداءُ الخطّ، والثاني سرعةُ الجهة في القرار.
+                'preparation_seconds' => JobProgress::preparationSeconds($job),
+                'review_seconds' => JobProgress::review($job)['seconds'],
                 'settled' => $job->state->isTerminal(),
                 // **الكلفة معروضة هنا وحدها**: هذه لوحة المشغّل، وSCREENS.md
                 // تمنع كلمة «توكن» في شاشة العميل لا في شاشته.

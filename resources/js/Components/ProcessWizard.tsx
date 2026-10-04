@@ -89,15 +89,20 @@ export function currentPhase(steps: ReadonlyArray<{ key: string; state: StepStat
  * **والزمنُ منصوص** — «تمّت (✓ وزمنها)» كما في §4 — من سجلّ الانتقالات لا
  * تقديراً، والجاريةُ تعدّ «منذ …» إلى ساعة من يقرأ.
  *
+ * ★ **ومراجعةُ الجهة بلا مدّة في لوحتها** — T-171: `decidedReview` يضع «حُسمت
+ * بقرارك» مكان زمنها، فالوقتُ وقتُها لا وقتُ الإعداد. ولوحةُ المشرف لا تمرّره،
+ * فتبقى له مدّتُها الفعلية، وهي تفيده تشغيلياً.
+ *
  * ★ **وبلا نسبة مئوية.** الشريط في رأسه ثمانيةُ أجزاءٍ بعدد المراحل، والجاري
  * منها يمرّ فيه ضوءٌ لا يمتلئ: «يجري الآن» لا «٦٠٪».
  */
 export function ProcessWizard({
-  steps, now, aside,
+  steps, now, aside, decidedReview = false,
 }: {
   steps: WizardStep[];
   now: number;
   aside?: ReactNode;
+  decidedReview?: boolean;
 }) {
   const byKey = new Map(steps.map((step) => [step.key, step]));
   const liveIndex = steps.findIndex((step) => step.state === 'active' || step.state === 'awaiting');
@@ -169,7 +174,13 @@ export function ProcessWizard({
                 const step = byKey.get(key);
 
                 return step === undefined ? null : (
-                  <StepRow key={key} step={step} now={now} last={index === phase.steps.length - 1} />
+                  <StepRow
+                    key={key}
+                    step={step}
+                    now={now}
+                    last={index === phase.steps.length - 1}
+                    decided={decidedReview && key === 'review'}
+                  />
                 );
               })}
             </ol>
@@ -180,7 +191,7 @@ export function ProcessWizard({
   );
 }
 
-function StepRow({ step, now, last }: { step: WizardStep; now: number; last: boolean }) {
+function StepRow({ step, now, last, decided }: { step: WizardStep; now: number; last: boolean; decided: boolean }) {
   return (
     <li
       aria-current={step.state === 'active' ? 'step' : undefined}
@@ -228,22 +239,24 @@ function StepRow({ step, now, last }: { step: WizardStep; now: number; last: boo
       </span>
 
       <span className="shrink-0 pt-1">
-        <Meta step={step} now={now} />
+        <Meta step={step} now={now} decided={decided} />
       </span>
     </li>
   );
 }
 
 /** ما يُقال في طرف السطر: زمنُ ما تمّ، وعدّادُ الجارية، وحالُ ما وقف. */
-function Meta({ step, now }: { step: WizardStep; now: number }) {
+function Meta({ step, now, decided }: { step: WizardStep; now: number; decided: boolean }) {
   if (step.state === 'done') {
     return (
       <span className="nums-tabular text-[12.5px] text-text-faint">
         {step.skipped
           ? t('jobs.live.wizard.skipped')
-          : step.seconds !== null
-            ? durationLabel(step.seconds)
-            : t('jobs.step_state.done')}
+          : decided
+            ? t('jobs.live.wizard.decided')
+            : step.seconds !== null
+              ? durationLabel(step.seconds)
+              : t('jobs.step_state.done')}
       </span>
     );
   }

@@ -155,6 +155,60 @@ final class JobProgress
         return [$entered, $left];
     }
 
+    /**
+     * وقتُ المراجعة — T-171: ما قضته المهمّة بيد الجهة لا بيدنا.
+     *
+     * ★ **«استغرق» يُحسب بلا هذا الوقت.** ومراجعةٌ دامت ست عشرة دقيقة
+     * من عشرين كانت تُقرأ بطئاً في المنتج، والوقتُ وقتُ الجهة نفسها.
+     *
+     * **مجموعُ كلّ فترات `needs_review`** لا الأولى وحدها: مهمّةٌ تعود
+     * إلى المراجعة بعد إعادة محاولة تدخلها مرّتين. والفترةُ المفتوحة —
+     * مهمّةٌ تنتظر القرار الآن — لا تدخل المجموع، ويُرجَع بدؤها ليقف
+     * عنده العدّاد في المتصفّح.
+     *
+     * @return array{seconds: int, open_since: string|null}
+     */
+    public static function review(SummaryJob $job): array
+    {
+        $seconds = 0;
+        $since = null;
+
+        foreach ($job->transitions()->get(['from_state', 'to_state', 'occurred_at']) as $transition) {
+            if ($transition->occurred_at === null) {
+                continue;
+            }
+
+            if ($transition->from_state === JobState::NeedsReview && $since !== null) {
+                $seconds += max(0, $transition->occurred_at->getTimestamp() - $since->getTimestamp());
+                $since = null;
+            }
+
+            if ($transition->to_state === JobState::NeedsReview) {
+                $since = $transition->occurred_at;
+            }
+        }
+
+        return [
+            'seconds' => $seconds,
+            'open_since' => $job->state === JobState::NeedsReview ? $since?->toIso8601String() : null,
+        ];
+    }
+
+    /**
+     * زمنُ الإعداد لمهمّةٍ انتهت — من بدئها إلى انتهائها، بلا وقت المراجعة (T-171).
+     * و`null` لما لم ينتهِ: الجاريةُ يعدّها المتصفّح بساعة من يقرأ.
+     */
+    public static function preparationSeconds(SummaryJob $job): ?int
+    {
+        if ($job->started_at === null || $job->finished_at === null) {
+            return null;
+        }
+
+        $total = $job->finished_at->getTimestamp() - $job->started_at->getTimestamp();
+
+        return max(0, $total - self::review($job)['seconds']);
+    }
+
     /** أين وقف الخطّ؟ — وموضعُ الحالة النهائية آخرُ الصفّ. */
     private static function indexOf(JobState $state): int
     {

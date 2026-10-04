@@ -110,6 +110,8 @@ class SummaryJobController extends Controller
                 'state' => $job->state->value,
                 'status' => JobProgress::badgeFor($job),
                 'steps' => JobProgress::steps($job),
+                // وقتُ المراجعة يُطرح من «استغرق» — T-171.
+                'review' => JobProgress::review($job),
                 // **الحالة النهائية توقف الاستطلاع.** واستطلاعٌ لا يتوقّف
                 // يبقى يضرب الخادم بعد أن انتهى كلّ شيء.
                 'settled' => $job->state->isTerminal(),

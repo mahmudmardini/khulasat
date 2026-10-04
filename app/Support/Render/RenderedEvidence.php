@@ -62,6 +62,55 @@ final readonly class RenderedEvidence
         );
     }
 
+    /**
+     * Collapse repeated citations for the sources list, keeping first-seen order.
+     *
+     * ★ **الشاهدُ المكرَّر سطرٌ واحد في قائمة التخريج** — T-117، قرار مالك
+     * المنتج. محاضرةٌ استشهدت بالحديث في موضعين تُبقيه في المتن موضعين،
+     * والقائمةُ حاشيةٌ يُعرف منها الموضع، فتكرارُه فيها لا يفيد شيئاً.
+     *
+     * **والتمييزُ بالموضع لا باللفظ:** الكتابُ والرقم للحديث، والسورةُ والآيات
+     * للآية. فروايتان برقمين شاهدان ولو تقارب لفظهما، ولفظان برقمٍ واحد شاهدٌ
+     * تكرّر. وما لا موضعَ له يبقى بعدده، فلا يُدمج شاهدان لا يُعرف أنّهما واحد.
+     *
+     * @param  list<self>  $items
+     * @return list<self>
+     */
+    public static function distinct(array $items): array
+    {
+        $seen = [];
+        $distinct = [];
+
+        foreach ($items as $item) {
+            $key = $item->locationKey();
+
+            if ($key !== null) {
+                if (isset($seen[$key])) {
+                    continue;
+                }
+
+                $seen[$key] = true;
+            }
+
+            $distinct[] = $item;
+        }
+
+        return $distinct;
+    }
+
+    private function locationKey(): ?string
+    {
+        if ($this->kind === 'ayah' && $this->surah !== null && $this->ayah !== null) {
+            return 'ayah:'.$this->surah.':'.$this->ayah.':'.($this->ayahEnd ?? $this->ayah);
+        }
+
+        if ($this->book !== null && $this->book !== '' && $this->hadithNumber !== null && $this->hadithNumber !== '') {
+            return $this->kind.':'.$this->book.':'.$this->hadithNumber;
+        }
+
+        return null;
+    }
+
     private static function number(mixed $value): ?int
     {
         return is_numeric($value) ? (int) $value : null;

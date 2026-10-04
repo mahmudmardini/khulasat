@@ -6,6 +6,7 @@ import { Card } from '@/Components/Card';
 import { DeviceFrame, type Device } from '@/Components/DeviceFrame';
 import { ErrorState } from '@/Components/ErrorState';
 import { FieldGroup } from '@/Components/FieldGroup';
+import { FileDropzone } from '@/Components/FileDropzone';
 import { PalettePicker, type Palette } from '@/Components/PalettePicker';
 import { Icon, type IconName } from '@/Components/Icon';
 import { Segmented } from '@/Components/Segmented';
@@ -45,7 +46,12 @@ interface OutputLocale {
 }
 
 interface Props {
-  limits: { max_lecture_minutes: number; upload_max_bytes: number; text_extensions: string[] };
+  limits: {
+    max_lecture_minutes: number;
+    upload_max_bytes: number;
+    text_extensions: string[];
+    media_extensions: string[];
+  };
   rich_outputs: boolean;
   venue_modes: string[];
   templates: OutputTemplate[];
@@ -57,13 +63,13 @@ interface Props {
 }
 
 /**
- * **والرفعُ «قريباً» — T-150.** كان يفتح صندوقاً لا يُرسل شيئاً، فيظنّ من
- * اختار ملفّه أنّ الدرس قيد الإعداد. فيُعرض معطَّلاً بشارته لا مخفيّاً، ليُعرف
- * أنّه آتٍ. وعند بنائه يعود فرعُ `FileDropzone` من تاريخ هذا الملفّ.
+ * المصادر الثلاثة. **والرفعُ يعمل** — §5-أ-4-ب: كان «قريباً» (T-150) حتى
+ * صار له مفرِّغ (Gemini) ومكانٌ ينتظر فيه الملفّ عاملَ الطابور. و`soon`
+ * باقٍ لمصدرٍ يُعرض قبل أن يُبنى، فيُرى آتياً لا مخفيّاً.
  */
 const SOURCES: ReadonlyArray<{ kind: SourceKind; icon: IconName; soon?: boolean }> = [
   { kind: 'url', icon: 'link' },
-  { kind: 'upload', icon: 'upload', soon: true },
+  { kind: 'upload', icon: 'upload' },
   { kind: 'text', icon: 'text' },
 ];
 
@@ -113,6 +119,7 @@ export default function Create({
     // إقرارُ التكرار — T-65. يبدأ مطفأً دائماً، ويُعرض عند التنبيه وحده.
     confirm_duplicate: false,
     transcript_text: '',
+    source_file: null as File | null,
     duration_seconds: 0,
     title_ar: '',
     subtitle_ar: '',
@@ -192,7 +199,11 @@ export default function Create({
   const blocked = preflight?.ok === true && preflight.exceeds_limit === true;
 
   const sourceReady =
-    kind === 'url' ? form.data.source_url.trim() !== '' : kind === 'text' ? form.data.transcript_text.trim() !== '' : false;
+    kind === 'url'
+      ? form.data.source_url.trim() !== ''
+      : kind === 'text'
+        ? form.data.transcript_text.trim() !== ''
+        : form.data.source_file !== null;
   const meetingReady = form.data.title_ar.trim() !== '' && form.data.speaker_name.trim() !== '';
 
   const template = templates.find((item) => item.key === form.data.template);
@@ -214,6 +225,11 @@ export default function Create({
         onSubmit={(event) => {
           event.preventDefault();
           const formEl = event.currentTarget;
+          /*
+            ملفٌّ اختير ثمّ بُدِّل التبويب لا يُرفع: نصفُ غيغابايت يُرسَل مع
+            رابط يوتيوب ولا يُقرأ منه شيء.
+          */
+          form.transform((data) => ({ ...data, source_file: data.source_kind === 'upload' ? data.source_file : null }));
           form.post('/panel/lectures', {
             /*
              * خطأٌ كالتكرار (confirm_duplicate) يظهر أعلى الخطوة الأولى،
@@ -313,6 +329,47 @@ export default function Create({
                   ) : null}
 
                   {preflight ? <PreflightPanel result={preflight} limit={limits.max_lecture_minutes} /> : null}
+                </div>
+              ) : null}
+
+              {kind === 'upload' ? (
+                <div className="mt-5 flex flex-col gap-2">
+                  <p className="flex items-center gap-2 text-[14px] font-medium text-text">
+                    {t('lectures.create.source.upload_label')}
+                    <span className="text-danger" aria-label={t('common.state.required')}>*</span>
+                  </p>
+
+                  {/*
+                    الفحص في المتصفّح راحةٌ لا أمان — الخادم يفحص المحتوى والمدّة
+                    وحدَّ الاشتراك قبل أن يُنشئ الدرس (§5-أ-4-ب).
+                  */}
+                  <FileDropzone
+                    name="source_file"
+                    accept={limits.media_extensions.map((extension) => `.${extension}`)}
+                    maxBytes={limits.upload_max_bytes}
+                    maxLabel={t('lectures.create.source.upload_max')}
+                    disabled={form.processing}
+                    onSelect={(file) => form.setData('source_file', file)}
+                    onClear={() => form.setData('source_file', null)}
+                  />
+
+                  <p className="text-[13px] text-text-muted">{t('lectures.create.source.upload_hint')}</p>
+
+                  {form.errors.source_file ? (
+                    <p role="alert" className="text-[13px] text-danger">{form.errors.source_file}</p>
+                  ) : null}
+
+                  {/* ملفُّ نصف غيغابايت يأخذ دقائق — والصمتُ طولَها يُظنّ تعطّلاً. */}
+                  {form.processing && form.progress?.percentage !== undefined ? (
+                    <div aria-live="polite" className="flex flex-col gap-1.5">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-surface-alt">
+                        <div className="h-full bg-primary transition-[width]" style={{ width: `${form.progress.percentage}%` }} />
+                      </div>
+                      <p className="text-[13px] text-text-muted">
+                        {toArabicIndic(t('lectures.create.source.uploading', { percent: form.progress.percentage }))}
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -773,9 +830,9 @@ export default function Create({
             <RequestSummary
               rows={[
                 {
-                  icon: kind === 'text' ? 'text' : 'link',
+                  icon: kind === 'text' ? 'text' : kind === 'upload' ? 'upload' : 'link',
                   label: t('lectures.create.summary.source'),
-                  value: sourceLabel(kind, form.data.source_url, form.data.transcript_text, preflight),
+                  value: sourceLabel(kind, form.data.source_url, form.data.transcript_text, form.data.source_file, preflight),
                 },
                 {
                   icon: 'page',
@@ -1221,9 +1278,13 @@ function PreflightPanel({ result, limit }: { result: Preflight; limit: number })
 }
 
 /** ما يُقال عن المصدر في «ملخّص طلبك» — ولا يُقال عن مصدرٍ لم يُعطَ شيء. */
-function sourceLabel(kind: SourceKind, url: string, text: string, preflight: Preflight | null): string | null {
+function sourceLabel(kind: SourceKind, url: string, text: string, file: File | null, preflight: Preflight | null): string | null {
   if (kind === 'text') {
     return text.trim() !== '' ? t('lectures.create.summary.text_source') : null;
+  }
+
+  if (kind === 'upload') {
+    return file !== null ? file.name : null;
   }
 
   if (kind !== 'url' || url.trim() === '') {

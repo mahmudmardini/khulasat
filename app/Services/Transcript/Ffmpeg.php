@@ -50,6 +50,28 @@ class Ffmpeg
     }
 
     /**
+     * Does the file carry a sound track at all?
+     *
+     * فيديو شاشةٍ بلا صوت تُقرأ مدّتُه سليمةً، ولا يظهر عيبُه إلّا في الطابور
+     * بعد أن خُصمت الحصّة. فيُسأل عند الرفع.
+     *
+     * @throws TranscriptFailed إن لم يكن الملفّ وسائطَ مقروءة أصلاً.
+     */
+    public function hasAudioTrack(string $path): bool
+    {
+        $output = $this->run([
+            $this->ffprobe(),
+            '-v', 'error',
+            '-select_streams', 'a:0',
+            '-show_entries', 'stream=index',
+            '-of', 'csv=p=0',
+            $path,
+        ]);
+
+        return trim($output) !== '';
+    }
+
+    /**
      * Detect the silent stretches — المواصفة §5-أ-4.
      *
      * ‏`silencedetect` يكتب على `stderr` لا `stdout`، وهذا سلوكُ ffmpeg في
@@ -73,6 +95,41 @@ class Ffmpeg
         ], readErrorOutput: true);
 
         return self::parseSilences($stderr);
+    }
+
+    /**
+     * One compact speech track for every source — mono, 16 kHz, AAC.
+     *
+     * **التقطيع نسخٌ بلا إعادة ترميز** ({@see splitAtSilence()})، فيحمل كلُّ
+     * مقطعٍ شكلَ أصله: فيديو مرفوع يخرج مقطعُه بصورته، و`wav` يخرج بحجمه، وكلاهما
+     * يتجاوز حدّ المزوّد بعد التقطيع نفسه. فيُوحَّد الشكل هنا مرّةً قبل التقطيع.
+     *
+     * **ولا يُفقد ما يُسمع**: Whisper وGemini كلاهما يُنزلان الصوت إلى قناةٍ
+     * واحدة بـ16 كيلوهرتز قبل أن يسمعاه. و48kbps تجعل الدقيقة نحو 360KB، فالحجم
+     * يُنبئ بالمدّة — وحدُّ المزوّد بالبايت يصير حدّاً بالدقائق تقريباً.
+     *
+     * @throws TranscriptFailed
+     */
+    public function toSpeechAudio(string $path, string $directory): string
+    {
+        $output = $directory.'/speech.m4a';
+
+        $this->run([
+            $this->ffmpeg(),
+            '-nostdin',
+            '-loglevel', 'error',
+            '-i', $path,
+            // أوّلُ مسار صوت وحده: لا صورة، ولا مسار تعليقٍ ثانٍ.
+            '-map', '0:a:0',
+            '-ac', '1',
+            '-ar', '16000',
+            '-c:a', 'aac',
+            '-b:a', '48k',
+            '-y',
+            $output,
+        ]);
+
+        return $output;
     }
 
     /**

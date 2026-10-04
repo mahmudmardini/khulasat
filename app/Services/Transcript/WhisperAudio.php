@@ -88,7 +88,11 @@ class WhisperAudio implements TranscriptProvider
             $duration = $this->ffmpeg->durationSeconds($audio);
             $this->assertWithinDuration($request, $duration);
 
-            $text = $this->transcribeInOrder($audio, $directory);
+            // **صوتٌ واحدُ الشكل لكلّ مصدر** — بعد فحص المدّة لا قبله. فيديو
+            // مرفوع أو `wav` ضخم يُقطَّع بالنسخ فيخرج مقطعُه أكبر من حدّ المزوّد.
+            $speechAudio = $this->ffmpeg->toSpeechAudio($audio, $directory);
+
+            $text = $this->transcribeInOrder($speechAudio, $directory);
 
             $this->chargeMinutes($request, $duration);
 
@@ -183,11 +187,10 @@ class WhisperAudio implements TranscriptProvider
         )));
     }
 
-    /** «إن تجاوز الملفّ حدّ المزوّد» — §5-أ-4. والحدّ حجمٌ لا مدّة. */
+    /** «إن تجاوز الملفّ حدّ المزوّد» — §5-أ-4. والحدّ حجمٌ لا مدّة، ومن المزوّد نفسه. */
     private function needsSplitting(string $audio): bool
     {
-        return UploadedSource::sizeBytes($audio)
-            > (int) config('khulasah.transcript.whisper.max_bytes');
+        return UploadedSource::sizeBytes($audio) > $this->speech->maxBytes();
     }
 
     /**
@@ -213,8 +216,8 @@ class WhisperAudio implements TranscriptProvider
      *
      * **والكلفة تُقيَّد معها الآن** — T-22. كانت `costUsd` تُترك على صفرها
      * الافتراضي، فسقفُ الإنفاق (T-13) لا يرى كلفة التفريغ قطّ، وشاشةُ
-     * الكلفة لا تجد لها رقماً. والسعر من الإعداد لا مكتوباً هنا، فيتبع
-     * تغيّر مزوّد التفريغ بلا مسّ الكود.
+     * الكلفة لا تجد لها رقماً. والسعر من المزوّد المضبوط لا مكتوباً هنا،
+     * فيتبع تغيّر مزوّد التفريغ بلا مسّ الكود.
      */
     private function chargeMinutes(TranscriptRequest $request, float $duration): void
     {
@@ -224,7 +227,7 @@ class WhisperAudio implements TranscriptProvider
             tenant: $request->lecture->tenant,
             event: UsageEvent::Transcribe,
             units: $minutes,
-            costUsd: $minutes * (float) config('khulasah.transcript.whisper.price_per_minute'),
+            costUsd: $minutes * $this->speech->pricePerMinute(),
         );
     }
 }

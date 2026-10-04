@@ -192,6 +192,7 @@ return [
         'logo' => 'logo',
         'disclaimer_text' => 'uyarı metni',
         'source_url' => 'ders bağlantısı',
+        'source_file' => 'ders dosyası',
         'transcript_text' => 'metin dökümü',
         'title_ar' => 'ders başlığı',
         'speaker_name' => 'konuşmacının adı',

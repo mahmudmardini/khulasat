@@ -50,4 +50,4 @@ git diff baseline-2026-09-27..main
 
 | # | الإضافة | الإيداعات | الملفّات الرئيسية |
 |---|---|---|---|
-| | | | |
+| 1 | **تفريغ الصوت بـ Gemini، وتفعيل رفع ملفّ صوت أو فيديو.** كان مسار الصوت مبنيّاً بلا مزوّد حقيقي، والرفع معطّلاً في الشاشة والخادم. صار Gemini Flash مزوّد التفريغ، ويخدم الملفّ المرفوع ورابط يوتيوب بلا ترجمة عربية معاً. وتعليماته تمنع تصحيح آيةٍ أو حديثٍ نطقه المتكلّم محرَّفاً. ويُفحص الملفّ عند الرفع (المحتوى، ووجود الصوت، والمدّة على حدّ الاشتراك)، ويُوحَّد صوته قبل التقطيع، ويُحذف متى صار نصّاً | الفرع `claude/lucid-turing-8hempo` | `app/Services/Transcript/Speech/GeminiSpeech.php`، `prompts/transcription/GEMINI.md`، `app/Support/Transcript/UploadStore.php`، `app/Http/Requests/StoreLectureRequest.php`، `resources/js/Pages/Lectures/Create.tsx` |

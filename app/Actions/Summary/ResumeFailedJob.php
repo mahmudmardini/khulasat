@@ -60,6 +60,10 @@ final class ResumeFailedJob
                 // وهذا صحيحٌ في كلّ نقطة استئناف: خامٌ، أو منظَّفٌ، سيّان.
                 'transcript_text' => $job->transcript_text,
                 'transcript_word_count' => $job->transcript_word_count,
+                // والملفّ المرفوع كذلك: مهمّةٌ أخفقت قبل أن يصير نصّاً تُفرّغه
+                // أختُها، فلا يُطلب من المستخدم رفعُه ثانيةً.
+                'upload_path' => $job->upload_path,
+                'upload_name' => $job->upload_name,
                 'structure_json' => $job->structure_json,
                 'evidence_json' => $job->evidence_json,
                 /*

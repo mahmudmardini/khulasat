@@ -54,3 +54,13 @@ Schedule::command('khulasah:enforce-spend-cap')
 Schedule::command('khulasah:check-cost-alerts')
     ->hourly()
     ->withoutOverlapping();
+
+/*
+ * كنسُ الملفّات المرفوعة المتروكة — المواصفة §5-أ-4-ب.
+ *
+ * الملفّ يُحذف متى صار نصّاً، وما بقي فلمهمّةٍ أخفقت ولم تُستأنف. يُنتظر به
+ * `UPLOAD_RETENTION_DAYS` لعلّ صاحبه يُعيد المحاولة، ثمّ يُكنس.
+ */
+Schedule::command('khulasah:prune-uploads')
+    ->dailyAt('03:00')
+    ->withoutOverlapping();

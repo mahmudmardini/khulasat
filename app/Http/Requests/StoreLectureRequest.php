@@ -7,12 +7,16 @@ namespace App\Http\Requests;
 use App\Enums\Locale;
 use App\Enums\SummaryTemplate;
 use App\Enums\VenueMode;
+use App\Exceptions\TranscriptFailed;
 use App\Http\Controllers\LectureController;
 use App\Models\Lecture;
+use App\Services\Transcript\Ffmpeg;
 use App\Support\Render\Palette;
 use App\Support\Transcript\SourceKey;
 use App\Support\Transcript\SourceUrlGuard;
+use App\Support\Transcript\UploadedSource;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 use Throwable;
@@ -26,13 +30,16 @@ use Throwable;
  */
 class StoreLectureRequest extends FormRequest
 {
+    private ?int $uploadedDuration = null;
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
-            // **`upload` غير مقبول بعد** — T-150: الشاشة تعرضه «قريباً»، والطلبُ المصنوعُ باليد يُرفض كذلك.
-            'source_kind' => ['required', Rule::in(['url', 'text'])],
+            'source_kind' => ['required', Rule::in(['url', 'upload', 'text'])],
             'source_url' => ['nullable', 'string', 'max:2048'],
+            // الملفّ المرفوع — §5-أ-4-ب: «حتى 500MB». ونوعُه يُفحص بالمحتوى بعدُ.
+            'source_file' => ['nullable', 'file', 'max:'.intdiv((int) config('khulasah.transcript.upload.max_bytes'), 1024)],
             // إقرارُ المستخدم بأنّ المصدر مكرَّرٌ عن قصد — T-65.
             'confirm_duplicate' => ['nullable', 'boolean'],
             'transcript_text' => ['nullable', 'string', 'max:2000000'],
@@ -75,10 +82,78 @@ class StoreLectureRequest extends FormRequest
                 $this->validateNotDuplicate($validator);
             }
 
+            if ($kind === 'upload' && ! $validator->errors()->has('source_file')) {
+                $this->validateUpload($validator);
+            }
+
             if ($kind === 'text' && trim((string) $this->input('transcript_text')) === '') {
                 $validator->errors()->add('transcript_text', trans('errors.transcript.transcript_too_short'));
             }
         });
+    }
+
+    /** مدّة الملفّ المرفوع بالثواني كما قرأها ffprobe — تُحفظ مع الدرس. */
+    public function uploadedDuration(): ?int
+    {
+        return $this->uploadedDuration;
+    }
+
+    /**
+     * الملفّ المرفوع — §5-أ-4-ب. **ويُفحص هنا قبل إنشاء الدرس**، لا في الطابور:
+     * الحصّة تُخصم عند الإنشاء، وملفٌّ لا صوت فيه أو أطول من حدّ الجهة يُعرف
+     * عيبُه الآن في ثانية، لا بعد أن يُرفع ويُنتظر ويُدفع.
+     *
+     * والنوع بالمحتوى لا باللاحقة ({@see UploadedSource::isMedia()}): اللاحقة
+     * يكتبها المستخدم، والملفّ يُمرَّر إلى ffmpeg وإلى خدمةٍ خارجية.
+     */
+    private function validateUpload(Validator $validator): void
+    {
+        $file = $this->file('source_file');
+
+        if (! $file instanceof UploadedFile || ! $file->isValid()) {
+            $validator->errors()->add('source_file', trans('lectures.create.source.upload_required'));
+
+            return;
+        }
+
+        $path = (string) $file->getRealPath();
+
+        if (! UploadedSource::isMedia($path)) {
+            $validator->errors()->add('source_file', trans('lectures.create.source.upload_invalid'));
+
+            return;
+        }
+
+        $ffmpeg = app(Ffmpeg::class);
+
+        try {
+            if (! $ffmpeg->hasAudioTrack($path)) {
+                $validator->errors()->add('source_file', trans('lectures.create.source.upload_no_audio'));
+
+                return;
+            }
+
+            $seconds = $ffmpeg->durationSeconds($path);
+        } catch (TranscriptFailed) {
+            $validator->errors()->add('source_file', trans('lectures.create.source.upload_invalid'));
+
+            return;
+        }
+
+        $limit = (int) ($this->user()?->tenant?->max_lecture_minutes ?? 0);
+
+        // «تُفحص على حدّ الاشتراك قبل أي معالجة» — §5-أ-4-ب. والحدُّ نفسه
+        // يُفحص ثانيةً في الطابور ({@see \App\Services\Transcript\WhisperAudio}).
+        if ($limit > 0 && $seconds > $limit * 60) {
+            $validator->errors()->add('source_file', trans('lectures.create.preflight.too_long', [
+                'minutes' => (int) ceil($seconds / 60),
+                'limit' => $limit,
+            ]));
+
+            return;
+        }
+
+        $this->uploadedDuration = (int) ceil($seconds);
     }
 
     /** @return array<string, string> */
@@ -86,6 +161,7 @@ class StoreLectureRequest extends FormRequest
     {
         return [
             'source_url' => trans('lectures.create.source.url_label'),
+            'source_file' => trans('lectures.create.source.upload_label'),
             'transcript_text' => trans('lectures.create.source.text_label'),
             'title_ar' => trans('lectures.create.meeting.title'),
             'speaker_name' => trans('lectures.create.meeting.speaker'),

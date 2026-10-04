@@ -58,6 +58,16 @@ function fakeSpeech(?callable $onCall = null): object
             return 'spy';
         }
 
+        public function maxBytes(): int
+        {
+            return (int) config('khulasah.transcript.whisper.max_bytes');
+        }
+
+        public function pricePerMinute(): float
+        {
+            return (float) config('khulasah.transcript.whisper.price_per_minute');
+        }
+
         public function transcribe(string $audioPath, string $languageCode, array $glossary = []): string
         {
             $this->calls[] = [
@@ -81,16 +91,31 @@ function fakeSpeech(?callable $onCall = null): object
     return $spy;
 }
 
-/** ffmpeg مُزيَّف: مدّة معلومة، وتقطيعٌ يُنتج مقاطع حقيقية على القرص. */
-function fakeFfmpeg(float $duration, int $chunks = 1): void
+/**
+ * ffmpeg مُزيَّف: مدّة معلومة، وتقطيعٌ يُنتج مقاطع حقيقية على القرص.
+ *
+ * والتوحيدُ يُعيد الملفّ نفسه، فيبقى حجمه حجمَ ما نزّله الاختبار — وعليه
+ * يُقرَّر التقطيع — ويُسجَّل ما وُحِّد في `normalized`.
+ */
+function fakeFfmpeg(float $duration, int $chunks = 1): Ffmpeg
 {
-    app()->instance(Ffmpeg::class, new class($duration, $chunks) extends Ffmpeg
+    $fake = new class($duration, $chunks) extends Ffmpeg
     {
+        /** @var list<string> */
+        public array $normalized = [];
+
         public function __construct(private float $duration, private int $chunks) {}
 
         public function durationSeconds(string $path): float
         {
             return $this->duration;
+        }
+
+        public function toSpeechAudio(string $path, string $directory): string
+        {
+            $this->normalized[] = $path;
+
+            return $path;
         }
 
         public function silences(string $path): array
@@ -110,7 +135,11 @@ function fakeFfmpeg(float $duration, int $chunks = 1): void
 
             return $paths;
         }
-    });
+    };
+
+    app()->instance(Ffmpeg::class, $fake);
+
+    return $fake;
 }
 
 /** yt-dlp مُزيَّف يكتب ملفّ صوت في مجلّد العملية. */
@@ -146,6 +175,20 @@ it('transcribes audio pulled from the link', function (): void {
 
     expect($result->source)->toBe(TranscriptSource::Whisper)
         ->and($speech->calls)->toHaveCount(1);
+});
+
+// **صوتٌ واحدُ الشكل لكلّ مصدر** — يوتيوب بلا ترجمة والملفّ المرفوع سواء،
+// فلا يبلغ المزوّدَ فيديو ولا `wav` ضخم بعد التقطيع.
+it('normalizes the audio before it reaches the speech service', function (): void {
+    fakeAudioDownload();
+    $ffmpeg = fakeFfmpeg(duration: 1_800.0);
+    $speech = fakeSpeech();
+
+    whisper()->fetch(audioRequest());
+
+    expect($ffmpeg->normalized)->toHaveCount(1)
+        ->and($ffmpeg->normalized[0])->toEndWith('/abc123.m4a')
+        ->and($speech->calls[0]['path'])->toBe($ffmpeg->normalized[0]);
 });
 
 // **`language=ar` إلزامياً** — §5-أ-4. وبلا تصريح باللغة قد يُخمّنها المزوّد

@@ -16,15 +16,19 @@ use App\Jobs\RunSummaryPipeline;
 use App\Models\Lecture;
 use App\Models\SummaryJob;
 use App\Models\Tenant;
+use App\Support\I18n\PageStrings;
 use App\Support\Render\Palette;
 use App\Support\Transcript\SourceKey;
+use App\Support\Transcript\UploadStore;
 use App\Support\Ui\JobProgress;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 /**
  * The tenant's index and creation screens — SCREENS.md §2 و§3، والمهمّة T-16.
@@ -120,6 +124,7 @@ class LectureController extends Controller
                 'max_lecture_minutes' => (int) $tenant->max_lecture_minutes,
                 'upload_max_bytes' => (int) config('khulasah.transcript.upload.max_bytes'),
                 'text_extensions' => config('khulasah.transcript.upload.text_extensions'),
+                'media_extensions' => config('khulasah.transcript.upload.media_extensions'),
             ],
             // «تظهران معطَّلتين مع سطر ترقية، لا مخفيّتين» — §3-ب.
             'rich_outputs' => $tenant->allowsRichOutputs(),
@@ -163,8 +168,8 @@ class LectureController extends Controller
              * `summary/partials/attrib`.
              */
             'attribution' => [
-                'lecture_by' => \App\Support\I18n\PageStrings::of('lecture_by', Locale::Ar),
-                'lecture_at' => \App\Support\I18n\PageStrings::of('lecture_at', Locale::Ar),
+                'lecture_by' => PageStrings::of('lecture_by', Locale::Ar),
+                'lecture_at' => PageStrings::of('lecture_at', Locale::Ar),
                 'venue' => (string) $tenant->name_ar,
             ],
             /*
@@ -216,23 +221,55 @@ class LectureController extends Controller
          */
         $tenant = $this->tenant($request);
 
-        $job = DB::transaction(function () use ($request, $tenant): SummaryJob {
+        /*
+         * الملفّ المرفوع — §5-أ-4-ب. **يُكتب قبل المعاملة لا فيها**: كتابةُ
+         * نصف غيغابايت داخل معاملةٍ تُبقيها مفتوحةً طولَ الكتابة. وإن سقطت
+         * المعاملة حُذف، فلا يبقى على القرص ملفٌّ بلا مهمّة.
+         */
+        $file = $request->string('source_kind')->toString() === 'upload' ? $request->file('source_file') : null;
+        $file = $file instanceof UploadedFile ? $file : null;
+        $upload = $file === null ? null : UploadStore::store($file, (int) $tenant->id);
+
+        try {
+            $job = $this->createLecture($request, $tenant, $upload, $file?->getClientOriginalName());
+        } catch (Throwable $exception) {
+            UploadStore::delete($upload);
+
+            throw $exception;
+        }
+
+        // **وهنا يبدأ الخطّ فعلاً** — T-11ب. وقبلها كانت المهمّة تُنشأ
+        // وتبقى `queued` أبداً، فتُرى في الشاشة ولا يجري لها شيء.
+        RunSummaryPipeline::dispatch((int) $job->id);
+
+        return to_route('jobs.show', $job)->with('message', trans('jobs.follow.title'));
+    }
+
+    private function createLecture(StoreLectureRequest $request, Tenant $tenant, ?string $upload, ?string $uploadName): SummaryJob
+    {
+        return DB::transaction(function () use ($request, $tenant, $upload, $uploadName): SummaryJob {
             $lecture = Lecture::query()->create([
                 'tenant_id' => $tenant->id,
                 'title_ar' => $request->string('title_ar')->toString(),
                 'subtitle_ar' => $request->input('subtitle_ar'),
                 'speaker_name' => $request->string('speaker_name')->toString(),
                 'speaker_title' => $request->input('speaker_title'),
-                'source_url' => $request->input('source_url'),
-                'source_platform' => $request->input('source_url') === null ? null : 'youtube',
+                // المصدرُ واحدٌ من ثلاثة، فرابطٌ بقي في الحقل من تبويبٍ آخر لا يُحفظ.
+                'source_url' => $upload === null ? $request->input('source_url') : null,
+                'source_platform' => match (true) {
+                    $upload !== null => 'upload',
+                    $request->input('source_url') !== null => 'youtube',
+                    default => null,
+                },
                 // مفتاحُ المقارنة — T-65. مشتقٌّ لا مُدخَل، وعليه يقع كشفُ التكرار.
-                'source_key' => SourceKey::for($request->input('source_url')),
+                'source_key' => $upload === null ? SourceKey::for($request->input('source_url')) : null,
                 'hijri_date' => $request->input('hijri_date'),
                 'gregorian_date' => $request->input('gregorian_date'),
                 'weekday' => $request->input('weekday'),
                 'time_note' => $request->input('time_note'),
                 'venue_mode' => $request->string('venue_mode')->toString(),
-                'duration_seconds' => $request->integer('duration_seconds') ?: null,
+                // مدّةُ الملفّ المرفوع من ffprobe، لا ما يقوله المتصفّح.
+                'duration_seconds' => $request->uploadedDuration() ?? ($request->integer('duration_seconds') ?: null),
                 /*
                  * **والشريحة تحرسه هنا لا في الواجهة وحدها** — SCREENS.md
                  * §3-ب. فالخانة معطَّلةٌ في الشاشة، والحقلُ يصل من طلبٍ
@@ -257,7 +294,9 @@ class LectureController extends Controller
                 'lecture_id' => $lecture->id,
                 'tenant_id' => $tenant->id,
                 'state' => JobState::Queued->value,
-                'transcript_text' => $request->input('transcript_text'),
+                'transcript_text' => $upload === null ? $request->input('transcript_text') : null,
+                'upload_path' => $upload,
+                'upload_name' => $uploadName,
             ]);
 
             /*
@@ -279,12 +318,6 @@ class LectureController extends Controller
 
             return $job;
         });
-
-        // **وهنا يبدأ الخطّ فعلاً** — T-11ب. وقبلها كانت المهمّة تُنشأ
-        // وتبقى `queued` أبداً، فتُرى في الشاشة ولا يجري لها شيء.
-        RunSummaryPipeline::dispatch((int) $job->id);
-
-        return to_route('jobs.show', $job)->with('message', trans('jobs.follow.title'));
     }
 
     /** @return Builder<SummaryJob> */

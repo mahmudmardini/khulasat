@@ -21,6 +21,17 @@ interface SpeechToText
     public function name(): string;
 
     /**
+     * «حدّ المزوّد» للملفّ الواحد بالبايت — §5-أ-4. وتجاوزُه هو ما يُوجب التقطيع.
+     *
+     * **من المزوّد لا من إعدادٍ عامّ**: حدُّ Whisper حجمُ الرفع (25MB)،
+     * وحدُّ Gemini حجمُ الطلب كلّه بعد base64 (20MB) — ولكلٍّ رقمُه.
+     */
+    public function maxBytes(): int;
+
+    /** سعر الدقيقة بالدولار — T-22. يُقيَّد به `usage_ledger.cost_usd`. */
+    public function pricePerMinute(): float;
+
+    /**
      * @param  string  $audioPath  ملفّ صوت واحد، مقطَّعٌ سلفاً إن لزم.
      * @param  list<string>  $glossary  مسرد المصطلحات — يرفع دقّة الأعلام كثيراً.
      *

@@ -27,6 +27,7 @@
 | OpenAI | `gpt-5.6-terra` و`gpt-5.6-sol` و`gpt-5-nano` | التنظيف، وبيانات المخرَج، والترجمة، وتفاصيل الدرس من الصورة. وبديلٌ في بقية المراحل | 2026-09-07 | شروط OpenAI لواجهة API |
 | Google | `gemini-3.7-flash` | بديل مرحلة الترجمة | 2026-09-08 | شروط Gemini API |
 | OpenAI Whisper | `whisper-1` | تفريغ الملفّات الصوتية حين لا ترجمة نصّية للمقطع | 2026-09-07 | شروط OpenAI لواجهة API |
+| ★ Google | `gemini-3.7-flash` | تفريغ الصوت: الملفّ المرفوع من الجهاز، ورابط يوتيوب بلا ترجمة عربية. ويُفعَّل بـ`WHISPER_PROVIDER=gemini`، وتعليماته في `prompts/transcription/GEMINI.md` | 2026-10-04 | شروط Gemini API |
 
 التوزيع الفعلي لكلّ مرحلة في [database/seeders/ModelConfigSeeder.php](database/seeders/ModelConfigSeeder.php)، ويعدّله المشرف من لوحته. وتعليمات المراحل من كتابة الفريق، في [prompts/islamic/PROMPT-PACK.md](prompts/islamic/PROMPT-PACK.md).
 

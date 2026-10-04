@@ -23,6 +23,16 @@ class FakeSpeechToText implements SpeechToText
         return 'fake';
     }
 
+    public function maxBytes(): int
+    {
+        return (int) config('khulasah.transcript.whisper.max_bytes');
+    }
+
+    public function pricePerMinute(): float
+    {
+        return (float) config('khulasah.transcript.whisper.price_per_minute');
+    }
+
     /** @param  list<string>  $glossary */
     public function transcribe(string $audioPath, string $languageCode, array $glossary = []): string
     {

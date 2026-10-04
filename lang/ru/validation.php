@@ -192,6 +192,7 @@ return [
         'logo' => 'логотип',
         'disclaimer_text' => 'текст примечания',
         'source_url' => 'ссылка на урок',
+        'source_file' => 'файл урока',
         'transcript_text' => 'текстовая расшифровка',
         'title_ar' => 'название урока',
         'speaker_name' => 'имя лектора',

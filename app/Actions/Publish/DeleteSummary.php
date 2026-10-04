@@ -7,6 +7,7 @@ namespace App\Actions\Publish;
 use App\Models\Lecture;
 use App\Models\SummaryJob;
 use App\Support\Publish\ShareCard;
+use App\Support\Transcript\UploadStore;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
@@ -39,6 +40,9 @@ final class DeleteSummary
         // يُجيب بـ٤٠٤ بعد الحذف؛ والملفُّ نفسُه لا يبقى على القرص بلا صاحب.
         Storage::disk((string) config('khulasah.share_card.disk'))
             ->deleteDirectory(ShareCard::directory((int) $job->id));
+
+        // وتسجيلُ الدرس إن بقي — مهمّةٌ حُذفت قبل أن يصير نصّاً.
+        UploadStore::delete($job->upload_path);
 
         $lectureId = (int) $job->lecture_id;
 

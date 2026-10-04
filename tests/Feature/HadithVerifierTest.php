@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Contracts\SupplementaryHadithProvider;
 use App\Enums\HadithGrade;
 use App\Enums\MatchStatus;
 use App\Enums\ReviewStatus;
 use App\Enums\UnverifiedPolicy;
+use App\Exceptions\HadithCorpusUnavailable;
 use App\Services\Verification\HadithVerifier;
 use App\Support\Verification\DomainPolicy;
 use App\Support\Verification\EvidenceInput;
@@ -176,15 +178,53 @@ it('survives a provider that throws and falls through to the next', function ():
     expect($r->status)->toBe(MatchStatus::Exact);
 });
 
-it('returns none — not an error — when every provider is down', function (): void {
-    // المواصفة §7-4: النظام يعمل بلا مزوّد، وإن احتاجت كل الشواهد إنساناً.
-    $r = verifyHadith('أحب الأعمال إلى الله أدومها وإن قل', providers: [
+/*
+ * ★ **بحثٌ لم يجرِ لا يُقال فيه «لم يُعثر عليه»** — T-213، قرار مالك المنتج.
+ * كان هذا يعود `none` (§7-4)، فقالت أداةُ «تحقّق» عن حديثٍ في البخاري إنّه
+ * غير موجود، ونُشر الملخّصُ بلا أحاديثه حين تعطّلت القاعدة.
+ */
+it('throws, rather than saying not found, when no graded provider answers', function (): void {
+    verifyHadith('أحب الأعمال إلى الله أدومها وإن قل', providers: [
         new FakeHadithProvider(failWith: 'مهلة', name: 'a'),
         new FakeHadithProvider(failWith: '500', name: 'b'),
+    ]);
+})->throws(HadithCorpusUnavailable::class);
+
+it('throws when the graded books fail even if the supplementary tier answers', function (): void {
+    // ما في الطبقة الثانية لا يُنشر، وقد يكون الحديثُ في البخاري بحكمه.
+    verifyHadith('أحب الأعمال إلى الله أدومها وإن قل', providers: [
+        new FakeHadithProvider(failWith: 'مهلة', name: 'graded'),
+        supplementaryProvider(FakeHadithProvider::withKnownHadiths()),
+    ]);
+})->throws(HadithCorpusUnavailable::class);
+
+it('passes over a failing supplementary tier once the graded books have answered', function (): void {
+    $r = verifyHadith('نص لا وجود له في أي كتاب من الكتب البتة', providers: [
+        FakeHadithProvider::withKnownHadiths(),
+        supplementaryProvider(new FakeHadithProvider(failWith: 'مهلة', name: 'second')),
     ]);
 
     expect($r->status)->toBe(MatchStatus::None);
 });
+
+/** مزوّدٌ تكميليٌّ بلا حكم، كالطبقة الثانية — يُغلّف مزوّداً وهمياً. */
+function supplementaryProvider(FakeHadithProvider $inner): SupplementaryHadithProvider
+{
+    return new class($inner) implements SupplementaryHadithProvider
+    {
+        public function __construct(private readonly FakeHadithProvider $inner) {}
+
+        public function name(): string
+        {
+            return 'supplementary';
+        }
+
+        public function search(string $normalized): array
+        {
+            return $this->inner->search($normalized);
+        }
+    };
+}
 
 it('keeps no cache layer between itself and the corpus', function (): void {
     // كان `hadith_cache` يمنع نداءً خارجياً يتكرّر. ولم يبقَ نداء خارجي —

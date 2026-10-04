@@ -139,6 +139,8 @@ return [
          * satır budur**: arıza kaynaktan ne kadar uzak olursa olsun eskiden
          * «ders kaynağını değiştirin» diye görünen şey buydu.
          */
+        'corpus_unavailable' => 'Hadisler şu anda kaynaklarıyla karşılaştırılamadı. Sorun bizde, dersinizde değil. Hiçbir şey yayımlanmadı ve yapılan iş korunuyor. Biraz sonra tekrar deneyin.',
+
         'pipeline_failed' => 'Bu özet hazırlanırken dâhilî bir hata oluştu. Ders kaynağınızla da girdiğiniz hiçbir şeyle de ilgisi yok. Tekrar deneyin, sürerse bize ulaşın.',
 
     ],

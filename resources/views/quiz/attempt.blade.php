@@ -8,7 +8,8 @@
   **ولا يحمل HTML هذه الصفحة الجوابَ الصحيح** إلّا لسؤالٍ كُشف حكمُه في وضع
   «بعد كلّ سؤال».
 --}}
-@extends('quiz.layout')
+{{-- **رأسٌ مضغوط** هنا: على الجوال يُرى السؤالُ وخياراتُه من أوّل نظرة. --}}
+@extends('quiz.layout', ['compact' => true])
 
 @php($total = count($questions))
 @php($digits = static fn (int $n): string => \App\Support\Arabic::toArabicIndicDigits($n))

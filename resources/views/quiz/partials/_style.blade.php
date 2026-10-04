@@ -34,6 +34,11 @@ body.kq{
 .kq-kicker{margin:0;font:700 19px/1.4 "Aref Ruqaa",serif;color:var(--gold-light)}
 .kq-title{margin:6px 0 0;font:700 clamp(24px,6.4vw,34px)/1.45 "Amiri",serif;text-wrap:balance}
 .kq-speaker{margin:6px 0 0;font-size:15px;opacity:.78}
+.kq-head.is-compact{padding:14px 16px 64px}
+.kq-head.is-compact .kq-star,.kq-head.is-compact .kq-kicker,.kq-head.is-compact .kq-speaker{display:none}
+.kq-head.is-compact .kq-title{margin-top:8px;font-size:clamp(19px,5vw,24px)}
+.kq-head.is-compact .kq-logo{height:32px;min-width:32px}
+.kq-head.is-compact .kq-logo img{max-height:24px}
 
 /* ── الورقة ─────────────────────────────────────────────────── */
 .kq-main{max-width:640px;margin:-56px auto 0;padding:0 16px 40px;position:relative}

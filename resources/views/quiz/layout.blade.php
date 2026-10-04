@@ -27,7 +27,7 @@
 </head>
 <body class="kq">
 
-<header class="kq-head">
+<header class="kq-head {{ ! empty($compact) ? 'is-compact' : '' }}">
   <div class="kq-head-in">
     <div class="kq-venue">
       @if ($brand->logoDataUri)

@@ -348,7 +348,6 @@ return [
         'not_ready' => 'Metin henüz tamamlanmadı',
         'not_ready_body' => 'Önizleme yazılmış metinden çizilir, o da henüz yazılmadı.',
 
-        'published_carousel' => 'Yayınlanan slaytlar',
         'more_title' => 'İndir, yayınla, yeniden üret',
         'open_carousel_page' => 'Slaytlar sayfası',
         'images_soon' => 'Görsel paketi henüz oluşturulmadı',
@@ -381,7 +380,6 @@ return [
         'visits_none' => 'Henüz açılmadı',
         'visits_recent' => 'Son otuz günde :count',
         'visits_hint' => 'Bunlar okuyucu sayısı değil sayfa açılmalarıdır: çerez yok, tarayıcı parmak izi yok ve açan hakkında hiçbir şey saklanmaz. Kendi önizlemeleriniz sayılmaz.',
-        'visits_by_output' => 'bunun :count kadarı slaytlar için',
 
         'publish' => 'Yayımla',
         'republish' => 'Yeniden yayımla',
@@ -445,8 +443,8 @@ return [
         'rendering' => 'Görseller oluşturuluyor…',
         'rendering_body' => 'Slaytlar gruplar halinde yakalanır; birkaç saniye sürer. Yenileri gelene dek önceki görseller kalır ve sayfa kendiliğinden güncellenir.',
         'free_hint' => 'Görselleri herhangi bir şablonla oluşturmak ve yeniden oluşturmak ücretsizdir ve kotanızdan düşülmez.',
-        'stale' => 'Bu görseller oluşturulduktan sonra slaytlar değişti (yeni anlatım ya da başka şablon). Slaytlarla eşleşmeleri için yeniden oluşturun; ücretsizdir.',
-        'design_scope' => 'Şablon bu özetin slayt şablonudur: görseller ve yayınlanan slaytlar onunla çizilir.',
+        'stale' => 'Bu görseller oluşturulduktan sonra slaytlar değişti (yeni anlatım, başka şablon ya da son slayttaki özet bağlantısı değişti). Slaytlarla eşleşmeleri için yeniden oluşturun; ücretsizdir.',
+        'design_scope' => 'Şablon yalnızca bu özetin slaytları içindir; görselleri onunla çizilir.',
         'ready_hint' => 'Sırasıyla numaralanmış 1080×1350 görseller ve caption.txt içinde gönderi metni.',
         'progress' => ':total görselden :done yakalandı',
         'stalled' => 'Görsel oluşturma tamamlanmadan durdu. Yeniden deneyin.',

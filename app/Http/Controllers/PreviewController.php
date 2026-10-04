@@ -129,7 +129,6 @@ class PreviewController extends Controller
                 ],
                 'carousel' => [
                     'produced' => $carousel !== null,
-                    'public_url' => $carousel?->public_url,
                     'slides' => $meta['slides'] ?? [],
                     // من الشرائح لا من المحفوظ — انظر `carouselText()`.
                     'plain_text' => SlideDeck::fromArray($meta['slides'] ?? [])->toPlainText(),
@@ -263,15 +262,20 @@ class PreviewController extends Controller
                 static fn (CarouselDesign $design): array => ['id' => $design->id, 'name' => $design->name],
                 $job->tenant === null ? [] : TenantCarouselDesigns::approved($job->tenant),
             ),
-            // **قالبُ شرائح الملخّص** لا قالبُ آخر حزمة — T-204: به رُسم المنشور،
-            // وبه تُنشأ الصور ما لم يُختر غيره.
+            // **قالبُ شرائح الملخّص** لا قالبُ آخر حزمة — T-204: به تُنشأ الصور
+            // ما لم يُختر غيره.
             'design' => CarouselDesign::forJob($job)->id,
             /*
              * **صورٌ أقدمُ من شرائحها** — T-204: صياغةٌ جديدة أو قالبٌ آخر بعد
-             * إنشائها، فلا تُعرض على أنّها الحالية. وإعادةُ إنشائها مجّانية.
+             * إنشائها، أو نُشر الملخّصُ بعدها فخلت شريحتُها الأخيرة من رابطه.
+             * فلا تُعرض على أنّها الحالية، وإعادةُ إنشائها مجّانية.
              */
-            'stale' => $count > 0 && $output?->rendered_at !== null
-                && ($this->output($job, OutputType::Carousel)?->rendered_at?->gt($output->rendered_at) ?? false),
+            'stale' => $count > 0 && $output?->rendered_at !== null && (
+                ($this->output($job, OutputType::Carousel)?->rendered_at?->gt($output->rendered_at) ?? false)
+                // وحزمةٌ قبل تقييد الرابط لا يُعرف رابطُها، فلا تُعدّ قديمةً به.
+                || (array_key_exists('page_url', $meta)
+                    && $meta['page_url'] !== $this->output($job, OutputType::Page)?->public_url)
+            ),
             'urls' => array_map(
                 static fn (int $slide): string => route('jobs.images.show', ['job' => $job->id, 'slide' => $slide], false)."?v={$version}",
                 $count > 0 ? range(1, $count) : [],

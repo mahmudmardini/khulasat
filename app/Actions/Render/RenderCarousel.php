@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Render;
 
-use App\Actions\Publish\PublishSummary;
 use App\Actions\Stages\CondenseForCarousel;
-use App\Domain\Summary\JobState;
 use App\Enums\OutputType;
 use App\Models\Output;
 use App\Models\SummaryJob;
@@ -29,13 +27,15 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
  *
  * و`$recondense` هو الاستثناء الصريح الوحيد: من أراد نصّاً آخر طلبه، ودفع
  * ثمنه — ولا يُدفع ثمنٌ بلا طلب.
+ *
+ * **ولا يُنشر ما يُرسم هنا** — T-204: الشرائح تُنزَّل صوراً
+ * ({@see RenderImageSet})، ويُقيَّد المخرَج لنصوصه وقالبه.
  */
 final class RenderCarousel
 {
     public function __construct(
         private readonly CondenseForCarousel $condense,
         private readonly RenderOutput $render,
-        private readonly PublishSummary $publish,
         private readonly ViewFactory $views,
     ) {}
 
@@ -50,10 +50,9 @@ final class RenderCarousel
         $deck = $recondense ? null : $this->stored($job);
         $deck ??= $this->condense->handle($job, $content);
 
-        $output = $this->render->handle(
+        return $this->render->handle(
             $job,
-            // **بقالب الملخّص لا بافتراضيّ الجهة** — T-204: فلا تُرسم الصورُ بقالبٍ
-            // وكاروسيلُ الويب المنشور بغيره.
+            // **بقالب الملخّص لا بافتراضيّ الجهة** — T-204: وبه تُرسم صورُه.
             new CarouselRenderer(
                 $this->views,
                 $deck,
@@ -61,18 +60,6 @@ final class RenderCarousel
                 $design === null ? CarouselDesign::forJob($job) : CarouselDesign::forTenant($job->tenant, $design),
             ),
         );
-
-        /*
-         * **ولا يُنشر إلّا ما كان منشوراً.** فمهمّةٌ لم تُنشر بعدُ لو مرّت
-         * على {@see PublishSummary} لانتقلت إلى `published` بكاروسيلٍ وحده
-         * وبلا صفحة — نشرٌ لم يطلبه أحد. والرسم قبل النشر جائزٌ للمعاينة،
-         * والنشر قرارٌ مستقلّ.
-         */
-        if ($job->state === JobState::Published) {
-            $this->publish->handle($job, [$output->type->value => $output->contents]);
-        }
-
-        return $output;
     }
 
     /** الشرائح المحفوظة من تكثيفٍ سابق، إن وُجدت. */

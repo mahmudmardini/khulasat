@@ -83,9 +83,10 @@ final class ShowPublishedSummaryController extends Controller
     }
 
     /**
-     * يقرأ ما بعد `{tenantSlug}/{summarySlug}/` — أربعُ صورٍ فقط بالضبط
-     * كما تكتبها {@see Paths::forOutput()}: فارغة، `carousel`،
-     * `{locale}`، أو `{locale}/carousel`.
+     * يقرأ ما بعد `{tenantSlug}/{summarySlug}/` — صورتان فقط بالضبط كما
+     * تكتبهما {@see Paths::forOutput()}: فارغة، أو `{locale}`.
+     *
+     * **ولا `carousel` بعد T-204**: الشرائح لا تُنشر، وملفٌّ بقي منها لا يُخدم.
      *
      * @return array{0: ?Locale, 1: OutputType}|null
      */
@@ -98,22 +99,17 @@ final class ShowPublishedSummaryController extends Controller
 
         return match (count($segments)) {
             0 => [null, OutputType::Page],
-            1 => $segments[0] === 'carousel'
-                ? [null, OutputType::Carousel]
-                : $this->withLocale($segments[0], OutputType::Page),
-            2 => $segments[1] === 'carousel'
-                ? $this->withLocale($segments[0], OutputType::Carousel)
-                : null,
+            1 => $this->withLocale($segments[0]),
             default => null,
         };
     }
 
     /** @return array{0: Locale, 1: OutputType}|null */
-    private function withLocale(string $value, OutputType $type): ?array
+    private function withLocale(string $value): ?array
     {
         $locale = Locale::tryFrom($value);
 
-        return $locale === null ? null : [$locale, $type];
+        return $locale === null ? null : [$locale, OutputType::Page];
     }
 
     private function tombstone(string $tenantSlug, string $summarySlug): Response

@@ -124,19 +124,20 @@ it('يعدّ بلا تسجيل دخول، فالقارئ ليس زبوناً', f
     expect(PageView::query()->where('summary_job_id', $job->id)->exists())->toBeTrue();
 });
 
-it('يفرّق بين فتحات الصفحة وفتحات الشرائح', function (): void {
+// الشرائحُ لا تُنشر بعد T-204، وشاهدتُها في نسخةٍ قديمةٍ محفوظة لا تُعدّ. والبكسلُ يُردّ.
+it('لا يعدّ فتحات الشرائح ولا حزمة الصور', function (): void {
     $job = countedJob();
 
     $this->get("/v/{$job->id}/page.gif")->assertOk();
-    $this->get("/v/{$job->id}/carousel.gif")->assertOk();
-    $this->get("/v/{$job->id}/carousel.gif")->assertOk();
+    $this->get("/v/{$job->id}/carousel.gif")->assertOk()->assertHeader('Content-Type', 'image/gif');
+    $this->get("/v/{$job->id}/image_set/ar.gif")->assertOk();
 
     $counts = PageView::query()
         ->where('summary_job_id', $job->id)
         ->pluck('views', 'output_type');
 
-    expect((int) $counts[OutputType::Page->value])->toBe(1)
-        ->and((int) $counts[OutputType::Carousel->value])->toBe(2);
+    expect($counts->keys()->all())->toBe([OutputType::Page->value])
+        ->and((int) $counts[OutputType::Page->value])->toBe(1);
 });
 
 /**
@@ -379,14 +380,12 @@ it('يعرض العدد في شاشة الملخّص المنشور', function (
 
     $this->get("/v/{$job->id}/page.gif")->assertOk();
     $this->get("/v/{$job->id}/page.gif")->assertOk();
-    $this->get("/v/{$job->id}/carousel.gif")->assertOk();
 
     $this->actingAs($this->user)->get("/panel/summaries/{$job->id}")
         ->assertInertia(fn (Assert $page): Assert => $page
-            ->where('views.total', 3)
-            ->where('views.recent', 3)
-            ->where('views.by_output.page', 2)
-            ->where('views.by_output.carousel', 1)
+            ->where('views.total', 2)
+            ->where('views.recent', 2)
+            ->missing('views.by_output')
         );
 });
 

@@ -350,7 +350,6 @@ return [
         'not_ready' => 'The body is not finished yet',
         'not_ready_body' => 'The preview is drawn from the written body, and it has not been written yet.',
 
-        'published_carousel' => 'Published slides',
         'more_title' => 'Download, publish, regenerate',
         'open_carousel_page' => 'Slides page',
         'images_soon' => 'The image pack has not been built yet',
@@ -383,7 +382,6 @@ return [
         'visits_none' => 'Not opened yet',
         'visits_recent' => ':count in the last thirty days',
         'visits_hint' => 'These are page opens, not a count of readers: no cookie, no browser fingerprint, and nothing is kept about whoever opened it. Your own previews are not counted.',
-        'visits_by_output' => 'of which :count for the slides',
 
         'publish' => 'Publish',
         'republish' => 'Publish again',
@@ -447,8 +445,8 @@ return [
         'rendering' => 'Creating images…',
         'rendering_body' => 'Slides are captured in batches, which takes a few seconds. The previous images stay until the new ones replace them, and the page updates on its own.',
         'free_hint' => 'Creating and recreating the images, with any template, is free and does not count against your quota.',
-        'stale' => 'The slides changed after these images were made (a new wording or another template). Recreate them to match; it costs nothing.',
-        'design_scope' => 'The template is this summary\'s slide template: the images and the published slides are both drawn with it.',
+        'stale' => 'The slides changed after these images were made (a new wording, another template, or a changed summary link on the last slide). Recreate them to match; it costs nothing.',
+        'design_scope' => 'The template applies to this summary\'s slides only, and their images are drawn with it.',
         'ready_hint' => '1080×1350 images numbered in order, with the post text in caption.txt.',
         'progress' => ':done of :total captured',
         'stalled' => 'Image creation stopped before it finished. Try again.',

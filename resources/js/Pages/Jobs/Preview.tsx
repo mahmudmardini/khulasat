@@ -52,7 +52,7 @@ interface Props {
   };
   outputs: {
     page: { produced: boolean; public_url: string | null };
-    carousel: { produced: boolean; public_url: string | null; slides: Slide[]; plain_text: string };
+    carousel: { produced: boolean; slides: Slide[]; plain_text: string };
     /** حزمة الصور — T-173. `state` حالُها في الطابور، و`urls` صورُها بترتيبها. */
     images: {
       produced: boolean;
@@ -627,26 +627,9 @@ function CarouselPane({
       <Card
         title={t('jobs.preview.slides')}
         action={
-          <div className="flex items-center gap-3">
-            <span className="nums-tabular text-[13px] text-text-muted">
-              {toArabicIndic(t('jobs.carousel.count', { count: carousel.slides.length }))}
-            </span>
-            {/*
-              **الشرائحُ المنشورة** مع الملخّص (`{slug}/carousel`) — T-204، بقالب
-              هذه الشرائح نفسه. وحلّ محلَّ رابط «صفحة الشرائح» المحذوفة.
-            */}
-            {carousel.public_url !== null ? (
-              <a
-                href={carousel.public_url}
-                target="_blank"
-                rel="noopener"
-                className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[13.5px] font-medium text-primary transition-colors hover:bg-surface-alt"
-              >
-                {t('jobs.preview.published_carousel')}
-                <Icon name="external" size={14} />
-              </a>
-            ) : null}
-          </div>
+          <span className="nums-tabular text-[13px] text-text-muted">
+            {toArabicIndic(t('jobs.carousel.count', { count: carousel.slides.length }))}
+          </span>
         }
       >
         <SlideCarousel

@@ -8,7 +8,10 @@ use App\Actions\Publish\UnpublishSummary;
 use App\Actions\Render\RenderOutput;
 use App\Actions\Summary\TransitionJob;
 use App\Domain\Summary\JobState;
+use App\Enums\Locale;
+use App\Enums\OutputType;
 use App\Models\Lecture;
+use App\Models\Output;
 use App\Models\SummaryJob;
 use App\Models\Tenant;
 use App\Services\Render\PageRenderer;
@@ -103,6 +106,51 @@ it('يردّ 404 للكاروسيل بعد إلغاء النشر لا شاهدة
     app(UnpublishSummary::class)->handle($this->job->refresh());
 
     $this->get('/tenant-a/anuan-al-drs/carousel')->assertNotFound();
+});
+
+// الشرائحُ لا تُنشر بعد T-204، وملفٌّ بقي منها قبل ذلك لا يُخدم ولو كان الملخّص منشوراً.
+it('يردّ 404 للكاروسيل والملخّصُ منشور', function (): void {
+    publishForShow($this->job);
+    Storage::disk('public')->put('tenant-a/anuan-al-drs/carousel/index.html', '<p>شرائح</p>');
+    Storage::disk('public')->put('tenant-a/anuan-al-drs/en/carousel/index.html', '<p>شرائح</p>');
+
+    $this->get('/tenant-a/anuan-al-drs')->assertOk();
+    $this->get('/tenant-a/anuan-al-drs/carousel')->assertNotFound();
+    $this->get('/tenant-a/anuan-al-drs/en/carousel')->assertNotFound();
+});
+
+// ترحيلُ T-204: ما رُفع من الشرائح قبله يُحذف ويُمسح رابطُه، ويبقى صفُّه بنصوصه. والصفحةُ لا تُمسّ.
+it('يحذف ملفّات الشرائح المنشورة قبل T-204 ويُبقي الصفحة', function (): void {
+    publishForShow($this->job);
+
+    $path = 'tenant-a/anuan-al-drs/carousel/index.html';
+    Storage::disk('public')->put($path, '<p>شرائح</p>');
+
+    $carousel = Output::query()->create([
+        'summary_job_id' => $this->job->id,
+        'tenant_id' => $this->tenant->id,
+        'type' => OutputType::Carousel->value,
+        'locale' => Locale::Ar->value,
+        'format' => OutputType::Carousel->format()->value,
+        'storage_path' => $path,
+        'public_url' => 'https://tenant-a.khulasat.io/anuan-al-drs/carousel',
+        'meta' => ['slides' => [['index' => 1]]],
+        'rendered_at' => now(),
+        'renderer_version' => '1.2.0',
+    ]);
+
+    (require database_path('migrations/2026_10_04_130000_unpublish_carousel_outputs.php'))->up();
+
+    $page = $this->job->outputs()->where('type', OutputType::Page->value)->first();
+
+    expect(Storage::disk('public')->exists($path))->toBeFalse()
+        ->and($carousel->refresh()->storage_path)->toBeNull()
+        ->and($carousel->public_url)->toBeNull()
+        ->and($carousel->meta['slides'])->toBe([['index' => 1]])
+        ->and(Storage::disk('public')->exists((string) $page->storage_path))->toBeTrue()
+        ->and($page->public_url)->not->toBeNull();
+
+    $this->get('/tenant-a/anuan-al-drs')->assertOk();
 });
 
 it('يردّ 404 على شكلٍ غير صالح من الرابط', function (): void {

@@ -7,7 +7,6 @@ namespace App\Services\Render;
 use App\Actions\Stages\CondenseForCarousel;
 use App\Contracts\Renderer;
 use App\Enums\OutputType;
-use App\Support\Publish\Beacon;
 use App\Support\Render\BrandKit;
 use App\Support\Render\CarouselDesign;
 use App\Support\Render\ContentObject;
@@ -62,13 +61,8 @@ class CarouselRenderer implements Renderer
 
     public function render(ContentObject $content, BrandKit $brand): RenderedOutput
     {
-        $html = $this->views->make('carousel.layout', [
-            ...$this->data($content, $brand, $this->deck),
-
-            // شاهدة العدّ — T-31. والشرائح مخرَجٌ منشور، فتُعدّ كالصفحة.
-            // واللسانُ فيها كذلك (T-140): الكاروسيل يُبنى بلغةٍ بعينها.
-            'beacon' => Beacon::for($content->summaryJobId, OutputType::Carousel, $content->locale),
-        ])->render();
+        // **بلا شاهدة عدّ** — T-204: الشرائح لا تُنشر صفحةً، فلا قارئ يُعدّ.
+        $html = $this->views->make('carousel.layout', $this->data($content, $brand, $this->deck))->render();
 
         return new RenderedOutput(
             type: $this->type(),
@@ -96,16 +90,12 @@ class CarouselRenderer implements Renderer
     /**
      * كلُّ شريحةٍ في وثيقتها، بمقاسها وبلا هامش — لتُلتقط صورةً (T-173).
      *
-     * ★ **وبلا شاهدة عدّ**: المتصفّحُ الملتقِط يطلبها كما يطلبها القارئ، فتُعدّ
-     * كلُّ صورةٍ زيارةً لم يزرها أحد.
-     *
      * @return list<string>
      */
     public function slides(ContentObject $content, BrandKit $brand): array
     {
         return array_map(fn (Slide $slide): string => $this->views->make('carousel.layout', [
             ...$this->data($content, $brand, new SlideDeck([$slide])),
-            'beacon' => null,
             'capture' => true,
         ])->render(), $this->deck->slides);
     }
@@ -114,14 +104,12 @@ class CarouselRenderer implements Renderer
      * شرائحُ متراصّةٌ عموداً في وثيقةٍ واحدة، تُلتقط بلقطةٍ واحدة — T-197.
      *
      * كلُّ شريحةٍ بمقاسها الثابت بلا هامشٍ ولا فاصل، فتُقصّ اللقطةُ صوراً بقسمة
-     * ارتفاعها، وتخرج كلُّ صورةٍ كما تخرج من التقاط الشريحة وحدها. **وبلا شاهدة
-     * عدّ**، كما في {@see self::slides()}.
+     * ارتفاعها، وتخرج كلُّ صورةٍ كما تخرج من التقاط الشريحة وحدها.
      */
     public function strip(ContentObject $content, BrandKit $brand, int $offset, int $length): string
     {
         return $this->views->make('carousel.layout', [
             ...$this->data($content, $brand, new SlideDeck(array_slice($this->deck->slides, $offset, $length))),
-            'beacon' => null,
             'capture' => true,
             'strip' => true,
         ])->render();
@@ -132,13 +120,12 @@ class CarouselRenderer implements Renderer
      *
      * **مصغَّراً ليُرى في إطاره على أيّ عرض**: القالبُ يصغّر نفسه تحت ١٠٨٠ وحده،
      * وإطارُ اللوحة على شاشةٍ عريضة أعرضُ منه، فكانت الشريحةُ تُرى بمقاسها
-     * ولا تُرى الأولى إلّا بالتمرير. **وبلا شاهدة عدّ**: فتحُ اللوحة ليس قراءة.
+     * ولا تُرى الأولى إلّا بالتمرير.
      */
     public function preview(ContentObject $content, BrandKit $brand): string
     {
         return $this->views->make('carousel.layout', [
             ...$this->data($content, $brand, $this->deck),
-            'beacon' => null,
             'fit' => true,
         ])->render();
     }

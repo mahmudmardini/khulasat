@@ -21,8 +21,8 @@ use Throwable;
  * الرسمُ والنشر فعلان قائمان (T-14 وT-15)، وهذه تصلهما بالخطّ في خطوة
  * واحدة كسائر المراحل، فيبقى المشغّل موزّعاً على الحالات لا حاملاً لمنطق.
  *
- * **والصفحة أوّلاً وقطعاً.** والكاروسيل يُبنى بعدها إن طلبته الجهة، وحزمةُ
- * الصور عارضٌ مؤجَّل (T-20) — §8-أ.
+ * **والصفحة أوّلاً وقطعاً.** والكاروسيل يُبنى بعدها إن طلبته الجهة، ولا
+ * يُنشر (T-204)، وحزمةُ الصور تُنشأ من شاشتها — §8-أ.
  */
 final class RenderAndPublish
 {
@@ -72,9 +72,9 @@ final class RenderAndPublish
         // شريطُ اللغات يحتاج الجميعَ منشوراً قبل أن يُرسَم — T-134.
         $this->relink->handle($job);
 
-        $carousel = $this->carouselUrl($job);
+        $this->carousel($job);
 
-        return $carousel === null ? $urls : [...$urls, OutputType::Carousel->value => $carousel];
+        return $urls;
     }
 
     /**
@@ -209,28 +209,21 @@ final class RenderAndPublish
      * مهمّةً تمّ عملُها كلُّه من أجل **مخرَجٍ ثانٍ**، ويُري الجهةَ ملخّصاً
      * «متوقّفاً» وهو منشورٌ يُخدَم.
      *
-     * فيُقيَّد الإخفاق ويُمضى، وتُبنى الشرائح بعدها من شاشتها بضغطة —
-     * وكلفتُها صفرٌ على أيّ حال.
+     * فيُقيَّد الإخفاق ويُمضى، وتُبنى الشرائح بعدها من شاشتها بضغطة.
      */
-    private function carouselUrl(SummaryJob $job): ?string
+    private function carousel(SummaryJob $job): void
     {
         /*
-         * ★ **وما بُني مرّةً يُعاد بناؤه عند كلّ نشر** — T-30.
+         * ★ **ويُبنى مرّةً لا عند كلّ نشر** — T-204.
          *
-         * فـ`want_carousel` تُسأل عنه الجهةُ ساعةَ الإنشاء وحدها، ومن بنى
-         * شرائحه بعدها من شاشتها لم يُبدَّل له الحقل. **فلمّا صار للجهة زرُّ
-         * «حدّثْ المنشور» (T-30) كان تحديثُ الصفحة يرفعها وحدها**، ويترك
-         * شرائحَ منشورةً بلا ملفّ — رابطٌ كان يعمل فلا يعمل، بلا قرارٍ من
-         * أحد.
-         *
-         * ووجودُ المخرَج نفسِه هو الطلب: من بناه أراده، وكلفةُ إعادة رسمه
-         * صفر (§8-أ).
+         * كان يُعاد رسمُه مع كلّ «حدّثْ المنشور» (T-30) ليبقى ملفُّه المنشور
+         * حيّاً. **ولا ملفَّ منشوراً له اليوم**، وإعادةُ رسمه تجعل صورَه أقدمَ
+         * من شرائحها فتُعرض قديمةً وما تغيّر فيها شيء.
          */
-        $wanted = $job->lecture?->want_carousel === true
-            || $job->outputs()->where('type', OutputType::Carousel->value)->exists();
-
-        if (! $wanted || ! $job->tenant?->allowsRichOutputs()) {
-            return null;
+        if ($job->lecture?->want_carousel !== true
+            || ! $job->tenant?->allowsRichOutputs()
+            || $job->outputs()->where('type', OutputType::Carousel->value)->exists()) {
+            return;
         }
 
         try {
@@ -240,13 +233,6 @@ final class RenderAndPublish
                 'summary_job_id' => $job->id,
                 'reason' => $failure->getMessage(),
             ]);
-
-            return null;
         }
-
-        return $job->refresh()
-            ->outputs()
-            ->where('type', OutputType::Carousel->value)
-            ->value('public_url');
     }
 }

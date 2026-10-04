@@ -42,7 +42,7 @@ class QuizBench extends Command
     protected $signature = 'khulasah:quiz-bench
                             {--input= : مجلّدٌ فيه دروسٌ بصيغة {structure, evidence}}
                             {--jobs= : أرقامُ ملخّصاتٍ قائمة، مفصولةٌ بفواصل}
-                            {--models=sonnet-5.5,gemini-3.8-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite}
+                            {--models=sonnet-5.5,gemini-3.8-flash,gemini-3.7-flash}
                             {--runs=2 : تشغيلاتٌ لكلّ نموذجٍ على كلّ درس}
                             {--max-usd=2 : سقفُ الإنفاق — يقف قبل أن يتجاوزه}
                             {--out= : مجلّدُ المخرجات}
@@ -60,6 +60,7 @@ class QuizBench extends Command
     private const MODELS = [
         'sonnet-5.5' => ['anthropic', 'claude-sonnet-5-5', 2.0, 10.0, 'low'],
         'gemini-3.8-flash' => ['google', 'gemini-3.8-flash', 0.75, 3.75, 'low'],
+        'gemini-3.7-flash' => ['google', 'gemini-3.7-flash', 0.75, 3.75, 'low'],
         'gemini-3.5-flash-lite' => ['google', 'gemini-3.5-flash-lite', 0.30, 2.50, 'low'],
         'gemini-3.1-flash-lite' => ['google', 'gemini-3.1-flash-lite', 0.25, 1.50, 'low'],
     ];

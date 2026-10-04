@@ -46,8 +46,24 @@ it('يربط الآية بموضعها في quran.com بترجمة الصفحة 
         ->and(nurAyah()->url(Locale::Ar))->toBe('https://quran.com/24/35')
         ->and((new RenderedEvidence(kind: 'ayah', text: 'ن', surah: 2, ayah: 1, ayahEnd: 2))->url(Locale::Tr))
         ->toBe('https://quran.com/2/1-2?translations=77')
-        // والحديثُ بلا رابط: لا مرجعَ واحداً ثابتاً، ورابطٌ مخمَّنٌ أسوأُ من لا رابط.
-        ->and((new RenderedEvidence(kind: 'hadith', text: 'متن'))->url(Locale::En))->toBeNull();
+        // وما ليس آيةً ولا حديثاً بلا رابط.
+        ->and((new RenderedEvidence(kind: 'athar', text: 'متن'))->url(Locale::En))->toBeNull();
+});
+
+/*
+ * ★ **والحديثُ رابطُ بحثٍ في الدرر السنية** — T-211. بمطلع المتن بلا تشكيلٍ
+ * ولا علامات، فيرى القارئ فيه أحكام المحدّثين بنفسه.
+ */
+it('يربط الحديث ببحثٍ في الدرر السنية بمطلع متنه بلا تشكيل', function (): void {
+    $hadith = new RenderedEvidence(kind: 'hadith', text: 'إِنَّمَا الأَعْمَالُ بِالنِّيَّاتِ، وَإِنَّمَا لِكُلِّ امْرِئٍ مَا نَوَى');
+
+    $url = $hadith->url(Locale::En);
+    parse_str((string) parse_url((string) $url, PHP_URL_QUERY), $query);
+
+    expect($url)->toStartWith('https://dorar.net/hadith/search?q=')
+        ->and($query['q'])->toBe('إنما الأعمال بالنيات وإنما لكل امرئ')
+        // واللغةُ لا تغيّره: الدررُ عربية، والبحثُ بلفظ المصدر.
+        ->and($hadith->url(Locale::Ar))->toBe($url);
 });
 
 /*

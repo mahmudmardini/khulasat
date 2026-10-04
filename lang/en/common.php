@@ -36,6 +36,7 @@ return [
         'index' => 'Summaries',
         'create' => 'New summary',
         'verify' => 'Verify tool',
+        'quizzes' => 'Quizzes',
         'brand' => 'Institution identity',
         'billing' => 'Subscription',
         'team' => 'Team',

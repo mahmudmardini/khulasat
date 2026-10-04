@@ -31,6 +31,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PreflightController;
 use App\Http\Controllers\PreviewController;
 use App\Http\Controllers\PublicationController;
+use App\Http\Controllers\QuizReportController;
 use App\Http\Controllers\Settings\BillingController;
 use App\Http\Controllers\Settings\BrandController;
 use App\Http\Controllers\Settings\CarouselDesignController;
@@ -153,6 +154,17 @@ Route::middleware('auth')->group(function (): void {
     Route::delete('/jobs/{job}/quiz/questions/{question}', [JobQuizController::class, 'destroyQuestion'])
         ->whereNumber('question')
         ->name('jobs.quiz.questions.destroy');
+
+    /*
+     * تقاريرُ الاختبارات — T-201. **قراءةٌ لا تغيير**، فيراها كلُّ عضوٍ في
+     * الجهة. والاختبارُ بنطاق الجهة في ربط المسار: تقريرُ جهةٍ ٤٠٤ لغيرها.
+     */
+    Route::get('/quizzes', [QuizReportController::class, 'index'])->name('quizzes.index');
+    Route::get('/quizzes/{quiz}', [QuizReportController::class, 'show'])->whereNumber('quiz')->name('quizzes.show');
+    Route::get('/quizzes/{quiz}/attempts/{attempt}', [QuizReportController::class, 'attempt'])
+        ->whereNumber(['quiz', 'attempt'])
+        ->name('quizzes.attempt');
+    Route::get('/quizzes/{quiz}/export.csv', [QuizReportController::class, 'export'])->whereNumber('quiz')->name('quizzes.export');
 
     /*
      * حزمةُ صور الكاروسيل — T-173. تُنشأ في الطابور، وتُرى صورُها من قرصٍ

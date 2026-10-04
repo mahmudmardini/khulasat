@@ -7,12 +7,14 @@ namespace App\Http\Controllers;
 use App\Actions\Publish\DeleteSummary;
 use App\Actions\Publish\PublishSummary;
 use App\Actions\Publish\UnpublishSummary;
+use App\Actions\Quiz\BuildQuizReport;
 use App\Actions\Stages\RenderAndPublish;
 use App\Domain\Summary\JobState;
 use App\Enums\Locale;
 use App\Enums\OutputType;
 use App\Models\Output;
 use App\Models\PageView;
+use App\Models\QuizAttempt;
 use App\Models\SummaryJob;
 use App\Support\Analytics\ViewsByLocale;
 use App\Support\Publish\LocaleAdditions;
@@ -77,10 +79,21 @@ class PublicationController extends Controller
             return null;
         }
 
+        // بطاقةُ التقرير — T-201: المشاركون المحسوبون ومتوسّطُ درجتهم.
+        $report = app(BuildQuizReport::class);
+        $counted = $report->countedIds($quiz->id);
+        $percents = QuizAttempt::query()->whereIn('id', $counted)->get(['score', 'total'])
+            ->map(static fn (QuizAttempt $a): float => $a->total === 0 ? 0.0 : 100 * (int) $a->score / $a->total)
+            ->all();
+        $average = BuildQuizReport::mean($percents);
+
         return [
+            'id' => $quiz->id,
             'state' => $quiz->state,
             'status' => $quiz->status,
             'attempts' => $quiz->attempts()->whereNotNull('finished_at')->count(),
+            'participants' => count($counted),
+            'average' => $average === null ? null : (int) round($average),
         ];
     }
 

@@ -174,6 +174,7 @@ class JobQuizController extends Controller
         $evidence = $this->evidence($questions->all());
 
         return [
+            'id' => $quiz->id,
             'state' => $quiz->state,
             'failure_reason' => $quiz->failure_reason,
             'status' => $quiz->status,

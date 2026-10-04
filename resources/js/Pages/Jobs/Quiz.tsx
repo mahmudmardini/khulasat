@@ -30,6 +30,7 @@ interface Question {
 }
 
 interface QuizData {
+  id: number;
   state: 'ready' | 'failed';
   failure_reason: string | null;
   status: 'open' | 'closed';
@@ -223,6 +224,11 @@ function LinkCard({ job, quiz }: { job: Props['job']; quiz: QuizData }) {
           <Button variant="secondary" disabled={!job.published} onClick={() => window.open(quiz.url, '_blank')}>
             <Icon name="external" size={16} />
             {t('quiz.panel.open')}
+          </Button>
+          {/* التقرير — T-201. */}
+          <Button variant="ghost" onClick={() => router.visit(`/panel/quizzes/${quiz.id}`)}>
+            <Icon name="list" size={16} />
+            {t('quiz.panel.report')}
           </Button>
         </div>
         {!job.published ? <p className="text-[13px] text-text-muted">{t('quiz.panel.not_published')}</p> : null}

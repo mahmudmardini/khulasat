@@ -14,9 +14,11 @@ use App\Models\SummaryTranslation;
 use App\Services\Render\PageRenderer;
 use App\Support\Publish\LocaleAdditions;
 use App\Support\Render\BrandKit;
+use App\Support\Render\CarouselDesign;
 use App\Support\Render\ContentObject;
 use App\Support\Render\ImageSet;
 use App\Support\Render\SlideDeck;
+use App\Support\Render\TenantCarouselDesigns;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Inertia\Inertia;
@@ -241,6 +243,12 @@ class PreviewController extends Controller
             'state' => $state,
             'error' => $state === 'failed' ? ($meta['error'] ?? null) : null,
             'enabled' => ImageSet::enabled(),
+            // قوالبُ الجهة المعتمدة يُختار منها عند الإنشاء، وأوّلُها افتراضيُّها — T-173.
+            'designs' => array_map(
+                static fn (CarouselDesign $design): array => ['id' => $design->id, 'name' => $design->name],
+                $job->tenant === null ? [] : TenantCarouselDesigns::approved($job->tenant),
+            ),
+            'design' => $meta['design'] ?? null,
             'urls' => array_map(
                 static fn (int $slide): string => route('jobs.images.show', ['job' => $job->id, 'slide' => $slide], false)."?v={$version}",
                 $count > 0 ? range(1, $count) : [],

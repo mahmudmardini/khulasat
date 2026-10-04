@@ -7,7 +7,9 @@ namespace App\Services\Model;
 use App\Enums\UsageEvent;
 use App\Models\ModelCall;
 use App\Models\SummaryJob;
+use App\Models\Tenant;
 use App\Models\UsageRecord;
+use App\Services\Quota\SpendCap;
 use App\Support\Model\ModelResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -65,6 +67,47 @@ class ModelCallRecorder
             ModelCall::create([
                 'tenant_id' => $job->tenant_id,
                 'summary_job_id' => $job->id,
+                'stage' => $response->stage,
+                'provider' => $response->provider,
+                'model_id' => $response->modelId,
+                'input_tokens' => $response->inputTokens,
+                'output_tokens' => $response->outputTokens,
+                'cost_usd' => $response->costUsd,
+                'duration_ms' => $response->durationMs,
+                'attempt' => $response->attempts,
+                'occurred_at' => now(),
+            ]);
+        });
+    }
+
+    /**
+     * نداءٌ مدفوع **للجهة لا لملخّص** — T-173 (قوالب الكاروسيل).
+     *
+     * يُقيَّد في السجلّين كما يُقيَّد نداءُ الملخّص، بلا `summary_job_id`:
+     * فيظهر في الكلفة، **ويحسبه سقفُ الإنفاق** ({@see SpendCap} يجمع
+     * `usage_ledger`). ولو تُرك لصار بابَ إنفاقٍ لا يراه السقف.
+     */
+    public function recordForTenant(ModelResponse $response, Tenant $tenant): void
+    {
+        Log::info('model.call', $response->toLog() + ['tenant_id' => $tenant->id]);
+
+        if ($response->costUsd <= 0.0) {
+            return;
+        }
+
+        DB::transaction(function () use ($response, $tenant): void {
+            UsageRecord::create([
+                'tenant_id' => $tenant->id,
+                'summary_job_id' => null,
+                'event' => UsageEvent::Generate,
+                'units' => 0,
+                'cost_usd' => $response->costUsd,
+                'occurred_at' => now(),
+            ]);
+
+            ModelCall::create([
+                'tenant_id' => $tenant->id,
+                'summary_job_id' => null,
                 'stage' => $response->stage,
                 'provider' => $response->provider,
                 'model_id' => $response->modelId,

@@ -15,6 +15,7 @@ use App\Services\Render\PageRenderer;
 use App\Support\Render\BrandKit;
 use App\Support\Render\ContentObject;
 use App\Support\Render\Palette;
+use App\Support\Render\TenantCarouselDesigns;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -79,6 +80,9 @@ class BrandController extends Controller
                 ],
                 SummaryTemplate::all(),
             )),
+            // قوالبُ الكاروسيل — T-173. والمخرجاتُ الغنيّة من شريحة مؤسسة فما فوق.
+            'carousel_designs' => TenantCarouselDesigns::forScreen($tenant),
+            'rich_outputs' => $tenant->allowsRichOutputs(),
             'palettes' => array_values(array_map(
                 static fn (Palette $palette): array => [
                     'key' => $palette->key,

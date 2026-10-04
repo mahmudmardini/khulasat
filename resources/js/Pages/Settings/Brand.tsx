@@ -3,6 +3,7 @@ import { router, useForm } from '@inertiajs/react';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { Button } from '@/Components/Button';
 import { Card } from '@/Components/Card';
+import { CarouselDesigns, type CarouselDesignsData } from '@/Components/CarouselDesigns';
 import { DeviceFrame, type Device } from '@/Components/DeviceFrame';
 import { FieldGroup } from '@/Components/FieldGroup';
 import { FileDropzone } from '@/Components/FileDropzone';
@@ -52,6 +53,9 @@ interface Props {
   palettes: Palette[];
   templates: SummaryTemplate[];
   locales: OutputLocale[];
+  /** قوالبُ الكاروسيل — T-173. */
+  carousel_designs: CarouselDesignsData;
+  rich_outputs: boolean;
 }
 
 /** مهلةٌ بعد آخر حرف قبل إعادة الرسم — لا يُرسم القالب كلّه بكلّ حرف. */
@@ -78,7 +82,7 @@ type SectionKey = (typeof SECTIONS)[number];
  * - القوالبُ قائمةً بعمودين لا ثلاثة أعمدةٍ ضيّقة، والمعاينةُ بجهازين.
  * - «تراجع»، وتنبيهٌ عند المغادرة بتغييراتٍ لم تُحفظ.
  */
-export default function Brand({ tenant, palettes, templates, locales }: Props) {
+export default function Brand({ tenant, palettes, templates, locales, carousel_designs, rich_outputs }: Props) {
   const [toast, setToast] = useState<string | null>(null);
   const [device, setDevice] = useState<Device>('mobile');
   // مفتاحٌ يُبدَّل بـ«تراجع» فتُعاد منطقة الرفع إلى أوّلها — تحفظ اسمَ الملفّ المختار في نفسها.
@@ -522,6 +526,20 @@ export default function Brand({ tenant, palettes, templates, locales }: Props) {
             )}
           </Card>
         </div>
+      </div>
+
+      {/*
+        قوالبُ الكاروسيل — T-173. **خارج النموذج**: أفعالُها تقع فوراً ولا تنتظر
+        «حفظ»، وتوليدُها نداءٌ مدفوعٌ لا يجوز أن يُطلقه حفظُ اسمٍ أو لون.
+      */}
+      <div id="brand-carousel" className="mt-6 scroll-mt-4">
+        <CarouselDesigns
+          designs={carousel_designs}
+          base="/panel/settings/brand/carousel-designs"
+          prop="carousel_designs"
+          manage
+          locked={!rich_outputs}
+        />
       </div>
 
       <Toast message={toast} tone="success" onDismiss={() => setToast(null)} />

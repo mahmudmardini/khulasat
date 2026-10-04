@@ -32,6 +32,7 @@ use App\Http\Controllers\PreviewController;
 use App\Http\Controllers\PublicationController;
 use App\Http\Controllers\Settings\BillingController;
 use App\Http\Controllers\Settings\BrandController;
+use App\Http\Controllers\Settings\CarouselDesignController;
 use App\Http\Controllers\Settings\TeamController;
 use App\Http\Controllers\SummaryJobController;
 use App\Http\Controllers\SummaryLocaleController;
@@ -209,6 +210,22 @@ Route::post('/invitations', [InvitationController::class, 'store'])
 Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(function (): void {
     Route::get('/brand', [BrandController::class, 'edit'])->name('brand.edit');
     Route::post('/brand', [BrandController::class, 'update'])->name('brand.update');
+
+    /*
+     * قوالبُ الكاروسيل — T-173. والتوليدُ وحده نداءٌ مدفوع، فيحرسه السقفُ
+     * والتعليق (`quota:extra`). والمعاينةُ قالبٌ على كاروسيل العيّنة في إطار.
+     */
+    Route::post('/brand/carousel-designs', [CarouselDesignController::class, 'generate'])
+        ->middleware('quota:extra')
+        ->name('brand.carousel-designs.generate');
+    Route::post('/brand/carousel-designs/{design}/approve', [CarouselDesignController::class, 'approve'])
+        ->name('brand.carousel-designs.approve');
+    Route::post('/brand/carousel-designs/{design}/default', [CarouselDesignController::class, 'makeDefault'])
+        ->name('brand.carousel-designs.default');
+    Route::delete('/brand/carousel-designs/{design}', [CarouselDesignController::class, 'destroy'])
+        ->name('brand.carousel-designs.destroy');
+    Route::get('/brand/carousel-designs/{design}/preview', [CarouselDesignController::class, 'preview'])
+        ->name('brand.carousel-designs.preview');
 
     // المعاينة الحيّة تُرسم بالقالب الحقيقي وتُعرض في إطار — الشاشة 8.
     Route::get('/brand/preview', [BrandController::class, 'preview'])->name('brand.preview');

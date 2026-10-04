@@ -7,6 +7,7 @@ namespace App\Enums;
 use App\Domain\Summary\JobState;
 use App\Support\I18n\BodyStrings;
 use App\Support\Model\Effort;
+use App\Support\Render\CarouselDesign;
 
 /**
  * The six model stages — `prompts/islamic/PROMPT-PACK.md` والمواصفة §6.
@@ -74,6 +75,19 @@ enum Stage: string
     case Translating = 'translating';
 
     /**
+     * **خارج الستّ كذلك** — قوالبُ كاروسيل الجهة، T-173.
+     *
+     * تجري **للجهة لا لملخّص**: مرّةً حين تطلب قوالب لهويتها، أو حين يعيد
+     * المشرف توليدها. وتُخرج مواصفاتٍ من كتالوجٍ مغلق
+     * ({@see CarouselDesign})، لا نصّاً يُنشر ولا HTML،
+     * فلا تمسّ متناً ولا شاهداً.
+     *
+     * وتعليماتُها في `shared/`: الشكلُ لا يختلف باختلاف المجال. وللمشرف أن
+     * يكتب لجهةٍ تعليماتٍ تحلّ محلّها (`tenants.carousel_design_prompt`).
+     */
+    case CarouselDesign = 'carousel_design';
+
+    /**
      * أتختلف تعليمات هذه المرحلة باختلاف المجال؟
      *
      * **الستّ تختلف**: حزمةٌ لكل مجال في `prompts/<المجال>/PROMPT-PACK.md`.
@@ -83,7 +97,7 @@ enum Stage: string
      */
     public function isDomainSpecific(): bool
     {
-        return $this !== self::LectureDetails && $this !== self::Translating;
+        return ! in_array($this, [self::LectureDetails, self::Translating, self::CarouselDesign], true);
     }
 
     /**

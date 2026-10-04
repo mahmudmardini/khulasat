@@ -61,6 +61,9 @@ interface Props {
       error: string | null;
       enabled: boolean;
       urls: string[];
+      /** قوالبُ الجهة المعتمدة — T-173. وأوّلُها افتراضيُّها. */
+      designs: Array<{ id: string; name: string | null }>;
+      design: string | null;
     };
   };
   regenerations: { used: number; limit: number };
@@ -128,9 +131,13 @@ export default function Preview({
     );
   }
 
-  function buildImages(): void {
+  function buildImages(design: string | null): void {
     setBusy(true);
-    router.post(`/panel/jobs/${job.id}/images`, {}, { preserveScroll: true, onFinish: () => setBusy(false) });
+    router.post(
+      `/panel/jobs/${job.id}/images`,
+      design === null ? {} : { design },
+      { preserveScroll: true, onFinish: () => setBusy(false) },
+    );
   }
 
   function regenerate(): void {
@@ -664,9 +671,12 @@ function ImagesPane({
   carouselProduced: boolean;
   rich: boolean;
   busy: boolean;
-  onBuild: () => void;
+  onBuild: (design: string | null) => void;
   onOpenCarousel: () => void;
 }) {
+  // القالب: ما صُنعت به الحزمة الحاليّة، وإلّا افتراضيُّ الجهة.
+  const [design, setDesign] = useState<string | null>(images.design ?? images.designs[0]?.id ?? null);
+
   if (!rich) {
     return (
       <Card>
@@ -717,10 +727,31 @@ function ImagesPane({
   }
 
   const create = (
-    <Button loading={busy} onClick={onBuild} variant={images.produced ? 'secondary' : 'primary'}>
-      <Icon name="images" size={16} />
-      {t(images.produced ? 'jobs.images.recreate' : 'jobs.images.create')}
-    </Button>
+    <div className="flex flex-wrap items-center gap-2">
+      {/* لا اختيار إلّا لجهةٍ اعتمدت قالباً — ومن لم تعتمد فقالبُها الأصل. */}
+      {images.designs.length > 0 ? (
+        <label className="flex items-center gap-2 text-[14px] text-text-muted">
+          <span>{t('common.carousel_designs.choose')}</span>
+          <select
+            value={design ?? ''}
+            onChange={(event) => setDesign(event.target.value)}
+            className="field w-auto py-1.5"
+          >
+            {images.designs.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name ?? t('common.carousel_designs.unnamed')}
+              </option>
+            ))}
+            <option value="default">{t('common.carousel_designs.default_original')}</option>
+          </select>
+        </label>
+      ) : null}
+
+      <Button loading={busy} onClick={() => onBuild(design)} variant={images.produced ? 'secondary' : 'primary'}>
+        <Icon name="images" size={16} />
+        {t(images.produced ? 'jobs.images.recreate' : 'jobs.images.create')}
+      </Button>
+    </div>
   );
 
   if (!images.produced) {

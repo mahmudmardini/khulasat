@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Admin;
 use App\Actions\Admin\RecordAudit;
 use App\Enums\AuditAction;
 use App\Enums\Role;
+use App\Enums\Stage;
 use App\Enums\UnverifiedPolicy;
 use App\Http\Controllers\Controller;
 use App\Models\AuditEvent;
@@ -18,7 +19,10 @@ use App\Models\User;
 use App\Services\Quota\QuotaGuard;
 use App\Support\Analytics\ViewsByLocale;
 use App\Support\Billing\Plan;
+use App\Support\Model\StagePrompt;
+use App\Support\Render\TenantCarouselDesigns;
 use App\Support\TenantContext;
+use App\Support\Verification\DomainPolicy;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -103,6 +107,12 @@ class TenantController extends Controller
                     self::LIMITS,
                     array_map(static fn (string $field): int => (int) $tenant->{$field}, self::LIMITS),
                 ),
+            ],
+            // قوالبُ الكاروسيل وتعليماتُ توليدها — T-173.
+            'carousel_designs' => TenantCarouselDesigns::forScreen($tenant),
+            'carousel_prompt' => [
+                'custom' => $tenant->carousel_design_prompt,
+                'default' => StagePrompt::for(Stage::CarouselDesign, DomainPolicy::DEFAULT),
             ],
             'usage' => [
                 'used' => $decision->used,

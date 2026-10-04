@@ -10,6 +10,7 @@ use App\Jobs\GenerateImageSet;
 use App\Models\SummaryJob;
 use App\Support\Render\ImageSet;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 /**
@@ -22,7 +23,7 @@ use Illuminate\Http\Response;
 class ImageSetController extends Controller
 {
     /** يُنشئ الحزمة أو يُعيدها — في الطابور، والشاشةُ تنتظر. */
-    public function store(SummaryJob $job): RedirectResponse
+    public function store(Request $request, SummaryJob $job): RedirectResponse
     {
         // حدُّ الشريحة على المخرَج كالكاروسيل — SCREENS.md §3-ب.
         if (! $job->tenant?->allowsRichOutputs()) {
@@ -43,7 +44,11 @@ class ImageSetController extends Controller
 
         RenderImageSet::mark($job, 'rendering');
 
-        GenerateImageSet::dispatch($job);
+        // القالبُ المختار — T-173. ومعرّفٌ لا تعرفه الجهة يسقط إلى افتراضيّها
+        // في `CarouselDesign::forTenant()`، فلا يُرفض طلبٌ لقالبٍ حُذف للتوّ.
+        $design = $request->string('design')->toString();
+
+        GenerateImageSet::dispatch($job, $design === '' ? null : $design);
 
         return back();
     }

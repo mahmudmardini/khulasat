@@ -45,6 +45,16 @@ enum AuditAction: string
     case TenantVerification = 'tenant.verification';
 
     /**
+     * تعليماتُ توليد قوالب الكاروسيل لجهةٍ بعينها — T-173.
+     *
+     * نصٌّ يصل نموذجاً مدفوعاً باسم الجهة، فيُعرف من كتبه ومتى.
+     */
+    case TenantCarouselPrompt = 'tenant.carousel_prompt';
+
+    /** توليدُ قوالب الكاروسيل لجهةٍ من لوحة المشرف — نداءٌ مدفوع. */
+    case TenantCarouselDesigns = 'tenant.carousel_designs';
+
+    /**
      * تعديل `model_config`.
      *
      * تغييرُ نموذجٍ يغيّر جودة المنتج وكلفته معاً، فلا يمرّ بلا أثر.

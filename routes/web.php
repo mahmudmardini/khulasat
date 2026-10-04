@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\InviteRequestController as AdminInviteRequestCont
 use App\Http\Controllers\Admin\ModelConfigController;
 use App\Http\Controllers\Admin\SpendCapController;
 use App\Http\Controllers\Admin\TakedownController;
+use App\Http\Controllers\Admin\TenantCarouselDesignController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Public\ComplaintController;
 use App\Http\Controllers\Public\InviteRequestController;
@@ -170,6 +171,18 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::put('/tenants/{tenant}/plan', [TenantController::class, 'applyPlan'])->name('tenants.plan');
     Route::put('/tenants/{tenant}/status', [TenantController::class, 'updateStatus'])->name('tenants.status');
     Route::put('/tenants/{tenant}/verification', [TenantController::class, 'updateVerification'])->name('tenants.verification');
+
+    /*
+     * قوالبُ كاروسيل الجهة — T-173. تعليماتُ توليدٍ خاصّة بالجهة، وإعادةُ
+     * توليدٍ بها. والتوليدُ إنفاقٌ فيحرسه السقف (`quota:cap`) كسائر النداءات.
+     */
+    Route::put('/tenants/{tenant}/carousel-designs/prompt', [TenantCarouselDesignController::class, 'updatePrompt'])
+        ->name('tenants.carousel-designs.prompt');
+    Route::post('/tenants/{tenant}/carousel-designs', [TenantCarouselDesignController::class, 'generate'])
+        ->middleware('quota:cap')
+        ->name('tenants.carousel-designs.generate');
+    Route::get('/tenants/{tenant}/carousel-designs/{design}/preview', [TenantCarouselDesignController::class, 'preview'])
+        ->name('tenants.carousel-designs.preview');
 
     /*
      * «صلاحية خطيرة تُراقَب لا تُمنع» — SCREENS.md §أ. فالبدء والانتهاء

@@ -227,8 +227,9 @@ it('يحرس الشاشة بوسيط المصادقة', function (): void {
     $routes = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($route): bool => str_starts_with($route->uri(), 'panel/settings/brand'));
 
-    // الرابع معاينةُ ما لم يُحفظ (`POST`) — T-85، وخلف الحارس نفسه.
-    expect($routes)->toHaveCount(4);
+    // الرابع معاينةُ ما لم يُحفظ (`POST`) — T-85. والخمسة بعده قوالبُ الكاروسيل
+    // (T-173): توليدٌ واعتمادٌ وافتراضيٌّ وحذفٌ ومعاينة، وكلُّها خلف الحارس نفسه.
+    expect($routes)->toHaveCount(9);
 
     foreach ($routes as $route) {
         expect($route->gatherMiddleware())->toContain('auth');

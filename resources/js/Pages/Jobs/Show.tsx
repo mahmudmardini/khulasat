@@ -34,6 +34,8 @@ interface Job {
   pending_evidence: number;
   started_at: string | null;
   finished_at: string | null;
+  /** وقتُ المراجعة: مجموعُ ما انقضى منه، وبدءُ ما هو مفتوحٌ الآن — T-171. */
+  review: { seconds: number; open_since: string | null };
   error: string | null;
   /** أيصلح تبديلُ المصدر هذا الخطأ فعلاً؟ — T-91. */
   error_offers_change_source: boolean;
@@ -143,6 +145,7 @@ export default function Show({ job: initial }: { job: Job }) {
             <ProcessWizard
               steps={job.steps}
               now={now}
+              decidedReview
               aside={
                 elapsed !== null ? (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-alt px-3 py-1 text-[13px] text-text-muted">
@@ -189,12 +192,19 @@ function Tally({ job, elapsed }: { job: Job; elapsed: number | null }) {
       icon: 'clock',
       label: t('jobs.live.wizard.tally.time'),
       value: elapsed === null ? t('jobs.live.wizard.tally.not_started') : durationLabel(elapsed),
+      // ★ ومن دخل المراجعةَ تُقال له «سوى وقت مراجعتك»، فلا يناقض
+      // سطرُ الساعتين الرقمَ فوقه — T-171.
       detail:
         job.started_at !== null
-          ? t('jobs.live.wizard.tally.span', {
-            from: clock(job.started_at),
-            to: job.finished_at !== null ? clock(job.finished_at) : t('jobs.live.wizard.tally.now'),
-          })
+          ? t(
+            job.review.seconds > 0 || job.review.open_since !== null
+              ? 'jobs.live.wizard.tally.span_without_review'
+              : 'jobs.live.wizard.tally.span',
+            {
+              from: clock(job.started_at),
+              to: job.finished_at !== null ? clock(job.finished_at) : t('jobs.live.wizard.tally.now'),
+            },
+          )
           : undefined,
       known: elapsed !== null,
     },
@@ -439,8 +449,12 @@ function clock(iso: string): string {
 }
 
 /**
- * الثواني المنقضية — إلى الانتهاء إن انتهت، وإلى الآن إن كانت تجري.
+ * ثواني الإعداد — إلى الانتهاء إن انتهت، وإلى الآن إن كانت تجري.
  * و`null` لما لم يبدأ: مهمّةٌ في الطابور لا زمنَ لها بعد.
+ *
+ * ★ **بلا وقت المراجعة** — T-171. ما قضته المهمّة بانتظار قرار الجهة
+ * وقتُ الجهة لا وقتُ الإعداد، فيُطرح. والمراجعةُ المفتوحة يقف العدُّ عند
+ * بدئها، ثمّ يُستأنف بعد القرار.
  */
 function elapsedSeconds(job: Job, now: number): number | null {
   if (job.started_at === null) {
@@ -448,7 +462,15 @@ function elapsedSeconds(job: Job, now: number): number | null {
   }
 
   const from = new Date(job.started_at).getTime();
-  const to = job.finished_at === null ? now : new Date(job.finished_at).getTime();
+  const to = job.finished_at !== null
+    ? new Date(job.finished_at).getTime()
+    : job.review.open_since !== null
+      ? new Date(job.review.open_since).getTime()
+      : now;
 
-  return Number.isNaN(from) || Number.isNaN(to) || to < from ? null : Math.round((to - from) / 1000);
+  if (Number.isNaN(from) || Number.isNaN(to) || to < from) {
+    return null;
+  }
+
+  return Math.max(0, Math.round((to - from) / 1000) - job.review.seconds);
 }

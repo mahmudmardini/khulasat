@@ -51,7 +51,6 @@ interface Props {
     state: 'ready' | 'failed';
     status: 'open' | 'closed';
     attempts: number;
-    participants: number;
     average: number | null;
   } | null;
 }
@@ -410,8 +409,8 @@ function QuizCard({ jobId, quiz }: { jobId: number; quiz: Props['quiz'] }) {
       ? t('quiz.panel.failed_title')
       : [
         quiz.status === 'open' ? t('quiz.panel.status_open') : t('quiz.panel.status_closed'),
-        quiz.participants > 0
-          ? prose(t('quiz.reports.summary_card', { count: quiz.participants, average: quiz.average ?? 0 }))
+        quiz.attempts > 0
+          ? prose(t('quiz.reports.summary_card', { count: quiz.attempts, average: quiz.average ?? 0 }))
           : t('quiz.reports.none'),
       ].join('، ');
 

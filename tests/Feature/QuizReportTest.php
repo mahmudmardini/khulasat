@@ -15,8 +15,8 @@ use App\Models\User;
 /*
  * تقاريرُ الاختبارات — T-201. **على بياناتٍ معلومة**، فكلُّ رقمٍ يُحسب باليد.
  *
- * والقاعدةُ الحاكمة: المحسوبُ أوّلُ محاولةٍ منتهية لكلّ (اسم + IP). فالمعيدُ
- * لا يرفع المتوسّط، ومن لم يُنهِ يُنقص نسبةَ الإكمال وحدها.
+ * والقاعدةُ الحاكمة: المحاولاتُ بلا أصحاب (قرار @HasanSiwi)، فكلُّ محاولةٍ
+ * منتهية تُحسب، ومن لم يُنهِ يُنقص نسبةَ الإكمال وحدها. **ولا قائمةَ أشخاص**.
  */
 
 beforeEach(function (): void {
@@ -65,17 +65,13 @@ function reportQuiz(Tenant $tenant, array $axes): Quiz
 /**
  * @param  list<int|null>  $choices  خيارُ كلّ سؤال، و`null` بلا جواب.
  */
-function reportAttempt(Quiz $quiz, string $name, string $ip, array $choices, ?int $seconds = 60, int $number = 1): QuizAttempt
+function reportAttempt(Quiz $quiz, array $choices, ?int $seconds = 60): QuizAttempt
 {
     $started = now()->subMinutes(10);
     $attempt = QuizAttempt::acrossTenants()->create([
         'tenant_id' => $quiz->tenant_id,
         'quiz_id' => $quiz->id,
         'token' => Str::random(40),
-        'participant_name' => $name,
-        'name_key' => $name,
-        'ip' => $ip,
-        'attempt_number' => $number,
         'total' => 3,
         'started_at' => $started,
         'finished_at' => $seconds === null ? null : $started->copy()->addSeconds($seconds),
@@ -100,41 +96,39 @@ function reportAttempt(Quiz $quiz, string $name, string $ip, array $choices, ?in
     return $attempt;
 }
 
-it('يحسب أوّل محاولةٍ منتهية لكلّ اسمٍ من جهاز، ويعدّ غير المنتهية في الإكمال وحده', function (): void {
-    reportAttempt($this->quiz, 'أ', '203.0.113.1', [0, 0, 0], 30);           // ١٠٠٪
-    reportAttempt($this->quiz, 'أ', '203.0.113.1', [0, 0, 0], 20, 2);        // إعادة: لا تُحسب
-    reportAttempt($this->quiz, 'ب', '203.0.113.2', [1, 0, null], 90);        // ٣٣٪
-    reportAttempt($this->quiz, 'ج', '203.0.113.3', [0, 2, 1], 60);           // ٣٣٪
-    reportAttempt($this->quiz, 'د', '203.0.113.4', [0, null, null], null);  // لم يُنهِ
+it('يحسب كلَّ محاولةٍ منتهية، ويعدّ غير المنتهية في الإكمال وحده', function (): void {
+    reportAttempt($this->quiz, [0, 0, 0], 30);          // ١٠٠٪
+    reportAttempt($this->quiz, [0, 0, 0], 20);          // إعادةٌ لا تُعرف: تُحسب كغيرها
+    reportAttempt($this->quiz, [1, 0, null], 90);       // ٣٣٪
+    reportAttempt($this->quiz, [0, 2, 1], 60);          // ٣٣٪
+    reportAttempt($this->quiz, [0, null, null], null);  // لم يُنهِ
 
     $report = app(BuildQuizReport::class)->forQuiz($this->quiz->refresh());
 
-    expect($report['participants'])->toBe(3)
+    expect($report)->not->toHaveKey('participants')
         ->and($report['started'])->toBe(5)
         ->and($report['finished'])->toBe(4)
         ->and($report['completion'])->toEqual(80)
-        // (100 + 33.3 + 33.3) / 3 = 55.6
-        ->and($report['average'])->toBe(56)
-        ->and($report['median'])->toBe(33)
-        // وسيطُ ٣٠ و٦٠ و٩٠ — عددٌ فرديّ.
-        ->and($report['duration_median'])->toBe(60)
-        ->and(array_column($report['distribution'], 'count'))->toBe([0, 2, 0, 1]);
+        // (100 + 100 + 33.3 + 33.3) / 4
+        ->and($report['average'])->toBe(67)
+        // وسيطُ عددٍ زوجيّ: (33.3 + 100) / 2
+        ->and($report['median'])->toBe(67)
+        // ٢٠ و٣٠ و٦٠ و٩٠ — وسيطُها ٤٥.
+        ->and($report['duration_median'])->toBe(45)
+        ->and(array_column($report['distribution'], 'count'))->toBe([0, 2, 0, 2]);
 
     [$first, $second, $third] = $report['questions'];
 
-    // السؤال الأوّل: أصابه اثنان من ثلاثة، والخطأُ الأكثر الخيارُ الثاني.
-    expect($first['correct_rate'])->toBe(67)
-        ->and($first['counts'])->toBe([2, 1, 0])
-        ->and($first['top_wrong'])->toBe(['index' => 1, 'rate' => 33])
-        // السؤال الثاني: أصابه اثنان، وأخطأ واحدٌ بالثالث.
-        ->and($second['correct_rate'])->toBe(67)
-        // السؤال الثالث: أصابه واحد، وتركه واحد — فالمقامُ المحسوبون كلُّهم.
-        ->and($third['correct_rate'])->toBe(33);
+    expect($first['correct_rate'])->toBe(75)
+        ->and($first['counts'])->toBe([3, 1, 0])
+        ->and($first['top_wrong'])->toBe(['index' => 1, 'rate' => 25])
+        ->and($second['correct_rate'])->toBe(75)
+        // تركه واحد — فالمقامُ المحاولاتُ المنتهية كلُّها.
+        ->and($third['correct_rate'])->toBe(50);
 
-    // المحور الأوّل متوسّطُ سؤاليه (٦٧)، والثاني (٣٣) — والأضعفُ أوّلاً.
     expect($report['axes'])->toBe([
-        ['index' => 1, 'name' => 'المحور الثاني', 'rate' => 33, 'questions' => 1],
-        ['index' => 0, 'name' => 'المحور الأوّل', 'rate' => 67, 'questions' => 2],
+        ['index' => 1, 'name' => 'المحور الثاني', 'rate' => 50, 'questions' => 1],
+        ['index' => 0, 'name' => 'المحور الأوّل', 'rate' => 75, 'questions' => 2],
     ]);
 });
 
@@ -144,62 +138,51 @@ it('يحسب الوسيط في عددٍ زوجيّ', function (): void {
 });
 
 it('يعرض التقرير العامّ واختبارَ الجهة وحدها', function (): void {
-    reportAttempt($this->quiz, 'أ', '203.0.113.1', [0, 0, 0], 30);
+    reportAttempt($this->quiz, [0, 0, 0], 30);
 
     $other = Tenant::factory()->create(['slug' => 'tenant-b']);
-    reportAttempt(reportQuiz($other, ['المحور الأوّل']), 'ب', '203.0.113.9', [1, 1, 1], 30);
+    reportAttempt(reportQuiz($other, ['المحور الأوّل']), [1, 1, 1], 30);
 
     $this->actingAs($this->owner)
         ->get(route('quizzes.index'))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('Quizzes/Index')
-            ->where('report.participants', 1)
+            ->where('report.attempts', 1)
             ->where('report.average', 100)
             ->has('report.quizzes', 1)
             ->has('report.daily', 30));
 });
 
-it('يعرض تقرير الاختبار بجدول المشاركين وإعاداتهم', function (): void {
-    reportAttempt($this->quiz, 'أ', '203.0.113.1', [0, 0, 0], 30);
-    reportAttempt($this->quiz, 'أ', '203.0.113.1', [0, 1, 0], 20, 2);
+it('يعرض تقرير الاختبار أرقاماً بلا قائمة أشخاص', function (): void {
+    reportAttempt($this->quiz, [0, 0, 0], 30);
 
     $this->actingAs($this->owner)
         ->get(route('quizzes.show', $this->quiz))
         ->assertOk()
         ->assertInertia(fn ($page) => $page->component('Quizzes/Show')
-            ->has('participants.data', 2)
-            ->where('participants.data.0.counted', false)
-            ->where('participants.data.1.counted', true)
-            ->where('participants.data.1.ip', '203.0.113.1'));
+            ->missing('participants')
+            ->where('report.finished', 1)
+            ->has('report.questions', 3));
 });
 
-it('يفتح إجابات محاولةٍ واحدة', function (): void {
-    $attempt = reportAttempt($this->quiz, 'أ', '203.0.113.1', [1, 0, null], 30);
-
-    $this->actingAs($this->owner)
-        ->getJson(route('quizzes.attempt', [$this->quiz, $attempt->id]))
-        ->assertOk()
-        ->assertJsonPath('answers.0.chosen', 'خطأٌ أوّل')
-        ->assertJsonPath('answers.0.correct', 'الصحيح')
-        ->assertJsonPath('answers.0.is_correct', false)
-        ->assertJsonPath('answers.2.chosen', null);
-});
-
-it('ينزّل CSV بعمودٍ لكلّ سؤال، وبعلامة BOM', function (): void {
-    reportAttempt($this->quiz, 'اسم المشارك', '203.0.113.1', [0, 1, null], 30);
+it('ينزّل CSV بصفٍّ لكلّ سؤال لا لكلّ مشارك، وبعلامة BOM', function (): void {
+    reportAttempt($this->quiz, [0, 1, null], 30);
+    reportAttempt($this->quiz, [1, 1, 0], 40);
 
     $csv = $this->actingAs($this->owner)
         ->get(route('quizzes.export', $this->quiz))
         ->assertOk()
         ->streamedContent();
 
-    $lines = array_values(array_filter(explode("\n", $csv)));
+    $rows = array_map('str_getcsv', array_values(array_filter(explode("\n", substr($csv, 3)))));
 
     expect(str_starts_with($csv, "\xEF\xBB\xBF"))->toBeTrue()
-        ->and(str_getcsv($lines[0]))->toHaveCount(13)
-        ->and($lines[1])->toContain('اسم المشارك')
-        ->and($lines[1])->toContain('✓ الصحيح')
-        ->and($lines[1])->toContain('✗ خطأٌ أوّل');
+        ->and($rows)->toHaveCount(4)
+        ->and($rows[0])->toHaveCount(11)
+        ->and($rows[1][1])->toBe('السؤال 1')
+        ->and($rows[1][3])->toBe('50')
+        ->and($rows[1][8])->toBe('الصحيح (1)')
+        ->and($rows[1][9])->toBe('خطأٌ أوّل (1)');
 });
 
 it('لا يفتح تقريرَ جهةٍ لغيرها', function (): void {

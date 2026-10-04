@@ -15,7 +15,7 @@ interface QuizRow {
   job_id: number;
   title: string | null;
   status: 'open' | 'closed';
-  participants: number;
+  attempts: number;
   average: number | null;
   duration_median: number | null;
   last_attempt: string | null;
@@ -24,7 +24,7 @@ interface QuizRow {
 interface Props {
   report: {
     open: number;
-    participants: number;
+    attempts: number;
     average: number | null;
     completion: number | null;
     daily: Array<{ date: string; count: number }>;
@@ -37,8 +37,8 @@ interface Props {
  * تقاريرُ الاختبارات — العامّ، T-201.
  *
  * أرقامٌ على اختبارات الجهة كلِّها، والمشاركةُ عبر الزمن، وقائمةُ الاختبارات
- * يفتح كلٌّ منها تقريره. **والمحسوبُ أوّلُ محاولةٍ منتهية لكلّ اسمٍ من جهاز**،
- * فلا يرفع المعيدُ المتوسّطَ بإعادته.
+ * يفتح كلٌّ منها تقريره. **مجموعةٌ بلا أسماء**: المحاولاتُ بلا أصحاب (قرار
+ * @HasanSiwi)، فكلُّ محاولةٍ منتهية تُحسب.
  */
 export default function Index({ report }: Props) {
   const columns: Array<Column<QuizRow>> = [
@@ -60,7 +60,7 @@ export default function Index({ report }: Props) {
         </span>
       ),
     },
-    { key: 'participants', header: t('quiz.reports.col_participants'), numeric: true, render: (row) => tabular(row.participants) },
+    { key: 'attempts', header: t('quiz.reports.col_attempts'), numeric: true, render: (row) => tabular(row.attempts) },
     { key: 'average', header: t('quiz.reports.col_average'), numeric: true, render: (row) => percent(row.average) },
     { key: 'duration', header: t('quiz.reports.col_duration'), numeric: true, render: (row) => clock(row.duration_median) },
     {
@@ -84,7 +84,7 @@ export default function Index({ report }: Props) {
         <div className="flex flex-col gap-5">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat label={t('quiz.reports.kpi_open')} value={tabular(report.open)} />
-            <Stat label={t('quiz.reports.kpi_participants')} value={tabular(report.participants)} />
+            <Stat label={t('quiz.reports.kpi_attempts')} value={tabular(report.attempts)} />
             <Stat label={t('quiz.reports.kpi_average')} value={percent(report.average)} />
             <Stat label={t('quiz.reports.kpi_completion')} value={percent(report.completion)} />
           </div>
@@ -93,14 +93,14 @@ export default function Index({ report }: Props) {
             <DailyColumns days={report.daily} caption={t('quiz.reports.daily')} />
           </Card>
 
-          <Card title={t('quiz.reports.list')} flush footer={<p className="text-[12.5px] text-text-faint">{t('quiz.reports.name_note')}</p>}>
+          <Card title={t('quiz.reports.list')} flush footer={<p className="text-[12.5px] text-text-faint">{t('quiz.reports.retake_note')}</p>}>
             <DataTable columns={columns} rows={report.quizzes} rowKey={(row) => row.id} />
           </Card>
 
           {report.hardest.length > 0 ? (
             <Card title={t('quiz.reports.hardest')} footer={<p className="text-[12.5px] text-text-faint">{t('quiz.reports.hardest_note', { min: 5 })}</p>}>
               <BarList
-                items={report.hardest.map((row) => ({ label: row.title ?? '—', value: row.average ?? 0, hint: `${t('quiz.reports.col_participants')}: ${tabular(row.participants)}` }))}
+                items={report.hardest.map((row) => ({ label: row.title ?? '—', value: row.average ?? 0, hint: `${t('quiz.reports.col_attempts')}: ${tabular(row.attempts)}` }))}
                 formatValue={(value) => `${value}%`}
               />
             </Card>

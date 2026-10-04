@@ -79,10 +79,9 @@ class PublicationController extends Controller
             return null;
         }
 
-        // بطاقةُ التقرير — T-201: المشاركون المحسوبون ومتوسّطُ درجتهم.
-        $report = app(BuildQuizReport::class);
-        $counted = $report->countedIds($quiz->id);
-        $percents = QuizAttempt::query()->whereIn('id', $counted)->get(['score', 'total'])
+        // بطاقةُ التقرير — T-201: المحاولاتُ المنتهية ومتوسّطُ درجتها.
+        $finished = app(BuildQuizReport::class)->finishedIds($quiz->id);
+        $percents = QuizAttempt::query()->whereIn('id', $finished)->get(['score', 'total'])
             ->map(static fn (QuizAttempt $a): float => $a->total === 0 ? 0.0 : 100 * (int) $a->score / $a->total)
             ->all();
         $average = BuildQuizReport::mean($percents);
@@ -91,8 +90,7 @@ class PublicationController extends Controller
             'id' => $quiz->id,
             'state' => $quiz->state,
             'status' => $quiz->status,
-            'attempts' => $quiz->attempts()->whereNotNull('finished_at')->count(),
-            'participants' => count($counted),
+            'attempts' => count($finished),
             'average' => $average === null ? null : (int) round($average),
         ];
     }

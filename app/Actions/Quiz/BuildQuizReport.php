@@ -15,25 +15,24 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * أرقامُ تقارير الاختبارات — T-201.
+ * أرقامُ تقارير الاختبارات — T-201. **مجموعةٌ لا فرادى**.
  *
- * ★ **المحاولةُ المحسوبة هي الأولى المنتهية لكلّ (اسم + IP)** — القرار ٤ في
- * T-195. وعليها تُبنى المتوسّطات والتوزيع ونِسَبُ الأسئلة والمحاور كلُّها.
- * فمن أعاد الاختبار حتى أصاب لا يرفع متوسّط فهم الدرس بإعادته. وما بعدها
- * يُعرض في جدول المشاركين وحده.
+ * ★ **والمحاولاتُ بلا أصحاب** — قرار @HasanSiwi، ٤ أكتوبر ٢٠٢٦: لا اسمَ ولا
+ * IP. فكلُّ محاولةٍ منتهية تدخل الأرقام، **والإعادةُ محاولةٌ كغيرها**: لا
+ * يُعرف المعيدُ ليُستثنى. والتقريرُ يقول ذلك في رأسه.
  *
  * **والحسابُ في استعلاماتٍ مجمَّعة** لا بتحميل المحاولات: اختبارٌ يُشارَك في
  * مجموعة واتساب كبيرة يبلغ آلاف المحاولات.
  */
 final class BuildQuizReport
 {
-    /** يُحسب «أصعبُ الاختبارات» ممّا شارك فيه هذا العددُ فأكثر — فاختبارٌ بمشاركَين لا يُحكم عليه. */
+    /** يُحسب «أصعبُ الاختبارات» ممّا أُنهي هذا العددَ فأكثر — فاختبارٌ بمحاولتين لا يُحكم عليه. */
     public const MIN_FOR_RANKING = 5;
 
     /** @return array<string, mixed> */
     public function forQuiz(Quiz $quiz): array
     {
-        $counted = $this->countedIds($quiz->id);
+        $counted = $this->finishedIds($quiz->id);
         $questions = $quiz->questions()->get();
         $axes = array_values((array) ($quiz->summaryJob?->structure_json['axes'] ?? []));
 
@@ -60,7 +59,6 @@ final class BuildQuizReport
             'started' => $started,
             'finished' => $finished,
             'completion' => $started === 0 ? null : round(100 * $finished / $started),
-            'participants' => count($counted),
             'average' => self::round(self::mean($percents)),
             'median' => self::round(self::median($percents)),
             'duration_median' => self::median($durations) === null ? null : (int) round((float) self::median($durations)),
@@ -89,7 +87,7 @@ final class BuildQuizReport
         $allCounted = [];
 
         foreach ($quizzes as $quiz) {
-            $counted = $this->countedIds($quiz->id);
+            $counted = $this->finishedIds($quiz->id);
             $allCounted = [...$allCounted, ...$counted];
 
             $rows = QuizAttempt::query()->whereIn('id', $counted)->get(['score', 'total', 'duration_seconds']);
@@ -103,7 +101,7 @@ final class BuildQuizReport
                 'job_id' => $quiz->summary_job_id,
                 'title' => $quiz->summaryJob?->structure_json['title_ar'] ?? $quiz->summaryJob?->lecture?->title_ar,
                 'status' => $quiz->status,
-                'participants' => count($counted),
+                'attempts' => count($counted),
                 'average' => self::round(self::mean($percents)),
                 'duration_median' => self::median($durations) === null ? null : (int) round((float) self::median($durations)),
                 'last_attempt' => $last === null ? null : Carbon::parse($last)->toIso8601String(),
@@ -120,12 +118,12 @@ final class BuildQuizReport
         $all = QuizAttempt::query()->whereIn('id', $allCounted)->get(['score', 'total']);
         $percents = $all->map(static fn (QuizAttempt $a): float => $a->total === 0 ? 0.0 : 100 * (int) $a->score / $a->total)->all();
 
-        $ranked = array_values(array_filter($list, static fn (array $q): bool => $q['participants'] >= self::MIN_FOR_RANKING));
+        $ranked = array_values(array_filter($list, static fn (array $q): bool => $q['attempts'] >= self::MIN_FOR_RANKING));
         usort($ranked, static fn (array $a, array $b): int => $a['average'] <=> $b['average']);
 
         return [
             'open' => $quizzes->where('status', Quiz::STATUS_OPEN)->count(),
-            'participants' => count($allCounted),
+            'attempts' => count($allCounted),
             'average' => self::round(self::mean($percents)),
             'completion' => $started === 0 ? null : round(100 * $finished / $started),
             'daily' => $this->daily(QuizAttempt::query()->whereIn('quiz_id', $ids)),
@@ -135,17 +133,15 @@ final class BuildQuizReport
     }
 
     /**
-     * معرّفاتُ المحاولات المحسوبة: **أوّلُ منتهيةٍ لكلّ (اسم + IP)**.
+     * معرّفاتُ المحاولات المنتهية — وعليها تُبنى الأرقام كلُّها.
      *
      * @return list<int>
      */
-    public function countedIds(int $quizId): array
+    public function finishedIds(int $quizId): array
     {
         return QuizAttempt::query()
             ->where('quiz_id', $quizId)
             ->whereNotNull('finished_at')
-            ->groupBy('name_key', 'ip')
-            ->selectRaw('MIN(id) as id')
             ->pluck('id')
             ->map(static fn ($id): int => (int) $id)
             ->all();
@@ -153,14 +149,14 @@ final class BuildQuizReport
 
     /**
      * لكلّ سؤال: نسبةُ الصواب، وتوزيعُ الخيارات، وأكثرُ خيارٍ خاطئٍ اختير،
-     * ووسيطُ وقت الجواب. **والمقامُ المحسوبون كلُّهم**: من ترك سؤالاً بلا
-     * جوابٍ لم يُصبه.
+     * ووسيطُ وقت الجواب. **والمقامُ المحاولاتُ المنتهية كلُّها**: من ترك
+     * سؤالاً بلا جوابٍ لم يُصبه.
      *
      * @param  list<QuizQuestion>  $questions
      * @param  list<int>  $counted
      * @return list<array<string, mixed>>
      */
-    private function questions(array $questions, array $counted, int $participants): array
+    private function questions(array $questions, array $counted, int $attempts): array
     {
         $choices = QuizAnswer::query()
             ->whereIn('quiz_attempt_id', $counted)
@@ -172,7 +168,7 @@ final class BuildQuizReport
         $seconds = $this->answerSeconds($counted);
         $evidence = self::evidenceExcerpts($questions);
 
-        return array_map(function (QuizQuestion $q) use ($choices, $participants, $seconds, $evidence): array {
+        return array_map(function (QuizQuestion $q) use ($choices, $attempts, $seconds, $evidence): array {
             $counts = array_fill(0, count($q->options), 0);
 
             foreach ($choices->get($q->id, collect()) as $row) {
@@ -194,10 +190,10 @@ final class BuildQuizReport
                 'correct_index' => $q->correct_index,
                 'options' => array_map(static fn (array $o): string => (string) ($o['text'] ?? $evidence[$o['evidence_item_id']] ?? ''), $q->options),
                 'counts' => $counts,
-                'correct_rate' => $participants === 0 ? null : (int) round(100 * $counts[$q->correct_index] / $participants),
+                'correct_rate' => $attempts === 0 ? null : (int) round(100 * $counts[$q->correct_index] / $attempts),
                 'top_wrong' => $topWrong === null || ($wrong[$topWrong] ?? 0) === 0 ? null : [
                     'index' => $topWrong,
-                    'rate' => (int) round(100 * $wrong[$topWrong] / max(1, $participants)),
+                    'rate' => (int) round(100 * $wrong[$topWrong] / max(1, $attempts)),
                 ],
                 'median_seconds' => self::median($seconds[$q->id] ?? []) === null ? null : (int) round((float) self::median($seconds[$q->id])),
             ];

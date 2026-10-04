@@ -7,6 +7,7 @@ namespace App\Support\Ui;
 use App\Domain\Summary\JobState;
 use App\Enums\Locale;
 use App\Models\SummaryJob;
+use App\Support\Render\ContentObject;
 
 /**
  * What the follow screen shows beside the steps — T-83، ونُقّح في T-92.
@@ -63,7 +64,7 @@ final class LiveFeed
      * ملامحُ الدرس من بنيته: الفكرةُ الجامعة والتشخيصُ والمحاور.
      *
      * و`closing_line` عمداً غائبة: سقالةٌ لصياغة المرحلة الخامسة لا نصٌّ
-     * للعرض (كما في {@see \App\Support\Render\ContentObject}). و`key_ayah`
+     * للعرض (كما في {@see ContentObject}). و`key_ayah`
      * غائبةٌ لعلّةٍ أشدّ — رأسُ هذا الصنف.
      *
      * @param  array<string, mixed>  $structure

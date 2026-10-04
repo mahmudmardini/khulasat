@@ -58,4 +58,17 @@ return [
         'mail_ignore' => 'Bunu siz istemediyseniz yapmanız gereken bir şey yok: mevcut parolanız geçerli kalır ve bu bağlantı olmadan kimse onu değiştiremez.',
         'mail_fallback' => 'Düğme çalışmazsa bu bağlantıyı tarayıcınıza kopyalayın:',
     ],
+
+    /* Jüri için tek tıkla giriş — T-186. */
+    'judges' => [
+        'title' => 'Jüri girişi',
+        'hint' => 'Tek tıkla, e-posta ve şifre olmadan. Her hesap platformu kendi rolünün yetkileriyle görür.',
+        'or' => 'veya e-posta ve şifre ile',
+        'roles' => [
+            'admin' => 'Platform yöneticisi',
+            'owner' => 'Kurum sahibi',
+            'editor' => 'Editör (denetçi)',
+        ],
+    ],
+
 ];

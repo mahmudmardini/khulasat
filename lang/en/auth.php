@@ -58,4 +58,17 @@ return [
         'mail_ignore' => 'If you did not ask for this, there is nothing to do: your current password still stands, and nobody can change it without this link.',
         'mail_fallback' => 'If the button does not work, copy this link into your browser:',
     ],
+
+    /* One-click judge login — T-186. */
+    'judges' => [
+        'title' => 'Judges’ sign-in',
+        'hint' => 'One click, no email or password. Each account sees the platform with its role’s permissions.',
+        'or' => 'or with email and password',
+        'roles' => [
+            'admin' => 'Platform admin',
+            'owner' => 'Institution owner',
+            'editor' => 'Editor (reviewer)',
+        ],
+    ],
+
 ];

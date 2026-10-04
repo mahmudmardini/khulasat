@@ -199,6 +199,11 @@ Route::middleware('guest:web,admin')->group(function (): void {
     Route::get('/login', [LoginController::class, 'show'])->name('login');
     Route::post('/login', [LoginController::class, 'store']);
 
+    // دخولُ لجنة التحكيم بنقرة — T-186. وهو مغلقٌ ما لم يُفتح بـ`JudgeAccess`.
+    Route::post('/login/judge', [LoginController::class, 'judge'])
+        ->middleware('throttle:20,1')
+        ->name('login.judge');
+
     /*
      * استعادة كلمة المرور — SCREENS.md §1 («حقلان وزر **واستعادة كلمة
      * المرور**»)، والمهمّة T-32.

@@ -6,6 +6,7 @@ import { Card } from '@/Components/Card';
 import { EmptyState } from '@/Components/EmptyState';
 import { Icon } from '@/Components/Icon';
 import { SlideBody } from '@/Components/SlideBody';
+import { forPost } from '@/lib/ayah';
 import { cn } from '@/lib/cn';
 import { t } from '@/lib/i18n';
 import { toArabicIndic } from '@/lib/numerals';
@@ -184,9 +185,11 @@ function Deck({
 }
 
 function SlideCard({ slide }: { slide: Slide }) {
-  const text = [slide.heading, slide.body, slide.source_line]
-    .filter((line): line is string => line !== null && line !== '')
-    .join('\n');
+  const text = forPost(
+    [slide.heading, slide.body, slide.source_line]
+      .filter((line): line is string => line !== null && line !== '')
+      .join('\n'),
+  );
 
   return (
     <li className="flex flex-col gap-2 rounded-lg border border-border bg-surface-alt p-4">

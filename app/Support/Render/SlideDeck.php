@@ -6,6 +6,7 @@ namespace App\Support\Render;
 
 use App\Enums\SlideKind;
 use App\Support\Arabic;
+use App\Support\Quran\AyahText;
 
 /**
  * شرائح الكاروسيل مجتمعةً — المواصفة §8-أ، والمهمّة T-19.
@@ -159,13 +160,17 @@ final readonly class SlideDeck
         return array_map(static fn (Slide $slide): array => $slide->toArray(), $this->slides);
     }
 
-    /** النصّ الذي يُنسخ يدوياً إلى إنستغرام — «نسخ الكلّ» في SCREENS.md §6. */
+    /**
+     * النصّ الذي يُنسخ يدوياً إلى إنستغرام — «نسخ الكلّ» في SCREENS.md §6.
+     *
+     * ورقمُ الآية فيه بلا «۝» — {@see AyahText::forPost()}، T-172.
+     */
     public function toPlainText(): string
     {
         $blocks = array_map(static function (Slide $slide): string {
             return implode("\n", array_filter([
                 $slide->label().'. '.$slide->heading,
-                $slide->body,
+                AyahText::forPost($slide->body),
                 $slide->sourceLine,
             ], static fn (?string $line): bool => $line !== null && trim($line) !== ''));
         }, $this->slides);

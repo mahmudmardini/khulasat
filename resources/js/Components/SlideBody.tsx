@@ -1,9 +1,4 @@
-/**
- * علامةُ نهاية الآية «۝» ورقمُها بالعربية الهندية، كما يضعها
- * `AyahText::decorate` في الخادم. **ومكتوبةٌ بترميزها** لأنّ المكوّن لا يحمل
- * حرفاً عربياً خارج تعليقاته (`DesignSystemTest`).
- */
-const AYAH_MARK = /(\u06DD[\u0660-\u0669]+)/u;
+import { AYAH_MARK } from '@/lib/ayah';
 
 interface Props {
   kind: string;

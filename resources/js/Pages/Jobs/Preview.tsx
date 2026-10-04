@@ -11,6 +11,7 @@ import { Icon, type IconName } from '@/Components/Icon';
 import { Segmented } from '@/Components/Segmented';
 import { SlideBody } from '@/Components/SlideBody';
 import { SlideCarousel } from '@/Components/SlideCarousel';
+import { forPost } from '@/lib/ayah';
 import { cn } from '@/lib/cn';
 import { t } from '@/lib/i18n';
 import { toArabicIndic } from '@/lib/numerals';
@@ -579,9 +580,11 @@ function CarouselPane({
 
               <div className="mt-auto pt-1">
                 <CopyButton
-                  text={[slide.heading, slide.body, slide.source_line]
-                    .filter((line): line is string => line !== null && line !== '')
-                    .join('\n')}
+                  text={forPost(
+                    [slide.heading, slide.body, slide.source_line]
+                      .filter((line): line is string => line !== null && line !== '')
+                      .join('\n'),
+                  )}
                   label={t('jobs.carousel.copy')}
                   variant="ghost"
                 />

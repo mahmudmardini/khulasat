@@ -194,6 +194,9 @@ class HandleInertiaRequests extends Middleware
          */
         $translations['admin'] = (array) trans('admin', [], Locale::source()->value);
 
+        // **وأداةُ «تحقّق» عربيةٌ كذلك** — T-181: المادّةُ التي تفحصها عربية.
+        $translations['verify'] = (array) trans('verify', [], Locale::source()->value);
+
         return $translations;
     }
 }

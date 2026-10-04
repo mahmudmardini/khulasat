@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Quota;
 
+use App\Models\ModelCall;
+use App\Models\Scopes\TenantScope;
 use App\Models\UsageRecord;
 use App\Services\Model\ModelCallRecorder;
 use Illuminate\Support\Facades\Cache;
@@ -50,9 +52,22 @@ class SpendCap
 
     private function spentSince(\DateTimeInterface $since): float
     {
-        return round((float) UsageRecord::query()
+        $tenants = (float) UsageRecord::query()
             ->where('occurred_at', '>=', $since)
-            ->sum('cost_usd'), 4);
+            ->sum('cost_usd');
+
+        /*
+         * ★ **ونداءاتُ أداة التحقّق معه** — T-181. لا جهة لها فلا صفّ لها في
+         * الدفتر، وصفوفُها في `model_calls` بلا جهة. ولو غابت عن هذا المجموع
+         * لصرفت أداةٌ عامّة بلا سقف.
+         */
+        $tool = (float) ModelCall::query()
+            ->withoutGlobalScope(TenantScope::class)
+            ->whereNull('tenant_id')
+            ->where('occurred_at', '>=', $since)
+            ->sum('cost_usd');
+
+        return round($tenants + $tool, 4);
     }
 
     public function dailyCapUsd(): float

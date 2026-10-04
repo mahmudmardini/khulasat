@@ -21,6 +21,7 @@ use App\Http\Controllers\Public\InviteRequestController;
 use App\Http\Controllers\Public\PageViewController;
 use App\Http\Controllers\Public\ShareCardController;
 use App\Http\Controllers\Public\ShowPublishedSummaryController;
+use App\Http\Controllers\VerifyController;
 use App\Http\Middleware\SetAppLocale;
 use App\Http\Middleware\SetLandingLocale;
 use App\Support\Landing\LandingView;
@@ -93,6 +94,16 @@ Route::get('/complaint', [ComplaintController::class, 'create'])->name('complain
 Route::post('/complaint', [ComplaintController::class, 'store'])
     ->middleware('throttle:10,60')
     ->name('complaint.store');
+
+/*
+ * أداة «تحقّق» — **بلا تسجيل دخول** (T-181). يلصق الباحث نصّاً فيرى كلّ آيةٍ
+ * وحديثٍ فيه بحكمه. وحدُّ المعدّل في `SubmitVerifyCheck` لا هنا: يُعدّ بالطلب
+ * المقبول، ويشترك فيه هذا المسار والواجهةُ البرمجية بمفتاحٍ واحد.
+ */
+Route::get('/verify', [VerifyController::class, 'create'])->name('verify.create');
+Route::post('/verify', [VerifyController::class, 'store'])->name('verify.store');
+Route::get('/verify/{check}', [VerifyController::class, 'show'])->whereUuid('check')->name('verify.show');
+Route::get('/verify/{check}/status', [VerifyController::class, 'status'])->whereUuid('check')->name('verify.status');
 
 /*
  * شاهدة عدّ الفتحات — **بلا تسجيل دخول** (T-31)، كمسار الاعتراض.
@@ -226,7 +237,7 @@ Route::post('/admin/impersonate/stop', [ImpersonationController::class, 'stop'])
  * Laravel يُطابق أوّل مسارٍ يوافق لا الأدقّ.
  *
  * والألفاظُ المحجوزة أعلاه (`admin`, `panel`, `complaint`, `invite`,
- * `v`, `up`, `storage`, `build`) ممنوعةٌ على `tenants.slug` في
+ * `v`, `up`, `storage`, `build`, `verify`, `api`) ممنوعةٌ على `tenants.slug` في
  * `TenantController::store` للسبب نفسه بالاتجاه المعاكس.
  */
 Route::get('/{tenantSlug}/{summarySlug}/{rest?}', ShowPublishedSummaryController::class)

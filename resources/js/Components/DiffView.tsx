@@ -5,6 +5,8 @@ import { wordDiff, type DiffToken } from '@/lib/diff';
 interface Props {
   source: string;
   quoted: string;
+  /** عنوانُ جانب الاقتباس — «كما ورد في الدرس» افتراضاً، وأداةُ التحقّق تقول «في النصّ» (T-181). */
+  quotedLabel?: string;
 }
 
 /**
@@ -23,7 +25,7 @@ interface Props {
  * تُكتب متّصلةً فيزداد الخلط. فكلّ لفظٍ في عموده، ومُظلَّلٌ فيه ما تبدّل
  * وحده — وهو ما يُقرأ في ثوانٍ، والقرار مطلوبٌ في أقلّ من دقيقة.
  */
-export function DiffView({ source, quoted }: Props) {
+export function DiffView({ source, quoted, quotedLabel }: Props) {
   const tokens = wordDiff(source, quoted);
 
   return (
@@ -34,7 +36,7 @@ export function DiffView({ source, quoted }: Props) {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Side
-          label={t('review.labels.quoted')}
+          label={quotedLabel ?? t('review.labels.quoted')}
           tokens={tokens}
           keep="added"
           tone="bg-danger/10 text-danger"

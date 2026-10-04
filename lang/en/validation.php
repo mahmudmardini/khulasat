@@ -35,7 +35,7 @@ return [
         'logo' => 'logo',
         'disclaimer_text' => 'disclaimer text',
         'source_url' => 'lecture link',
-        'source_file' => 'lesson file',
+        'upload_id' => 'lesson file',
         'transcript_text' => 'transcript',
         'title_ar' => 'lecture title',
         'speaker_name' => 'speaker name',

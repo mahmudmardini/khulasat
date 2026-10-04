@@ -34,6 +34,7 @@ use App\Http\Controllers\Settings\BrandController;
 use App\Http\Controllers\Settings\TeamController;
 use App\Http\Controllers\SummaryJobController;
 use App\Http\Controllers\SummaryLocaleController;
+use App\Http\Controllers\UploadController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -59,6 +60,23 @@ Route::middleware('auth')->group(function (): void {
 
     // الفحص المسبق قبل صرف أيّ مورد — §5-أ-1.
     Route::post('/lectures/preflight', PreflightController::class)->name('lectures.preflight');
+
+    /*
+     * رفعُ ملفّ الدرس أجزاءً — §5-أ-4-ب. **والحصّة تُفحص عند البدء**: لا
+     * يُرفع نصفُ غيغابايت ثمّ يُقال «نفدت حصّتكم». والأجزاءُ بحدٍّ واسع:
+     * درسٌ واحد خمسون جزءاً، وإعادةُ الساقط منها جزءٌ من العمل لا إساءة.
+     */
+    Route::post('/uploads', [UploadController::class, 'store'])
+        ->middleware(['quota', 'throttle:30,60'])
+        ->name('uploads.store');
+    Route::get('/uploads/{upload}', [UploadController::class, 'show'])->whereUuid('upload')->name('uploads.show');
+    Route::put('/uploads/{upload}/chunks/{index}', [UploadController::class, 'chunk'])
+        ->whereUuid('upload')
+        ->whereNumber('index')
+        ->middleware('throttle:600,1')
+        ->name('uploads.chunk');
+    Route::post('/uploads/{upload}/complete', [UploadController::class, 'complete'])->whereUuid('upload')->name('uploads.complete');
+    Route::delete('/uploads/{upload}', [UploadController::class, 'destroy'])->whereUuid('upload')->name('uploads.destroy');
 
     // «عاين المظهر» في شاشة الإنشاء — T-95. للمحرّر كالمالك، وبجهة الطالب وحدها، ولا تكتب شيئاً.
     Route::get('/lectures/appearance-preview', AppearancePreviewController::class)->name('lectures.appearance-preview');

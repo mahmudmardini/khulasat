@@ -71,6 +71,11 @@ return [
         'silence_noise_db' => env('SILENCE_NOISE_DB', '-30dB'),
         'silence_min_seconds' => env('SILENCE_MIN_SECONDS', '0.5'),
 
+        // والبديلُ حين لا سكتةَ صريحة قرب القطع: نَفَسٌ أقصر وأقلّ هدوءاً
+        // بين جملتين — قاعةٌ فيها مروحة أو صدى لا تهبط إلى -30dB أبداً.
+        'silence_soft_noise_db' => env('SILENCE_SOFT_NOISE_DB', '-20dB'),
+        'silence_soft_min_seconds' => env('SILENCE_SOFT_MIN_SECONDS', '0.2'),
+
         /*
          * خدمة التفريغ — §5-أ-4 و§13.
          * **الافتراضي وهميّ** ولا يُبدَّل إلا بـ WHISPER_PROVIDER صريحاً
@@ -157,8 +162,23 @@ return [
              */
             'disk' => env('UPLOAD_DISK', 'local'),
 
-            // ما بقي بعدها لمهمّةٍ أخفقت ولم تُستأنف يُكنس — `khulasah:prune-uploads`.
-            'retention_days' => (int) env('UPLOAD_RETENTION_DAYS', 7),
+            /*
+             * **حجمُ الجزء** — الملفّ يُرفع أجزاءً لا في طلبٍ واحد
+             * ({@see \App\Services\Transcript\ChunkedUploads}). عشرةُ ميغابايت
+             * تُرفع في ثوانٍ على اتّصالٍ معقول، وتُعاد وحدها إن سقطت. ولا يتجاوز
+             * `post_max_size` في PHP أبداً — يُنزَل إليه آليّاً. ويلزم nginx أن
+             * يقبلها: `client_max_body_size 11m` على الأقلّ.
+             */
+            'chunk_bytes' => (int) env('UPLOAD_CHUNK_BYTES', 10 * 1024 * 1024),
+
+            // رفعٌ لم يكتمل أو اكتمل ولم يُرسَل: يُكنس بأجزائه بعد هذه الساعات.
+            'stale_hours' => (int) env('UPLOAD_STALE_HOURS', 24),
+
+            /*
+             * ملفُّ مهمّةٍ أخفقت إخفاقاً عارضاً يُبقى لـ«أعد المحاولة» هذه الأيّام،
+             * ثمّ يُكنس. وما أخفق لعيبٍ في الملفّ نفسه يُحذف فوراً — {@see \App\Actions\Summary\TransitionJob}.
+             */
+            'retention_days' => (int) env('UPLOAD_RETENTION_DAYS', 3),
 
             // المسار اليدوي: لصقٌ أو ملفّ ترجمة أو نصّ — §5-أ-5.
             'text_extensions' => ['srt', 'vtt', 'txt'],

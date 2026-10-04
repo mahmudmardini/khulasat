@@ -46,12 +46,39 @@ it('falls back to the exact target when no silence is near', function (): void {
     expect(SilenceCutPoints::cuts(1_000.0, silencesAt([100, 102]), 600))->toBe([600.0]);
 });
 
-it('ignores a silence outside the search window', function (): void {
-    // النافذة ٢٠٪ من ٦٠٠ = ١٢٠ ثانية، فـ ٤٥٠ خارجها (المسافة ١٥٠).
-    expect(SilenceCutPoints::cuts(1_000.0, silencesAt([449, 451]), 600))->toBe([600.0]);
+// **ولا قطعَ أعمى ما دامت سكتةٌ في المتناول**: خارج النافذة القريبة يُمدّ البحث
+// إلى ربع ساعة قبل أن يُقطع عند الهدف. مقطعٌ أقصر أو أطول خيرٌ من كلمةٍ مشطورة.
+it('reaches beyond the near window before cutting blind', function (): void {
+    // النافذة القريبة ٢٠٪ من ٦٠٠ = ١٢٠ ثانية، فـ ٤٥٠ خارجها (المسافة ١٥٠) —
+    // لكنّها في متناول المدّ، فيُقطع عندها لا عند ٦٠٠.
+    expect(SilenceCutPoints::cuts(1_000.0, silencesAt([449, 451]), 600))->toBe([450.0])
+        ->and(SilenceCutPoints::blindCuts(1_000.0, silencesAt([449, 451]), 600))->toBe(0);
 
-    // و٤٩٠ داخلها (المسافة ١١٠).
+    // و٤٩٠ داخل النافذة القريبة (المسافة ١١٠).
     expect(SilenceCutPoints::cuts(1_000.0, silencesAt([489, 491]), 600))->toBe([490.0]);
+});
+
+// قاعةٌ فيها مروحة أو صدى: لا سكتةَ صريحة قرب الهدف، لكن بين الجملتين نَفَس.
+it('takes a soft pause near the target before stretching to a far silence', function (): void {
+    $cuts = SilenceCutPoints::cuts(1_000.0, silencesAt([449, 451]), 600, soft: silencesAt([655, 657]));
+
+    expect($cuts)->toBe([656.0]);
+});
+
+it('prefers a clear silence to a soft pause in the same window', function (): void {
+    // اللّيّنة أقرب إلى الهدف (٦٠٠)، والصريحة أولى ولو بعدت قليلاً.
+    $cuts = SilenceCutPoints::cuts(1_000.0, silencesAt([580, 584]), 600, soft: silencesAt([599, 601]));
+
+    expect($cuts)->toBe([582.0]);
+});
+
+// ربعُ الساعة حدٌّ: أبعدُ منه يُخرج مقطعاً قد يتجاوز حدّ المزوّد.
+it('stretches a chunk to a quarter hour at most, then cuts at the target and says so', function (): void {
+    expect(SilenceCutPoints::cuts(2_000.0, silencesAt([880, 882]), 600))->toBe([881.0, 1_481.0])
+        ->and(SilenceCutPoints::blindCuts(2_000.0, silencesAt([880, 882]), 600))->toBe(1);
+
+    expect(SilenceCutPoints::cuts(2_000.0, silencesAt([930, 932]), 600)[0])->toBe(600.0)
+        ->and(SilenceCutPoints::blindCuts(2_000.0, silencesAt([930, 932]), 600))->toBeGreaterThan(0);
 });
 
 // سكتةٌ باكرة جداً تُخرج مقطعاً ثوانيَ، وهي في أوّل الدرس كثيرة.

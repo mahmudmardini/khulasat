@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 use App\Actions\Stages\ResolveTranscript;
 use App\Actions\Summary\ResumeFailedJob;
+use App\Actions\Summary\TransitionJob;
 use App\Contracts\SpeechToText;
 use App\Domain\Summary\JobState;
 use App\Enums\TranscriptErrorCode;
 use App\Enums\TranscriptSource;
 use App\Exceptions\TranscriptFailed;
 use App\Models\Lecture;
+use App\Models\MediaUpload;
 use App\Models\SummaryJob;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Transcript\Ffmpeg;
 use App\Services\Transcript\Speech\FakeSpeechToText;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 
 /*
@@ -67,11 +69,50 @@ function probeAs(float $seconds, bool $audio = true): void
     });
 }
 
-function uploadPayload(?UploadedFile $file, array $extra = []): array
+/** ملفُّ صوتٍ صغير: ترويسةُ WAV ثمّ حشوٌ — مئة بايت، فثلاثة أجزاءٍ من أربعين. */
+function lessonBytes(): string
+{
+    return str_pad(wavBytes(), 100, "\x01");
+}
+
+/** يبدأ رفعاً ويعيد ما قاله الخادم. */
+function startUpload(string $name = 'درس الجمعة.wav', int $size = 100): array
+{
+    return test()->postJson('/panel/uploads', ['name' => $name, 'size' => $size])
+        ->assertCreated()
+        ->json();
+}
+
+/** جزءٌ خامٌ بجسم الطلب، كما يرسله المتصفّح. */
+function putChunk(string $id, int $index, string $bytes): TestResponse
+{
+    return test()->call(
+        'PUT',
+        "/panel/uploads/{$id}/chunks/{$index}",
+        server: ['CONTENT_TYPE' => 'application/octet-stream', 'HTTP_ACCEPT' => 'application/json'],
+        content: $bytes,
+    );
+}
+
+/** يرفع الملفّ كلّه أجزاءً ويجمعه — ويعيد معرّفه. */
+function uploadWhole(string $bytes): string
+{
+    $id = startUpload(size: strlen($bytes))['id'];
+
+    foreach (str_split($bytes, 40) as $index => $chunk) {
+        putChunk($id, $index, $chunk)->assertOk();
+    }
+
+    test()->postJson("/panel/uploads/{$id}/complete")->assertOk();
+
+    return $id;
+}
+
+function uploadPayload(string $uploadId, array $extra = []): array
 {
     return [
         'source_kind' => 'upload',
-        'source_file' => $file,
+        'upload_id' => $uploadId,
         'title_ar' => 'درس الجمعة',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
@@ -79,81 +120,209 @@ function uploadPayload(?UploadedFile $file, array $extra = []): array
     ];
 }
 
-// ── الإنشاء ──────────────────────────────────────────────────────
+// ── الرفع أجزاءً ─────────────────────────────────────────────────
 
-it('creates the lesson from an uploaded recording and keeps the file for the pipeline', function (): void {
+beforeEach(function (): void {
+    config()->set('khulasah.transcript.upload.chunk_bytes', 40);
+    $this->actingAs($this->user);
+});
+
+it('announces an upload and says how to cut it', function (): void {
+    $upload = startUpload(size: 100);
+
+    expect($upload['chunk_bytes'])->toBe(40)
+        ->and($upload['chunk_count'])->toBe(3)
+        ->and($upload['received'])->toBe([])
+        ->and(MediaUpload::query()->sole()->status)->toBe(MediaUpload::RECEIVING);
+});
+
+// يُرفض قبل أن يُرفع بايتٌ واحد — لا بعد نصف غيغابايت.
+it('refuses a file too large or of the wrong type before any byte is sent', function (): void {
+    $this->postJson('/panel/uploads', ['name' => 'درس.wav', 'size' => 500 * 1024 * 1024 + 1])
+        ->assertUnprocessable()
+        ->assertJson(['message' => trans('lectures.create.source.upload_too_large')]);
+
+    $this->postJson('/panel/uploads', ['name' => 'درس.exe', 'size' => 100])
+        ->assertUnprocessable()
+        ->assertJson(['message' => trans('lectures.create.source.upload_invalid')]);
+
+    expect(MediaUpload::query()->count())->toBe(0);
+});
+
+it('assembles the chunks in order, whatever order they arrived in', function (): void {
     probeAs(seconds: 1_830.4);
+    $bytes = lessonBytes();
+    $id = startUpload(size: 100)['id'];
 
-    $this->actingAs($this->user)
-        ->post('/panel/lectures', uploadPayload(
-            UploadedFile::fake()->createWithContent('درس الجمعة.wav', wavBytes()),
-            // رابطٌ بقي في الحقل من تبويبٍ آخر لا يُحفظ.
-            ['source_url' => 'https://www.youtube.com/watch?v=leftover123'],
-        ))
-        ->assertSessionHasNoErrors()
-        ->assertRedirect();
+    // الأخيرُ أوّلاً: الترتيب بالرقم لا بالوصول.
+    putChunk($id, 2, substr($bytes, 80))->assertOk();
+    putChunk($id, 0, substr($bytes, 0, 40))->assertOk();
+    putChunk($id, 1, substr($bytes, 40, 40))->assertOk();
 
-    $job = SummaryJob::query()->sole();
-    $lecture = $job->lecture;
+    $ready = $this->postJson("/panel/uploads/{$id}/complete")->assertOk()->json();
 
-    expect($lecture->source_platform)->toBe('upload')
-        ->and($lecture->source_url)->toBeNull()
-        ->and($lecture->source_key)->toBeNull()
-        // من ffprobe، مقرَّبةً إلى أعلى.
-        ->and($lecture->duration_seconds)->toBe(1_831)
-        ->and($job->upload_name)->toBe('درس الجمعة.wav')
+    $upload = MediaUpload::query()->sole();
+
+    expect($ready['status'])->toBe('ready')
+        ->and($ready['duration_seconds'])->toBe(1_831)
+        ->and(Storage::disk('local')->get($upload->path))->toBe($bytes)
         // باسمٍ مولَّد تحت الجهة، لا باسم المستخدم.
-        ->and($job->upload_path)->toStartWith("uploads/{$this->tenant->id}/")
-        ->and($job->upload_path)->not->toContain('الجمعة');
+        ->and($upload->path)->toStartWith("uploads/{$this->tenant->id}/")
+        ->and($upload->path)->not->toContain('الجمعة');
 
-    Storage::disk('local')->assertExists($job->upload_path);
+    // الأجزاء صارت ملفّاً، فلا يبقى منها شيء.
+    expect(Storage::disk('local')->allFiles("uploads/incoming/{$id}"))->toBe([]);
 });
 
-it('asks for the file when none was chosen', function (): void {
-    $this->actingAs($this->user)
-        ->post('/panel/lectures', uploadPayload(null))
-        ->assertSessionHasErrors('source_file');
+// **الجزء الساقط يُعاد وحده** — والمتصفّح يسأل ما وصل فيُكمل الناقص.
+it('tells a resumed upload which chunks already arrived, and lets one be re-sent', function (): void {
+    $bytes = lessonBytes();
+    $id = startUpload(size: 100)['id'];
 
-    expect(Lecture::query()->count())->toBe(0);
+    putChunk($id, 0, substr($bytes, 0, 40))->assertOk();
+    putChunk($id, 2, substr($bytes, 80))->assertOk();
+    // إعادةُ جزءٍ وصل تكتب فوقه بلا ضرر.
+    putChunk($id, 0, substr($bytes, 0, 40))->assertOk();
+
+    $this->getJson("/panel/uploads/{$id}")->assertOk()->assertJson(['received' => [0, 2]]);
+
+    // والجمعُ قبل اكتمالها لا يحذف شيئاً: يقول «ناقص» فيُرفع الناقص.
+    $this->postJson("/panel/uploads/{$id}/complete")
+        ->assertStatus(409)
+        ->assertJson(['reason' => 'upload_incomplete']);
+
+    expect(Storage::disk('local')->allFiles("uploads/incoming/{$id}"))->toHaveCount(2);
 });
 
-// النوع بالمحتوى لا باللاحقة — اللاحقة يكتبها المستخدم.
-it('refuses a file that only claims to be audio', function (): void {
+// جزءٌ ناقص يُجمع ملفّاً تالفاً لا يُكتشف إلّا عند ffmpeg.
+it('refuses a chunk of the wrong size or number', function (): void {
+    $id = startUpload(size: 100)['id'];
+
+    putChunk($id, 0, str_repeat('a', 39))->assertUnprocessable();
+    putChunk($id, 3, str_repeat('a', 40))->assertUnprocessable();
+
+    expect(Storage::disk('local')->allFiles("uploads/incoming/{$id}"))->toBe([]);
+});
+
+// النوع بالمحتوى لا باللاحقة. **وما رُفض يُحذف فوراً**: لا يبقى ليُرفع غيرُه بجانبه.
+it('checks the assembled content and deletes a file that is not audio', function (): void {
     probeAs(seconds: 600.0);
+    $id = startUpload(name: 'درس.mp3', size: 100)['id'];
 
-    $this->actingAs($this->user)
-        ->post('/panel/lectures', uploadPayload(UploadedFile::fake()->createWithContent('درس.mp3', 'هذا نصّ لا صوت')))
-        ->assertSessionHasErrors(['source_file' => trans('lectures.create.source.upload_invalid')]);
+    // مئةُ بايتٍ من نصٍّ صريح، لا صوتٍ فيها.
+    foreach (str_split(str_repeat('text ', 20), 40) as $index => $chunk) {
+        putChunk($id, $index, $chunk)->assertOk();
+    }
 
-    expect(Lecture::query()->count())->toBe(0)
-        ->and(Storage::disk('local')->allFiles())->toBe([]);
+    $this->postJson("/panel/uploads/{$id}/complete")
+        ->assertUnprocessable()
+        ->assertJson(['message' => trans('lectures.create.source.upload_invalid')]);
+
+    expect(MediaUpload::query()->count())->toBe(0)
+        ->and(Storage::disk('local')->allFiles('uploads'))->toBe([]);
 });
 
-it('refuses a video with no sound before the quota is spent', function (): void {
+it('refuses a video with no sound, and deletes it', function (): void {
     probeAs(seconds: 600.0, audio: false);
+    $id = startUpload(size: 100)['id'];
 
-    $this->actingAs($this->user)
-        ->post('/panel/lectures', uploadPayload(UploadedFile::fake()->createWithContent('شاشة.wav', wavBytes())))
-        ->assertSessionHasErrors(['source_file' => trans('lectures.create.source.upload_no_audio')]);
+    foreach (str_split(lessonBytes(), 40) as $index => $chunk) {
+        putChunk($id, $index, $chunk);
+    }
 
-    expect(Lecture::query()->count())->toBe(0);
+    $this->postJson("/panel/uploads/{$id}/complete")
+        ->assertUnprocessable()
+        ->assertJson(['message' => trans('lectures.create.source.upload_no_audio')]);
+
+    expect(Storage::disk('local')->allFiles('uploads'))->toBe([]);
 });
 
 // «المدّة تُقرأ بـ ffprobe وتُفحص على حدّ الاشتراك قبل أي معالجة» — §5-أ-4-ب.
-it('refuses a recording longer than the plan allows, at upload time', function (): void {
+it('refuses a recording longer than the plan allows as soon as it is uploaded', function (): void {
     probeAs(seconds: 120 * 60.0);
+    $id = startUpload(size: 100)['id'];
 
-    $this->actingAs($this->user)
-        ->post('/panel/lectures', uploadPayload(UploadedFile::fake()->createWithContent('طويل.wav', wavBytes())))
-        ->assertSessionHasErrors('source_file');
+    foreach (str_split(lessonBytes(), 40) as $index => $chunk) {
+        putChunk($id, $index, $chunk);
+    }
 
-    expect(Lecture::query()->count())->toBe(0)
-        ->and(Storage::disk('local')->allFiles())->toBe([]);
+    $this->postJson("/panel/uploads/{$id}/complete")->assertUnprocessable();
+
+    expect(MediaUpload::query()->count())->toBe(0)
+        ->and(Storage::disk('local')->allFiles('uploads'))->toBe([]);
+});
+
+// أُزيل الملفّ، أو اختير غيرُه، أو غادر المستخدم: يُحذف كلّ ما رُفع.
+it('deletes every byte of a cancelled upload', function (): void {
+    $bytes = lessonBytes();
+    $id = startUpload(size: 100)['id'];
+    putChunk($id, 0, substr($bytes, 0, 40));
+
+    $this->deleteJson("/panel/uploads/{$id}")->assertNoContent();
+
+    expect(MediaUpload::query()->count())->toBe(0)
+        ->and(Storage::disk('local')->allFiles('uploads'))->toBe([]);
+});
+
+it('hides one tenant\'s upload from another', function (): void {
+    // قبل أوّل طلب: بعده يكون السياقُ على جهةٍ، فلا يُكتب مستخدمٌ لغيرها.
+    $other = User::factory()->owner()->for_(Tenant::factory()->create())->create();
+
+    $id = startUpload(size: 100)['id'];
+
+    $this->actingAs($other)->getJson("/panel/uploads/{$id}")->assertNotFound();
+    $this->actingAs($other)->deleteJson("/panel/uploads/{$id}")->assertNotFound();
+    putChunk($id, 0, str_repeat('a', 40))->assertNotFound();
+
+    expect(MediaUpload::query()->withoutGlobalScopes()->count())->toBe(1);
+});
+
+// ── الإنشاء ──────────────────────────────────────────────────────
+
+it('creates the lesson from a completed upload, and the job takes the file over', function (): void {
+    probeAs(seconds: 1_830.4);
+    $id = uploadWhole(lessonBytes());
+    $path = MediaUpload::query()->sole()->path;
+
+    $this->post('/panel/lectures', uploadPayload($id, [
+        // رابطٌ بقي في الحقل من تبويبٍ آخر لا يُحفظ.
+        'source_url' => 'https://www.youtube.com/watch?v=leftover123',
+    ]))->assertSessionHasNoErrors()->assertRedirect();
+
+    $job = SummaryJob::query()->sole();
+
+    expect($job->lecture->source_platform)->toBe('upload')
+        ->and($job->lecture->source_url)->toBeNull()
+        ->and($job->lecture->duration_seconds)->toBe(1_831)
+        ->and($job->upload_path)->toBe($path)
+        ->and($job->upload_name)->toBe('درس الجمعة.wav')
+        // صار ملكَ المهمّة: لا صفّ رفعٍ يُكنس فيأخذ ملفّها معه.
+        ->and(MediaUpload::query()->count())->toBe(0);
+
+    Storage::disk('local')->assertExists($path);
+});
+
+it('asks for the file when none was uploaded', function (): void {
+    $this->post('/panel/lectures', uploadPayload(''))
+        ->assertSessionHasErrors(['upload_id' => trans('lectures.create.source.upload_required')]);
+
+    expect(Lecture::query()->count())->toBe(0);
+});
+
+it('refuses an upload that is unfinished, swept or unknown', function (): void {
+    $unfinished = startUpload(size: 100)['id'];
+
+    $this->post('/panel/lectures', uploadPayload($unfinished))
+        ->assertSessionHasErrors(['upload_id' => trans('lectures.create.source.upload_expired')]);
+
+    $this->post('/panel/lectures', uploadPayload('9b2f4a8e-0000-4000-8000-000000000000'))
+        ->assertSessionHasErrors('upload_id');
+
+    expect(Lecture::query()->count())->toBe(0);
 });
 
 it('offers the accepted media types to the page', function (): void {
-    $this->actingAs($this->user)
-        ->get('/panel/lectures/create')
+    $this->get('/panel/lectures/create')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->where('limits.media_extensions', config('khulasah.transcript.upload.media_extensions'))
@@ -252,4 +421,66 @@ it('sweeps abandoned uploads after the retention period, never a running job\'s'
 
     expect($failed->refresh()->upload_path)->toBeNull()
         ->and($running->refresh()->upload_path)->toBe('uploads/1/running.wav');
+});
+
+// انقطع الاتّصال ولم يعد صاحبُه، أو رُفع الملفّ ولم يُرسَل النموذج.
+it('sweeps unfinished and unsent uploads after their hours, with every chunk', function (): void {
+    config()->set('khulasah.transcript.upload.stale_hours', 24);
+    probeAs(seconds: 600.0);
+    $bytes = lessonBytes();
+
+    $unfinished = startUpload(size: 100)['id'];
+    putChunk($unfinished, 0, substr($bytes, 0, 40));
+
+    $unsent = uploadWhole($bytes);
+    $unsentPath = MediaUpload::query()->find($unsent)->path;
+
+    // وأجزاءٌ بلا صفّ — عطلٌ وقع بين كتابة الجزء وحفظ الصفّ.
+    Storage::disk('local')->put('uploads/incoming/7d0c2b7e-0000-4000-8000-000000000000/0.part', 'x');
+    touch(Storage::disk('local')->path('uploads/incoming/7d0c2b7e-0000-4000-8000-000000000000/0.part'), now()->subDay()->subHour()->getTimestamp());
+
+    $this->travel(25)->hours();
+
+    // ورفعٌ حيّ بدأ للتوّ لا يُمسّ.
+    $fresh = startUpload(size: 100)['id'];
+    putChunk($fresh, 0, substr($bytes, 0, 40));
+
+    $this->artisan('khulasah:prune-uploads')->assertSuccessful();
+
+    expect(MediaUpload::query()->pluck('id')->all())->toBe([$fresh]);
+
+    Storage::disk('local')->assertMissing("uploads/incoming/{$unfinished}/0.part");
+    Storage::disk('local')->assertMissing($unsentPath);
+    Storage::disk('local')->assertMissing('uploads/incoming/7d0c2b7e-0000-4000-8000-000000000000/0.part');
+    Storage::disk('local')->assertExists("uploads/incoming/{$fresh}/0.part");
+});
+
+// الإلغاءُ من الشاشة أو من لوحة المشرف يمرّ من الانتقال نفسه.
+it('deletes the recording when its job is cancelled', function (): void {
+    $job = uploadedJob($this->tenant);
+
+    $this->post("/panel/jobs/{$job->id}/cancel")->assertRedirect();
+
+    expect($job->refresh()->upload_path)->toBeNull();
+    Storage::disk('local')->assertMissing("uploads/{$this->tenant->id}/lesson.wav");
+});
+
+// إخفاقٌ لا يُصلحه إلّا رفعٌ جديد: إبقاءُ الملفّ نصفُ غيغابايت لا يقرؤه أحد.
+it('deletes the recording when the job fails for a reason only a new file can fix', function (): void {
+    $job = uploadedJob($this->tenant);
+
+    app(TransitionJob::class)->handle($job, JobState::Failed, errorCode: TranscriptErrorCode::TranscriptTooShort->value);
+
+    expect($job->refresh()->upload_path)->toBeNull();
+    Storage::disk('local')->assertMissing("uploads/{$this->tenant->id}/lesson.wav");
+});
+
+// وإخفاقٌ عارض يُبقيه لـ«أعد المحاولة» — بلا رفعٍ ثانٍ.
+it('keeps the recording when the job fails for a passing reason', function (): void {
+    $job = uploadedJob($this->tenant);
+
+    app(TransitionJob::class)->handle($job, JobState::Failed, errorCode: TranscriptErrorCode::TranscriptionFailed->value);
+
+    expect($job->refresh()->upload_path)->toBe("uploads/{$this->tenant->id}/lesson.wav");
+    Storage::disk('local')->assertExists("uploads/{$this->tenant->id}/lesson.wav");
 });

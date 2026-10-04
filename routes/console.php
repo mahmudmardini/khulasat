@@ -58,9 +58,10 @@ Schedule::command('khulasah:check-cost-alerts')
 /*
  * كنسُ الملفّات المرفوعة المتروكة — المواصفة §5-أ-4-ب.
  *
- * الملفّ يُحذف متى صار نصّاً، وما بقي فلمهمّةٍ أخفقت ولم تُستأنف. يُنتظر به
- * `UPLOAD_RETENTION_DAYS` لعلّ صاحبه يُعيد المحاولة، ثمّ يُكنس.
+ * **كلّ ساعة**: أجزاءُ رفعٍ انقطع ولم يُستأنف تُكنس بعد `UPLOAD_STALE_HOURS`،
+ * وملفُّ مهمّةٍ أخفقت إخفاقاً عارضاً بعد `UPLOAD_RETENTION_DAYS`. والملفّ
+ * يُحذف قبل ذلك كلّه متى صار نصّاً، أو أُلغيت مهمّته، أو أخفقت لعيبٍ فيه.
  */
 Schedule::command('khulasah:prune-uploads')
-    ->dailyAt('03:00')
+    ->hourly()
     ->withoutOverlapping();

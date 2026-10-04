@@ -30,15 +30,23 @@ final class SilenceCutPoints
     /** أقصر مقطع مقبول، نسبةً إلى طول المقطع — لئلّا يخرج مقطعٌ ثوانٍ. */
     private const MIN_SEGMENT_RATIO = 0.25;
 
+    /**
+     * أطولُ ما يُمدّ إليه المقطع بحثاً عن سكتة، نسبةً إلى طوله: ربعُ ساعةٍ
+     * لمقطع العشر دقائق. **مقطعٌ أطول قليلاً خيرٌ من كلمةٍ مشطورة**، وربعُ
+     * الساعة من الصوت الموحَّد نحو 5MB — في حدّ Gemini وWhisper كليهما.
+     */
+    private const MAX_STRETCH_RATIO = 1.5;
+
     private function __construct() {}
 
     /**
      * Segment boundaries as [start, end] pairs, in order.
      *
-     * @param  list<array{start: float, end: float}>  $silences  من `silencedetect`.
+     * @param  list<array{start: float, end: float}>  $silences  من `silencedetect` بعتبته الصارمة.
+     * @param  list<array{start: float, end: float}>  $soft  سكتاتٌ أقصر وأقلّ هدوءاً — بديلٌ لا أصل.
      * @return list<array{start: float, end: float}>
      */
-    public static function segments(float $duration, array $silences, int $chunkSeconds): array
+    public static function segments(float $duration, array $silences, int $chunkSeconds, array $soft = []): array
     {
         if ($duration <= 0.0) {
             return [];
@@ -47,7 +55,7 @@ final class SilenceCutPoints
         $segments = [];
         $position = 0.0;
 
-        foreach (self::cuts($duration, $silences, $chunkSeconds) as $cut) {
+        foreach (self::cuts($duration, $silences, $chunkSeconds, $soft) as $cut) {
             $segments[] = ['start' => $position, 'end' => $cut];
             $position = $cut;
         }
@@ -59,18 +67,45 @@ final class SilenceCutPoints
 
     /**
      * @param  list<array{start: float, end: float}>  $silences
+     * @param  list<array{start: float, end: float}>  $soft
      * @return list<float>
      */
-    public static function cuts(float $duration, array $silences, int $chunkSeconds): array
+    public static function cuts(float $duration, array $silences, int $chunkSeconds, array $soft = []): array
+    {
+        return self::plan($duration, $silences, $chunkSeconds, $soft)['cuts'];
+    }
+
+    /**
+     * كم قطعاً لم يجد سكتةً فوقع عند الهدف نفسه — وقد يشطر كلمة.
+     *
+     * يُسأل قبل البحث عن السكتات الليّنة: ما لا قطعَ أعمى فيه لا يحتاجها،
+     * فلا يُفكّ الصوتُ مرّةً ثانية بلا داعٍ.
+     *
+     * @param  list<array{start: float, end: float}>  $silences
+     * @param  list<array{start: float, end: float}>  $soft
+     */
+    public static function blindCuts(float $duration, array $silences, int $chunkSeconds, array $soft = []): int
+    {
+        return self::plan($duration, $silences, $chunkSeconds, $soft)['blind'];
+    }
+
+    /**
+     * @param  list<array{start: float, end: float}>  $silences
+     * @param  list<array{start: float, end: float}>  $soft
+     * @return array{cuts: list<float>, blind: int}
+     */
+    private static function plan(float $duration, array $silences, int $chunkSeconds, array $soft): array
     {
         if ($chunkSeconds <= 0 || $duration <= $chunkSeconds) {
-            return [];
+            return ['cuts' => [], 'blind' => 0];
         }
 
         $window = $chunkSeconds * self::SEARCH_WINDOW_RATIO;
         $minSegment = $chunkSeconds * self::MIN_SEGMENT_RATIO;
+        $stretch = $chunkSeconds * (self::MAX_STRETCH_RATIO - 1.0);
 
         $cuts = [];
+        $blind = 0;
         $position = 0.0;
 
         while ($duration - $position > $chunkSeconds) {
@@ -85,10 +120,25 @@ final class SilenceCutPoints
                 ? $position + ($remaining / 2)
                 : $position + $chunkSeconds;
 
-            $cut = self::nearestSilence($silences, $target, $window, $position + $minSegment)
-                // لا سكتة في النافذة: يُقطع عند الهدف. مقطعٌ مقطوعُ الكلمة
-                // خيرٌ من مقطعٍ يتجاوز حدّ المزوّد فيُرفض كلّه.
-                ?? $target;
+            $earliest = $position + $minSegment;
+
+            /*
+             * **سلّمٌ من أربع درجات، ولا يُنزل إلى الأخيرة إلّا مضطرّاً:**
+             *   ١. سكتةٌ صريحة قرب الهدف.
+             *   ٢. سكتةٌ ليّنة قربه — قاعةٌ فيها مروحة أو صدى لا تهبط إلى -30dB،
+             *      لكنّ بين الجملتين نَفَساً يهبط عن صوت الكلام.
+             *   ٣. أيُّ سكتةٍ حتى ربع ساعة: مقطعٌ أطول قليلاً خيرٌ من كلمةٍ مشطورة.
+             *   ٤. الهدفُ نفسه — كلامٌ متّصلٌ تحت موسيقى بلا نَفَس. مقطعٌ مقطوعُ
+             *      الكلمة خيرٌ من مقطعٍ يتجاوز حدّ المزوّد فيُرفض كلّه.
+             */
+            $cut = self::nearestSilence($silences, $target, $window, $earliest)
+                ?? self::nearestSilence($soft, $target, $window, $earliest)
+                ?? self::nearestSilence([...$silences, ...$soft], $target, $stretch, $earliest, $position + $chunkSeconds + $stretch);
+
+            if ($cut === null) {
+                $cut = $target;
+                $blind++;
+            }
 
             // حارسٌ ضدّ الدوران: نقطةٌ لا تتقدّم تُبقي الحلقة أبداً.
             if ($cut <= $position) {
@@ -99,7 +149,7 @@ final class SilenceCutPoints
             $position = $cut;
         }
 
-        return $cuts;
+        return ['cuts' => $cuts, 'blind' => $blind];
     }
 
     /**
@@ -110,7 +160,7 @@ final class SilenceCutPoints
      *
      * @param  list<array{start: float, end: float}>  $silences
      */
-    private static function nearestSilence(array $silences, float $target, float $window, float $earliest): ?float
+    private static function nearestSilence(array $silences, float $target, float $window, float $earliest, float $latest = INF): ?float
     {
         $best = null;
         $bestDistance = null;
@@ -118,7 +168,7 @@ final class SilenceCutPoints
         foreach ($silences as $silence) {
             $middle = ($silence['start'] + $silence['end']) / 2;
 
-            if ($middle < $earliest) {
+            if ($middle < $earliest || $middle > $latest) {
                 continue;
             }
 

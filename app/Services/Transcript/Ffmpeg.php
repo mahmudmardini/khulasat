@@ -83,9 +83,34 @@ class Ffmpeg
      */
     public function silences(string $path): array
     {
-        $noise = (string) config('khulasah.transcript.silence_noise_db', '-30dB');
-        $minimum = (string) config('khulasah.transcript.silence_min_seconds', '0.5');
+        return $this->detectSilences(
+            $path,
+            (string) config('khulasah.transcript.silence_noise_db', '-30dB'),
+            (string) config('khulasah.transcript.silence_min_seconds', '0.5'),
+        );
+    }
 
+    /**
+     * Shorter, less quiet pauses — the fallback when no clear silence is near a cut.
+     *
+     * قاعةٌ فيها مروحةٌ أو صدى لا يهبط صوتُها إلى -30dB أبداً، فلا يجد الكشفُ
+     * الصارم سكتةً واحدة ويقع كلّ قطعٍ عند الدقيقة العاشرة بالضبط. **لكنّ بين
+     * الجملتين نَفَساً** يهبط عن صوت الكلام، وهذا ما يلتقطه هذا الكشف.
+     *
+     * @return list<array{start: float, end: float}>
+     */
+    public function softSilences(string $path): array
+    {
+        return $this->detectSilences(
+            $path,
+            (string) config('khulasah.transcript.silence_soft_noise_db', '-20dB'),
+            (string) config('khulasah.transcript.silence_soft_min_seconds', '0.2'),
+        );
+    }
+
+    /** @return list<array{start: float, end: float}> */
+    private function detectSilences(string $path, string $noise, string $minimum): array
+    {
         $stderr = $this->run([
             $this->ffmpeg(),
             '-i', $path,
@@ -142,7 +167,14 @@ class Ffmpeg
     public function splitAtSilence(string $path, string $directory, int $chunkSeconds): array
     {
         $duration = $this->durationSeconds($path);
-        $segments = SilenceCutPoints::segments($duration, $this->silences($path), $chunkSeconds);
+        $silences = $this->silences($path);
+
+        // السكتاتُ الليّنة لا تُطلب إلّا إن بقي قطعٌ أعمى، فلا يُفكّ الصوتُ مرّتين بلا داعٍ.
+        $soft = SilenceCutPoints::blindCuts($duration, $silences, $chunkSeconds) > 0
+            ? $this->softSilences($path)
+            : [];
+
+        $segments = SilenceCutPoints::segments($duration, $silences, $chunkSeconds, $soft);
 
         if (count($segments) <= 1) {
             return [$path];

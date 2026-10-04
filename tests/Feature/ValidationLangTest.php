@@ -44,7 +44,7 @@ it('يسمّي كلّ حقلٍ تعرضه الشاشات بلغة القارئ �
     $fields = [
         'email', 'password', 'password_confirmation', 'name', 'role', 'name_ar', 'name_ar_full',
         'name_latin', 'palette', 'template', 'locales', 'youtube_url', 'social_url', 'logo',
-        'disclaimer_text', 'source_url', 'source_file', 'transcript_text', 'title_ar', 'speaker_name',
+        'disclaimer_text', 'source_url', 'upload_id', 'transcript_text', 'title_ar', 'speaker_name',
         'speaker_title', 'venue_mode', 'source_kind',
     ];
 
@@ -117,6 +117,6 @@ it('يطلب الخادم الملفَّ بالعربية حين يُختار ا
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
-    ])->assertSessionHasErrors(['source_file' => 'اختر ملفّ الصوت أو الفيديو.'])
+    ])->assertSessionHasErrors(['upload_id' => 'اختر ملفّ الصوت أو الفيديو.'])
         ->assertSessionDoesntHaveErrors('source_kind');
 });

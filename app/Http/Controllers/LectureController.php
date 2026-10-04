@@ -14,21 +14,19 @@ use App\Enums\VenueMode;
 use App\Http\Requests\StoreLectureRequest;
 use App\Jobs\RunSummaryPipeline;
 use App\Models\Lecture;
+use App\Models\MediaUpload;
 use App\Models\SummaryJob;
 use App\Models\Tenant;
 use App\Support\I18n\PageStrings;
 use App\Support\Render\Palette;
 use App\Support\Transcript\SourceKey;
-use App\Support\Transcript\UploadStore;
 use App\Support\Ui\JobProgress;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Throwable;
 
 /**
  * The tenant's index and creation screens — SCREENS.md §2 و§3، والمهمّة T-16.
@@ -221,22 +219,10 @@ class LectureController extends Controller
          */
         $tenant = $this->tenant($request);
 
-        /*
-         * الملفّ المرفوع — §5-أ-4-ب. **يُكتب قبل المعاملة لا فيها**: كتابةُ
-         * نصف غيغابايت داخل معاملةٍ تُبقيها مفتوحةً طولَ الكتابة. وإن سقطت
-         * المعاملة حُذف، فلا يبقى على القرص ملفٌّ بلا مهمّة.
-         */
-        $file = $request->string('source_kind')->toString() === 'upload' ? $request->file('source_file') : null;
-        $file = $file instanceof UploadedFile ? $file : null;
-        $upload = $file === null ? null : UploadStore::store($file, (int) $tenant->id);
+        // الملفّ المرفوع — §5-أ-4-ب. رُفع أجزاءً وجُمع وفُحص قبل الإرسال.
+        $upload = $request->string('source_kind')->toString() === 'upload' ? $request->mediaUpload() : null;
 
-        try {
-            $job = $this->createLecture($request, $tenant, $upload, $file?->getClientOriginalName());
-        } catch (Throwable $exception) {
-            UploadStore::delete($upload);
-
-            throw $exception;
-        }
+        $job = $this->createLecture($request, $tenant, $upload);
 
         // **وهنا يبدأ الخطّ فعلاً** — T-11ب. وقبلها كانت المهمّة تُنشأ
         // وتبقى `queued` أبداً، فتُرى في الشاشة ولا يجري لها شيء.
@@ -245,9 +231,9 @@ class LectureController extends Controller
         return to_route('jobs.show', $job)->with('message', trans('jobs.follow.title'));
     }
 
-    private function createLecture(StoreLectureRequest $request, Tenant $tenant, ?string $upload, ?string $uploadName): SummaryJob
+    private function createLecture(StoreLectureRequest $request, Tenant $tenant, ?MediaUpload $upload): SummaryJob
     {
-        return DB::transaction(function () use ($request, $tenant, $upload, $uploadName): SummaryJob {
+        return DB::transaction(function () use ($request, $tenant, $upload): SummaryJob {
             $lecture = Lecture::query()->create([
                 'tenant_id' => $tenant->id,
                 'title_ar' => $request->string('title_ar')->toString(),
@@ -269,7 +255,7 @@ class LectureController extends Controller
                 'time_note' => $request->input('time_note'),
                 'venue_mode' => $request->string('venue_mode')->toString(),
                 // مدّةُ الملفّ المرفوع من ffprobe، لا ما يقوله المتصفّح.
-                'duration_seconds' => $request->uploadedDuration() ?? ($request->integer('duration_seconds') ?: null),
+                'duration_seconds' => $upload?->duration_seconds ?? ($request->integer('duration_seconds') ?: null),
                 /*
                  * **والشريحة تحرسه هنا لا في الواجهة وحدها** — SCREENS.md
                  * §3-ب. فالخانة معطَّلةٌ في الشاشة، والحقلُ يصل من طلبٍ
@@ -295,9 +281,16 @@ class LectureController extends Controller
                 'tenant_id' => $tenant->id,
                 'state' => JobState::Queued->value,
                 'transcript_text' => $upload === null ? $request->input('transcript_text') : null,
-                'upload_path' => $upload,
-                'upload_name' => $uploadName,
+                'upload_path' => $upload?->path,
+                'upload_name' => $upload?->original_name,
             ]);
+
+            /*
+             * **والرفعُ يصير ملكَ المهمّة في المعاملة نفسها**: يُحذف صفُّه ويبقى
+             * ملفّه. فإن سقطت المعاملة عاد الصفّ كما كان، فيُرسَل النموذج ثانيةً
+             * أو يُكنس الرفعُ بعد مدّته — ولا يبقى ملفٌّ بلا صفٍّ ولا مهمّة.
+             */
+            $upload?->delete();
 
             /*
              * ★ **وهنا تُستهلك وحدةُ الحصّة** — المواصفة §4 و§11، وT-23.

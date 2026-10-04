@@ -348,6 +348,7 @@ return [
         'not_ready' => 'Metin henüz tamamlanmadı',
         'not_ready_body' => 'Önizleme yazılmış metinden çizilir, o da henüz yazılmadı.',
 
+        'published_carousel' => 'Yayınlanan slaytlar',
         'more_title' => 'İndir, yayınla, yeniden üret',
         'open_carousel_page' => 'Slaytlar sayfası',
         'images_soon' => 'Görsel paketi henüz oluşturulmadı',
@@ -444,6 +445,8 @@ return [
         'rendering' => 'Görseller oluşturuluyor…',
         'rendering_body' => 'Slaytlar gruplar halinde yakalanır; birkaç saniye sürer. Yenileri gelene dek önceki görseller kalır ve sayfa kendiliğinden güncellenir.',
         'free_hint' => 'Görselleri herhangi bir şablonla oluşturmak ve yeniden oluşturmak ücretsizdir ve kotanızdan düşülmez.',
+        'stale' => 'Bu görseller oluşturulduktan sonra slaytlar değişti (yeni anlatım ya da başka şablon). Slaytlarla eşleşmeleri için yeniden oluşturun; ücretsizdir.',
+        'design_scope' => 'Şablon bu özetin slayt şablonudur: görseller ve yayınlanan slaytlar onunla çizilir.',
         'ready_hint' => 'Sırasıyla numaralanmış 1080×1350 görseller ve caption.txt içinde gönderi metni.',
         'progress' => ':total görselden :done yakalandı',
         'stalled' => 'Görsel oluşturma tamamlanmadan durdu. Yeniden deneyin.',

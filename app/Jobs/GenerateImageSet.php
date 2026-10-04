@@ -36,8 +36,7 @@ final class GenerateImageSet implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 600;
 
-    /** @param  string|null  $design  قالبٌ معتمدٌ اختارته الجهة، وإلّا افتراضيُّها — T-173. */
-    public function __construct(public SummaryJob $summaryJob, public ?string $design = null) {}
+    public function __construct(public SummaryJob $summaryJob) {}
 
     public function uniqueId(): string
     {
@@ -53,7 +52,7 @@ final class GenerateImageSet implements ShouldBeUnique, ShouldQueue
         }
 
         try {
-            $render->handle($job, $this->design);
+            $render->handle($job);
         } catch (RuntimeException $refused) {
             RenderImageSet::mark($job, 'failed', $refused->getMessage());
         } catch (Throwable $failure) {

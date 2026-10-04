@@ -174,10 +174,11 @@ it('ينشر الصفحة ولو أخفق تكثيف الشرائح', function (
         ->and($job->published_at)->not->toBeNull();
 });
 
-it('يردّ ٤٠٤ على معاينةٍ قبل بناء الشرائح', function (): void {
+// ★ T-204 — صفحةُ الشرائح ومعاينتُها حُذفتا بلا تحويل (قرار @HasanSiwi): الشرائحُ
+// في تبويبها بالمعاينة. فرابطُهما القديم «غير موجود»، لا «طريقةٌ غيرُ مسموحة».
+it('لا صفحةَ شرائح منفصلة ولا معاينةَ لها', function (): void {
     $user = User::factory()->create(['tenant_id' => $this->tenant->id]);
 
-    $this->actingAs($user)
-        ->get(route('jobs.carousel.preview', $this->job))
-        ->assertNotFound();
+    $this->actingAs($user)->get("/panel/jobs/{$this->job->id}/carousel")->assertNotFound();
+    $this->actingAs($user)->get("/panel/jobs/{$this->job->id}/carousel/preview")->assertNotFound();
 });

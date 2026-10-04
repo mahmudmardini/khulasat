@@ -85,6 +85,11 @@ beforeEach(function (): void {
     Storage::fake('local');
     config()->set('khulasah.images.disk', 'local');
 
+    // إنشاءُ الصور يُعيد رسم كاروسيل الويب وينشره إن كان الملخّص منشوراً (T-204).
+    Storage::fake('public');
+    config()->set('khulasah.publish.disk', 'public');
+    config()->set('khulasah.publish.cdn_url', 'https://cdn.khulasah.test');
+
     $this->capturer = new class implements ShareCardCapturer
     {
         /** @var list<array{html: string, width: int, height: int}> */
@@ -338,11 +343,13 @@ it('يرسم الشعار على لوحٍ في الخلفية الداكنة، �
 
 // ★ T-196 — معاينةُ اللوحة مصغَّرةٌ لتُرى في إطارها، وبلا شاهدة عدّ: كان فتحُها
 // من اللوحة يُعدّ قراءة. والالتقاطُ بمقاسه، فلا يمسّه التصغير.
-it('يصغّر معاينة صفحة الشرائح ولا يعدّها قراءة، ولا يمسّ الالتقاط', function (): void {
+it('يصغّر معاينة اللوحة ولا يعدّها قراءة، ولا يمسّ الالتقاط', function (): void {
     config()->set('khulasah.analytics.enabled', true);
     config()->set('khulasah.analytics.beacon_base', 'https://views.test');
 
-    $preview = $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/carousel/preview")->assertOk()->getContent();
+    // معاينةُ اللوحة اليوم معاينةُ القوالب (T-204 حذف صفحة الشرائح)، وكلتاهما منه.
+    $preview = (new CarouselRenderer(app('view'), imageDeck()))
+        ->preview(ContentObject::fromJob($this->job), BrandKit::forTenant($this->tenant));
 
     expect($preview)->toContain(' fit">')->not->toContain('views.test');
 
@@ -441,4 +448,65 @@ it('يعرض التقدّم من أوّل لحظة، قبل أن يبلغ الع
             ->where('outputs.images.state', 'rendering')
             ->where('outputs.images.progress', ['done' => 0, 'total' => 5])
         );
+});
+
+// ── T-204: قالبٌ واحد لشرائح الملخّص ─────────────────────────────────
+
+/** يعتمد للجهة قالباً ليلياً، ويعيده. */
+function approveNight(Tenant $tenant): CarouselDesign
+{
+    $night = CarouselDesign::from([...CarouselDesign::default()->toArray(), 'id' => 'night', 'name' => 'ليلي', 'surface' => 'night']);
+    $tenant->forceFill(['brand_kit' => ['carousel_designs' => [$night->toArray()]]])->save();
+
+    return $night;
+}
+
+it('يجعل القالب المختار قالبَ شرائح الملخّص: يُرسم به المنشور والصور معاً', function (): void {
+    approveNight($this->tenant);
+
+    // الجهةُ تختار الأصل للصور، وافتراضيُّها الليليّ: فيتبعه كلُّ شيء.
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images", ['design' => 'default']);
+
+    $job = $this->job->fresh();
+    $carousel = $job->outputs()->where('type', OutputType::Carousel->value)->first();
+
+    expect(CarouselDesign::forJob($job)->id)->toBe(CarouselDesign::DEFAULT_ID)
+        ->and($carousel->meta['design']['id'])->toBe(CarouselDesign::DEFAULT_ID)
+        ->and(imageSetRow($job)->meta['design'])->toBe(CarouselDesign::DEFAULT_ID);
+
+    // **والمنشورُ يُحدَّث بالقالب نفسه**: الملخّصُ منشور، فكاروسيلُه على الويب.
+    $published = collect(Storage::disk('public')->allFiles())->first(fn (string $path): bool => str_ends_with($path, 'carousel/index.html'));
+
+    expect(Storage::disk('public')->get($published))->toContain('class="deck surface-paper')->not->toContain('class="deck surface-night');
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images", ['design' => 'night']);
+
+    $published = Storage::disk('public')->get($published);
+
+    expect(CarouselDesign::forJob($this->job->fresh())->id)->toBe('night')
+        ->and($published)->toContain('class="deck surface-night')
+        ->and(imageSetRow($this->job)->meta['design'])->toBe('night');
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->assertInertia(fn (Assert $page): Assert => $page->where('outputs.images.design', 'night'));
+});
+
+it('يقول إنّ الصور قديمةٌ إذا تغيّرت الشرائح بعدها، ويزول ذلك بإعادة إنشائها', function (): void {
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    $stale = fn (): bool => $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->viewData('page')['props']['outputs']['images']['stale'];
+
+    expect($stale())->toBeFalse();
+
+    // إعادةُ رسم الشرائح بعد الصور (صياغةٌ أو قالبٌ أو هويةٌ تغيّرت).
+    $this->travel(2)->seconds();
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/carousel/build", ['recondense' => false]);
+
+    expect($stale())->toBeTrue();
+
+    $this->travel(2)->seconds();
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    expect($stale())->toBeFalse();
 });

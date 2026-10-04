@@ -252,9 +252,6 @@ it('ينسخ رقم الآية بلا علامتها ويُبقيها في ال�
             // **والشريحةُ تبقى بعلامتها**: تُرسم بخطّ المصحف لا تُنسخ.
             ->where('outputs.carousel.slides.0.body', $ayah)
         );
-
-    $this->actingAs($this->user)->get("/panel/jobs/{$job->id}/carousel")
-        ->assertInertia(fn (Assert $page): Assert => $page->where('carousel.plain_text', $copied));
 });
 
 // ── ٢. النشر ─────────────────────────────────────────────────────

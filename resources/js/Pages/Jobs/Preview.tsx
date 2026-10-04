@@ -66,6 +66,8 @@ interface Props {
       design: string | null;
       /** ما التُقط من كم أثناء الإنشاء — T-197. */
       progress: { done: number; total: number } | null;
+      /** صورٌ أقدمُ من شرائحها (صياغةٌ أو قالبٌ بعدها) — T-204. */
+      stale: boolean;
     };
   };
   regenerations: { used: number; limit: number };
@@ -104,6 +106,7 @@ export default function Preview({
   const [confirming, setConfirming] = useState(false);
   // بناءُ الشرائح نداءٌ للنموذج، فيُقرّ بخطوةٍ ثانية — T-203.
   const [confirmingCarousel, setConfirmingCarousel] = useState(false);
+  const [confirmingRecondense, setConfirmingRecondense] = useState(false);
 
   const left = Math.max(0, regenerations.limit - regenerations.used);
 
@@ -130,8 +133,19 @@ export default function Preview({
   function buildCarousel(): void {
     setBusy(true);
     router.post(
-      `/panel/jobs/${job.id}/carousel`,
+      `/panel/jobs/${job.id}/carousel/build`,
       { recondense: false },
+      { preserveScroll: true, onFinish: () => setBusy(false) },
+    );
+  }
+
+  // صياغةٌ جديدة لنصوص الشرائح — نداءٌ للنموذج يُبدِّل ما قبله (T-203)، وكان في
+  // صفحة الشرائح المحذوفة (T-204).
+  function recondense(): void {
+    setBusy(true);
+    router.post(
+      `/panel/jobs/${job.id}/carousel/build`,
+      { recondense: true },
       { preserveScroll: true, onFinish: () => setBusy(false) },
     );
   }
@@ -205,6 +219,7 @@ export default function Preview({
                 busy={busy}
                 onBuild={() => setConfirmingCarousel(true)}
                 onBuildImages={buildImages}
+                onRecondense={() => setConfirmingRecondense(true)}
               />
             ) : null}
 
@@ -259,6 +274,19 @@ export default function Preview({
         confirmLabel={t('jobs.preview.regenerate')}
         onConfirm={regenerate}
         onCancel={() => setConfirming(false)}
+      />
+
+      <CostConfirm
+        open={confirmingRecondense}
+        title={t('jobs.carousel.recondense')}
+        action={t('jobs.carousel.recondense_action')}
+        replaces
+        confirmLabel={t('jobs.carousel.recondense')}
+        onConfirm={() => {
+          setConfirmingRecondense(false);
+          recondense();
+        }}
+        onCancel={() => setConfirmingRecondense(false)}
       />
 
       <CostConfirm
@@ -560,7 +588,7 @@ function QuickButton({
 
 /** الشرائح متجاورةً، لكلٍّ نسخ النصّ، وزرّ نسخ الكلّ — §6. */
 function CarouselPane({
-  job, carousel, images, rich, busy, onBuild, onBuildImages,
+  job, carousel, images, rich, busy, onBuild, onBuildImages, onRecondense,
 }: {
   job: Props['job'];
   carousel: Props['outputs']['carousel'];
@@ -569,6 +597,7 @@ function CarouselPane({
   busy: boolean;
   onBuild: () => void;
   onBuildImages: (design: string | null) => void;
+  onRecondense: () => void;
 }) {
   if (!carousel.produced || carousel.slides.length === 0) {
     return (
@@ -603,16 +632,20 @@ function CarouselPane({
               {toArabicIndic(t('jobs.carousel.count', { count: carousel.slides.length }))}
             </span>
             {/*
-              **رابطُ صفحة الشرائح هنا لا تحت البطاقات** — T-196. كان سطراً
-              منفرداً فوق بطاقة الأفعال، فيُقرأ عنواناً لها.
+              **الشرائحُ المنشورة** مع الملخّص (`{slug}/carousel`) — T-204، بقالب
+              هذه الشرائح نفسه. وحلّ محلَّ رابط «صفحة الشرائح» المحذوفة.
             */}
-            <Link
-              href={`/panel/jobs/${job.id}/carousel`}
-              className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[13.5px] font-medium text-primary transition-colors hover:bg-surface-alt"
-            >
-              {t('jobs.preview.open_carousel_page')}
-              <Icon name="external" size={14} />
-            </Link>
+            {carousel.public_url !== null ? (
+              <a
+                href={carousel.public_url}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[13.5px] font-medium text-primary transition-colors hover:bg-surface-alt"
+              >
+                {t('jobs.preview.published_carousel')}
+                <Icon name="external" size={14} />
+              </a>
+            ) : null}
           </div>
         }
       >
@@ -621,7 +654,8 @@ function CarouselPane({
           slides={carousel.slides.map((slide, position) =>
             // **الصورةُ الملتقَطة متى وُجدت** — T-173: فلا تختلف المعاينة عن
             // التنزيل. وعددٌ لا يطابق الشرائح يعني صوراً من كاروسيلٍ سابق.
-            images.produced && images.urls.length === carousel.slides.length ? (
+            // وصورٌ أقدمُ من شرائحها لا تُعرض حاليّةً — T-204 (إلّا أثناء إنشاء بدلها).
+            images.produced && images.urls.length === carousel.slides.length && (!images.stale || images.state === 'rendering') ? (
               <img
                 key={slide.index}
                 src={images.urls[position]}
@@ -644,7 +678,14 @@ function CarouselPane({
 
       <Card
         title={t('jobs.preview.slide_texts')}
-        action={<CopyButton text={carousel.plain_text} label={t('jobs.carousel.copy_all')} variant="secondary" />}
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="ghost" loading={busy} onClick={onRecondense}>
+              {t('jobs.carousel.recondense')}
+            </Button>
+            <CopyButton text={carousel.plain_text} label={t('jobs.carousel.copy_all')} variant="secondary" />
+          </div>
+        }
       >
         <ul className="grid gap-3 sm:grid-cols-2">
           {carousel.slides.map((slide) => (
@@ -740,7 +781,8 @@ function ImagesPane({
           <Button
             loading={busy || rendering}
             onClick={() => onBuild(design)}
-            variant={images.produced ? 'secondary' : 'primary'}
+            // صورٌ قديمةٌ تُنشأ من جديد أوّلاً، فالزرُّ أبرزُ ما في البطاقة حينها.
+            variant={images.produced && !images.stale ? 'secondary' : 'primary'}
           >
             <Icon name="images" size={16} />
             {t(images.produced ? 'jobs.images.recreate' : 'jobs.images.create')}
@@ -760,6 +802,12 @@ function ImagesPane({
     >
       {rendering ? <ImagesProgress progress={images.progress} /> : null}
 
+      {images.stale && !rendering ? (
+        <p className="mb-4 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-[14px] text-text">
+          {t('jobs.images.stale')}
+        </p>
+      ) : null}
+
       {images.state === 'failed' && images.error !== null ? (
         <p className="mb-4 rounded-lg border border-danger/35 bg-danger/8 px-4 py-3 text-[14px] text-danger">
           {images.error}
@@ -768,6 +816,8 @@ function ImagesPane({
 
       <div className="flex flex-col gap-1 text-[13px] text-text-faint">
         <span>{t(images.produced ? 'jobs.images.ready_hint' : 'jobs.images.empty_body')}</span>
+        {/* القالبُ قالبُ الشرائح كلِّها، لا الصور وحدها — T-204. */}
+        {images.designs.length > 0 ? <span>{t('jobs.images.design_scope')}</span> : null}
         {/* الكلفةُ مكتوبةٌ تحت الزرّ لا مفترَضة — T-196. */}
         <span className="font-medium text-text-muted">{t('jobs.images.free_hint')}</span>
       </div>

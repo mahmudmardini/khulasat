@@ -11,7 +11,6 @@ use App\Enums\OutputType;
 use App\Models\Output;
 use App\Models\SummaryJob;
 use App\Services\Render\CarouselRenderer;
-use App\Support\Render\BrandKit;
 use App\Support\Render\CarouselDesign;
 use App\Support\Render\ContentObject;
 use App\Support\Render\RenderedOutput;
@@ -40,7 +39,11 @@ final class RenderCarousel
         private readonly ViewFactory $views,
     ) {}
 
-    public function handle(SummaryJob $job, bool $recondense = false): RenderedOutput
+    /**
+     * @param  string|null  $design  قالبٌ جديدٌ لشرائح الملخّص (معرّفُ قالبٍ معتمد، أو
+     *                               `default`) — T-204. وغيابُه قالبُه الحاليّ.
+     */
+    public function handle(SummaryJob $job, bool $recondense = false, ?string $design = null): RenderedOutput
     {
         $content = ContentObject::fromJob($job);
 
@@ -49,7 +52,14 @@ final class RenderCarousel
 
         $output = $this->render->handle(
             $job,
-            new CarouselRenderer($this->views, $deck, $this->pageUrl($job), CarouselDesign::forTenant($job->tenant)),
+            // **بقالب الملخّص لا بافتراضيّ الجهة** — T-204: فلا تُرسم الصورُ بقالبٍ
+            // وكاروسيلُ الويب المنشور بغيره.
+            new CarouselRenderer(
+                $this->views,
+                $deck,
+                $this->pageUrl($job),
+                $design === null ? CarouselDesign::forJob($job) : CarouselDesign::forTenant($job->tenant, $design),
+            ),
         );
 
         /*
@@ -63,28 +73,6 @@ final class RenderCarousel
         }
 
         return $output;
-    }
-
-    /**
-     * المعاينة: ترسم من الشرائح المحفوظة **ولا تكتب شيئاً**.
-     *
-     * و`handle` لا تصلح للمعاينة: تُقيّد الصفّ وتنشر الملفّ. وطلبُ `GET`
-     * يُعاد بكلّ تحديث صفحة، فينشر مخرَجاً لم يطلب أحدٌ نشره ويكتب
-     * `rendered_at` جديداً في كلّ فتحة. **والقراءة لا تُغيّر حالاً.**
-     *
-     * وتعود `null` قبل أن تُبنى الشرائح، فلا شيء يُعاين.
-     */
-    public function preview(SummaryJob $job): ?string
-    {
-        $deck = $this->stored($job);
-
-        if ($deck === null) {
-            return null;
-        }
-
-        // مصغَّرةً وبلا شاهدة عدّ — T-196: كان فتحُها من اللوحة يُعدّ قراءة.
-        return (new CarouselRenderer($this->views, $deck, $this->pageUrl($job), CarouselDesign::forTenant($job->tenant)))
-            ->preview(ContentObject::fromJob($job), BrandKit::forTenant($job->tenant, $job->lecture));
     }
 
     /** الشرائح المحفوظة من تكثيفٍ سابق، إن وُجدت. */

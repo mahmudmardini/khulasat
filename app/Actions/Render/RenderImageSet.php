@@ -67,11 +67,12 @@ final class RenderImageSet
     }
 
     /**
-     * @param  string|null  $design  معرّفُ قالبٍ معتمد، أو `default` للأصل. وغيابُه افتراضيُّ الجهة.
+     * بقالب شرائح الملخّص ({@see CarouselDesign::forJob()}) — T-204: ما رُسم به
+     * كاروسيلُ الويب، فلا تفترق الصورُ عن المنشور.
      *
      * @throws RuntimeException سببُه يُعرض على المستخدم كما هو.
      */
-    public function handle(SummaryJob $job, ?string $design = null): Output
+    public function handle(SummaryJob $job): Output
     {
         // الصورُ تُنشر على إنستغرام بيد الجهة، فحكمُها حكمُ المنشور (§2-٤).
         $pending = $job->pendingEvidenceCount();
@@ -89,7 +90,7 @@ final class RenderImageSet
             throw new RuntimeException(trans('jobs.images.no_carousel'));
         }
 
-        $chosen = CarouselDesign::forTenant($tenant, $design);
+        $chosen = CarouselDesign::forJob($job);
         $pageUrl = $job->outputs()->where('type', OutputType::Page->value)->first()?->public_url;
 
         $renderer = new CarouselRenderer($this->views, $deck, $pageUrl, $chosen);

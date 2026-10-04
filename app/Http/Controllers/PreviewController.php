@@ -263,7 +263,15 @@ class PreviewController extends Controller
                 static fn (CarouselDesign $design): array => ['id' => $design->id, 'name' => $design->name],
                 $job->tenant === null ? [] : TenantCarouselDesigns::approved($job->tenant),
             ),
-            'design' => $meta['design'] ?? null,
+            // **قالبُ شرائح الملخّص** لا قالبُ آخر حزمة — T-204: به رُسم المنشور،
+            // وبه تُنشأ الصور ما لم يُختر غيره.
+            'design' => CarouselDesign::forJob($job)->id,
+            /*
+             * **صورٌ أقدمُ من شرائحها** — T-204: صياغةٌ جديدة أو قالبٌ آخر بعد
+             * إنشائها، فلا تُعرض على أنّها الحالية. وإعادةُ إنشائها مجّانية.
+             */
+            'stale' => $count > 0 && $output?->rendered_at !== null
+                && ($this->output($job, OutputType::Carousel)?->rendered_at?->gt($output->rendered_at) ?? false),
             'urls' => array_map(
                 static fn (int $slide): string => route('jobs.images.show', ['job' => $job->id, 'slide' => $slide], false)."?v={$version}",
                 $count > 0 ? range(1, $count) : [],

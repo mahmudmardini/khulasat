@@ -5,32 +5,24 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\Render\RenderCarousel;
-use App\Enums\OutputType;
 use App\Exceptions\ModelCallFailed;
-use App\Models\Output;
 use App\Models\SummaryJob;
-use App\Support\Render\SlideDeck;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Inertia\Inertia;
-use Inertia\Response as InertiaResponse;
 use RuntimeException;
 
 /**
  * شرائح إنستغرام — SCREENS.md §6 «الكاروسيل»، والمهمّة T-19.
  *
  * **والجهة تنشر على إنستغرام قبل موقعها**، فهذه ليست زينةً على الصفحة بل
- * المخرَج الذي يُشارَك فعلاً. ولذلك تُعرض نصوصُ الشرائح للنسخ اليدويّ إلى
- * جانب المعاينة: من أراد الصور انتظر T-20، ومن أراد النشر اليوم نسخ النصّ.
+ * المخرَج الذي يُشارَك فعلاً.
+ *
+ * وهنا البناءُ وإعادةُ الصياغة وحدهما. **والعرضُ في تبويب الشرائح بالمعاينة**
+ * (T-199): الشرائحُ وصورُها وقالبُها ونصوصُها للنسخ. وكانت لها صفحةٌ منفصلة
+ * تعرض كاروسيل الويب بقالبٍ غير قالب الصور، فحُذفت — T-204.
  */
 class CarouselController extends Controller
 {
-    public function show(SummaryJob $job): InertiaResponse
-    {
-        return Inertia::render('Jobs/Carousel', $this->payload($job));
-    }
-
     /**
      * يبني الشرائح أو يعيد رسمها.
      *
@@ -61,58 +53,6 @@ class CarouselController extends Controller
         }
 
         return back();
-    }
-
-    /**
-     * المعاينة بالقالب الحقيقي، تُعرض في إطار — كما في شاشة الهوية.
-     *
-     * **ولا تستدعي نموذجاً ولا تكتب صفّاً**: الشرائح محفوظة، والرسم منها
-     * مجّانيّ. وطلبُ `GET` يُعاد مع كلّ تحديثِ صفحة، فلا يجوز أن ينشر.
-     */
-    public function preview(SummaryJob $job, RenderCarousel $carousel): Response
-    {
-        $html = $carousel->preview($job);
-
-        abort_if($html === null, 404);
-
-        return response($html)
-            ->header('Content-Type', 'text/html; charset=UTF-8')
-            ->header('X-Frame-Options', 'SAMEORIGIN')
-            ->header('Cache-Control', 'no-store');
-    }
-
-    /** @return array<string, mixed> */
-    private function payload(SummaryJob $job): array
-    {
-        $job->loadMissing('lecture');
-
-        $output = $this->output($job);
-        $meta = (array) ($output?->meta ?? []);
-
-        return [
-            'job' => [
-                'id' => $job->id,
-                'title' => $job->lecture?->title_ar,
-                'state' => $job->state->value,
-                'pending_evidence' => $job->pendingEvidenceCount(),
-                // معطَّلٌ لا مخفيّ — SCREENS.md §3-ب.
-                'locked' => ! $job->tenant?->allowsRichOutputs(),
-            ],
-            'carousel' => $output === null ? null : [
-                'slides' => $meta['slides'] ?? [],
-                // من الشرائح لا من `plain_text` المحفوظ: ما حُفظ قبل T-172
-                // يحمل «۝» في النصّ المنسوخ، والشرائحُ هي الأصل.
-                'plain_text' => SlideDeck::fromArray($meta['slides'] ?? [])->toPlainText(),
-                'public_url' => $output->public_url,
-                'rendered_at' => $output->rendered_at?->toIso8601String(),
-                'renderer_version' => $output->renderer_version,
-            ],
-        ];
-    }
-
-    private function output(SummaryJob $job): ?Output
-    {
-        return $job->outputs()->where('type', OutputType::Carousel->value)->first();
     }
 
     /**

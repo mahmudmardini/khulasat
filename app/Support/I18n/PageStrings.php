@@ -78,6 +78,18 @@ final class PageStrings
             'tr' => 'Bu özet dersten alınmıştır ve dersin birebir metni değildir. Kaydın kendisine dönmek daha tam ve daha doğrudur.',
             'ru' => 'Это резюме составлено по лекции и не является её дословной записью. Обращение к записи полнее и предпочтительнее.',
         ],
+        /*
+         * الإفصاحُ عن الذكاء الاصطناعي — T-206، بندُ الشفافية في وثيقة المرجعية.
+         * **سطرٌ مستقلّ عن التنويه لا جزءٌ منه**: الجهةُ تكتب تنويهها فيحلّ
+         * محلَّ الافتراضيّ كلّه، والإفصاحُ لا يُحذف بذلك. ولا يقول إلّا ما
+         * هو صحيح: النموذجُ أعدّ الملخّص، والمطابقةُ حتمية بلا نموذج.
+         */
+        'ai_disclosure' => [
+            'ar' => 'أعدّت هذا الملخّصَ أداةُ ذكاءٍ اصطناعي، وقوبلت آياتُه وأحاديثه بمصادرها بمطابقة النصوص، بلا ذكاءٍ اصطناعي.',
+            'en' => 'This summary was prepared by an AI tool. Its verses and hadiths were checked against their sources by text matching, without AI.',
+            'tr' => 'Bu özet bir yapay zekâ aracıyla hazırlanmıştır. Ayetleri ve hadisleri, yapay zekâ kullanılmadan metin eşleştirmesiyle kaynaklarına karşı denetlenmiştir.',
+            'ru' => 'Это резюме подготовлено инструментом искусственного интеллекта. Его аяты и хадисы сверены с источниками путём сопоставления текстов, без ИИ.',
+        ],
         /** صيغةُ التخريج: «رواه فلان». */
         'narrated_by' => ['ar' => 'رواه', 'en' => 'Reported by', 'tr' => 'Rivayet eden:', 'ru' => 'Передал'],
         /** «رقم» في «رواه البخاري، رقم ٩٢٣». */

@@ -122,6 +122,7 @@ return [
     'product' => [
         'name' => 'Khulasat',
         'rights' => '© :year',
+        'privacy' => 'Gizlilik politikası',
         'slogan' => 'Kaynağına dayandırılmış özetler',
     ],
 

@@ -285,6 +285,7 @@ return [
         'links' => 'Links',
         'login_tenants' => 'Institution sign-in',
         'complaint' => 'Request removal or report an error',
+        'privacy' => 'Privacy policy',
         'anatomy_link' => 'Sample page',
         'rights' => 'Khulasat · © 2026',
     ],

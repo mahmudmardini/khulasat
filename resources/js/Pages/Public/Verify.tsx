@@ -270,6 +270,9 @@ function Intake({ limits }: { limits: Props['limits'] }) {
         <span className="inline-flex items-center gap-1.5">
           <Icon name="shield" size={14} />
           {toArabicIndic(t('verify.form.privacy', { days: limits.retention_days }))}
+          <Link href="/privacy" className="underline hover:text-text-muted">
+            {t('verify.form.privacy_link')}
+          </Link>
         </span>
         <span className="inline-flex items-center gap-1.5">
           <Icon name="clock" size={14} />

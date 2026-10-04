@@ -72,6 +72,10 @@ export function ProductFooter({ className }: { className?: string }) {
       <Wordmark className="text-[16px] text-primary" />
       <span aria-hidden="true">·</span>
       <span>{t('common.product.rights', { year: toArabicIndic(new Date().getFullYear()) })}</span>
+      <span aria-hidden="true">·</span>
+      <a href="/privacy" className="hover:text-text-muted hover:underline">
+        {t('common.product.privacy')}
+      </a>
     </footer>
   );
 }

@@ -284,6 +284,7 @@ return [
         'links' => 'Bağlantılar',
         'login_tenants' => 'Kurum girişi',
         'complaint' => 'Kaldırma talebi veya hata bildirimi',
+        'privacy' => 'Gizlilik politikası',
         'anatomy_link' => 'Örnek sayfa',
         'rights' => 'Khulasat · © 2026',
     ],

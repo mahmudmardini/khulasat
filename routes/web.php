@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Public\ComplaintController;
 use App\Http\Controllers\Public\InviteRequestController;
 use App\Http\Controllers\Public\PageViewController;
+use App\Http\Controllers\Public\PrivacyController;
 use App\Http\Controllers\Public\QuizController;
 use App\Http\Controllers\Public\ShareCardController;
 use App\Http\Controllers\Public\ShowPublishedSummaryController;
@@ -92,6 +93,9 @@ Route::permanentRedirect('/login', '/panel/login');
  * منشورة، ومن يعترض غالباً ليس زبوناً: شيخٌ نُسب إليه كلام، أو قارئٌ رأى
  * تخريجاً خطأً. واشتراطُ التسجيل يُغلق الباب على من فُتح لأجله.
  */
+// سياسة الخصوصية المعلنة — T-207، بلا تسجيل دخول.
+Route::get('/privacy', PrivacyController::class)->name('privacy');
+
 Route::get('/complaint', [ComplaintController::class, 'create'])->name('complaint.create');
 Route::post('/complaint', [ComplaintController::class, 'store'])
     ->middleware('throttle:10,60')
@@ -270,7 +274,7 @@ Route::post('/admin/impersonate/stop', [ImpersonationController::class, 'stop'])
  * Laravel يُطابق أوّل مسارٍ يوافق لا الأدقّ.
  *
  * والألفاظُ المحجوزة أعلاه (`admin`, `panel`, `complaint`, `invite`,
- * `v`, `up`, `storage`, `build`, `verify`, `api`) ممنوعةٌ على `tenants.slug` في
+ * `v`, `up`, `storage`, `build`, `verify`, `api`, `privacy`) ممنوعةٌ على `tenants.slug` في
  * `TenantController::store` للسبب نفسه بالاتجاه المعاكس.
  */
 Route::get('/{tenantSlug}/{summarySlug}/{rest?}', ShowPublishedSummaryController::class)

@@ -442,6 +442,7 @@ return [
         'disabled' => 'Bu sunucuda görsel yakalama etkin değil.',
         'no_carousel' => 'Önce slaytları oluşturun; görseller onlardan yakalanır.',
         'pending' => 'Çözülmemiş :count kanıt varken görseller oluşturulmaz.',
+        'overflow' => ':slides. slaytın metni bu şablonda sınırlarını aşıyor ve görselde kesilir. Başka bir şablon deneyin ya da slaytları yeniden oluşturun.',
         'capture_failed' => ':slide. slayt yakalanamadı. Biraz sonra yeniden deneyin.',
         'failed' => 'Görseller oluşturulamadı. Biraz sonra yeniden deneyin.',
         'slide_alt' => 'Slayt :slide',

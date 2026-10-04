@@ -6,16 +6,23 @@ namespace App\Actions\Brand;
 
 use App\Actions\Stages\StageSchemas;
 use App\Contracts\ModelGateway;
+use App\Contracts\OverflowProbe;
 use App\Contracts\ShareCardCapturer;
 use App\Enums\Stage;
+use App\Http\Controllers\Settings\BrandController;
 use App\Models\Tenant;
 use App\Services\Model\ModelCallRecorder;
 use App\Services\Quota\SpendCap;
+use App\Services\Render\CarouselRenderer;
 use App\Support\Model\ImageAttachment;
 use App\Support\Model\StagePrompt;
+use App\Support\Render\BrandKit;
 use App\Support\Render\CarouselDesign;
 use App\Support\Render\Palette;
+use App\Support\Render\SampleCarousel;
 use App\Support\Verification\DomainPolicy;
+use Illuminate\Contracts\View\Factory as ViewFactory;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -29,6 +36,8 @@ use Throwable;
  *
  * ★ **والنموذجُ يختار ولا يكتب.** كلُّ قالبٍ يمرّ بـ{@see CarouselDesign::from()}
  * الصارمة، وقيمةٌ واحدةٌ خارج الكتالوج تُسقطه كلَّه. ومعرّفُه يضعه الخادم.
+ * **ثمّ يُقاس فيضُه** على كاروسيل الإجهاد ({@see SampleCarousel::stress()}) بهوية
+ * الجهة نفسها، وما فاض نصُّه عن شريحةٍ لا يُعرض: يُقصّ في الصورة صامتاً.
  *
  * والتعليماتُ تعليماتُ الجهة إن كتبها المشرف (`tenants.carousel_design_prompt`)،
  * وإلّا الافتراضية في `resources/prompts/shared/carousel_design.txt`.
@@ -44,6 +53,8 @@ final class GenerateCarouselDesigns
         private readonly ModelCallRecorder $recorder,
         private readonly SpendCap $spendCap,
         private readonly ShareCardCapturer $capturer,
+        private readonly OverflowProbe $probe,
+        private readonly ViewFactory $views,
     ) {}
 
     /** التعليماتُ التي يُولَّد بها لهذه الجهة. */
@@ -86,7 +97,7 @@ final class GenerateCarouselDesigns
 
         $this->recorder->recordForTenant($response, $tenant);
 
-        $candidates = $this->candidates((array) (($response->decoded ?? [])['designs'] ?? []));
+        $candidates = $this->candidates((array) (($response->decoded ?? [])['designs'] ?? []), $tenant);
 
         if ($candidates === []) {
             throw new RuntimeException(trans('common.carousel_designs.none_valid'));
@@ -113,7 +124,7 @@ final class GenerateCarouselDesigns
      * @param  array<mixed>  $rows
      * @return list<array{design: CarouselDesign, rationale: string}>
      */
-    private function candidates(array $rows): array
+    private function candidates(array $rows, Tenant $tenant): array
     {
         $kept = [];
         $seen = [];
@@ -137,7 +148,7 @@ final class GenerateCarouselDesigns
             // قالبان بالقيم نفسها قالبٌ واحد، ولو اختلف اسماهما.
             $signature = md5(serialize([$design->values, $design->layouts]));
 
-            if (isset($seen[$signature])) {
+            if (isset($seen[$signature]) || $this->overflows($design, $tenant)) {
                 continue;
             }
 
@@ -146,6 +157,30 @@ final class GenerateCarouselDesigns
         }
 
         return $kept;
+    }
+
+    /**
+     * أيفيض نصُّ شريحةٍ بهذا القالب على كاروسيل الإجهاد؟
+     *
+     * **وتعذُّرُ القياس لا يُسقط قالباً** (لا متصفّح): قالبٌ يُعرض بلا قياس خيرٌ
+     * من توليدٍ مدفوعٍ لا يُعرض منه شيء. وإنشاءُ الصور يقيس الشرائح الحقيقية
+     * ثانيةً قبل التقاطها.
+     */
+    private function overflows(CarouselDesign $design, Tenant $tenant): bool
+    {
+        $html = (new CarouselRenderer($this->views, SampleCarousel::stress(), rtrim((string) config('app.url'), '/').'/s/lesson', $design))
+            ->render(BrandController::sampleContent(), BrandKit::forTenant($tenant))
+            ->contents;
+
+        $over = $this->probe->overflowing($html);
+
+        if ($over !== null && $over !== []) {
+            Log::info('carousel_design_overflows', ['tenant_id' => $tenant->id, 'slides' => $over, 'design' => $design->toArray()]);
+
+            return true;
+        }
+
+        return false;
     }
 
     /** @return list<array<string, mixed>> */

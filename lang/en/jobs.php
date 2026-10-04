@@ -444,6 +444,7 @@ return [
         'disabled' => 'Image capture is not enabled on this server.',
         'no_carousel' => 'Build the slides first; the images are captured from them.',
         'pending' => 'Images are not created while :count evidence items are unresolved.',
+        'overflow' => 'The text of slide :slides runs past its edges with this template and would be cut off in the image. Try another template, or rebuild the slides.',
         'capture_failed' => 'Slide :slide could not be captured. Try again shortly.',
         'failed' => 'The images could not be created. Try again shortly.',
         'slide_alt' => 'Slide :slide',

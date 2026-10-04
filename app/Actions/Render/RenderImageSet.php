@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Render;
 
+use App\Contracts\OverflowProbe;
 use App\Contracts\ShareCardCapturer;
 use App\Enums\Locale;
 use App\Enums\OutputType;
@@ -35,6 +36,7 @@ final class RenderImageSet
     public function __construct(
         private readonly ShareCardCapturer $capturer,
         private readonly ViewFactory $views,
+        private readonly OverflowProbe $probe,
     ) {}
 
     /**
@@ -89,8 +91,20 @@ final class RenderImageSet
         $chosen = CarouselDesign::forTenant($tenant, $design);
         $pageUrl = $job->outputs()->where('type', OutputType::Page->value)->first()?->public_url;
 
-        $documents = (new CarouselRenderer($this->views, $deck, $pageUrl, $chosen))
-            ->slides(ContentObject::fromJob($job), BrandKit::forTenant($tenant, $job->lecture));
+        $renderer = new CarouselRenderer($this->views, $deck, $pageUrl, $chosen);
+        $content = ContentObject::fromJob($job);
+        $brand = BrandKit::forTenant($tenant, $job->lecture);
+
+        // ★ **الفيضُ قبل الالتقاط** — T-173. الشريحةُ تقصّ ما فاض صامتة، فنصٌّ
+        // لا يسعها يخرج في الصورة مبتوراً ويُنشر. وبلا شاهدة عدّ: المتصفّحُ
+        // القائس يطلبها كما يطلبها القارئ.
+        $over = $this->probe->overflowing($renderer->render($content->withoutBeacon(), $brand)->contents);
+
+        if ($over !== null && $over !== []) {
+            throw new RuntimeException(trans('jobs.images.overflow', ['slides' => implode('، ', $over)]));
+        }
+
+        $documents = $renderer->slides($content, $brand);
 
         $images = [];
 

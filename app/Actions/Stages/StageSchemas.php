@@ -410,7 +410,9 @@ final class StageSchemas
                         'type' => 'object',
                         'required' => ['kind', 'prompt', 'options', 'explanation', 'axis_id'],
                         'properties' => [
-                            'kind' => ['type' => 'string', 'enum' => ['single', 'true_false', 'evidence']],
+                            // **بلا `enum`**: النوعُ يُستنتج من الخيارات في الحارس، وسؤالٌ
+                            // بنوعٍ مكتوبٍ خطأً لا يُسقط الاختبارَ كلَّه بإعادةٍ وفشل.
+                            'kind' => ['type' => 'string'],
                             'level' => ['type' => 'string', 'nullable' => true],
                             'prompt' => ['type' => 'string'],
                             'options' => [

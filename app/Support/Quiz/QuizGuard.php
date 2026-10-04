@@ -138,13 +138,7 @@ final class QuizGuard
      */
     private function question(array $question, int $index, ?string &$reason): ?QuizQuestionDraft
     {
-        $kind = (string) ($question['kind'] ?? '');
-
-        if (! in_array($kind, QuizQuestionDraft::KINDS, true)) {
-            $reason = "نوعٌ مجهول: {$kind}.";
-
-            return null;
-        }
+        $kind = $this->kindOf($question);
 
         $level = $question['level'] ?? null;
         $level = in_array($level, QuizQuestionDraft::LEVELS, true) ? $level : null;
@@ -330,6 +324,35 @@ final class QuizGuard
         }
 
         return [array_map(static fn (int $id): array => ['text' => null, 'evidence_item_id' => $id], $ids), $correct];
+    }
+
+    /**
+     * **نوعُ السؤال من شكل خياراته لا ممّا كتبه النموذج.**
+     *
+     * فقياسُ المهمّة (القرار ٦) وجد نماذج Gemini تكتب مستوى السؤال في حقل
+     * نوعه («understanding» مكان «single»)، فيسقط سؤالٌ سليمٌ لاسمٍ في حقل.
+     * والنوعُ صفةٌ للخيارات أصلاً: خيارٌ بمعرّف شاهدٍ سؤالُ شاهد، وخياران
+     * هما «صواب» و«خطأ» صوابٌ وخطأ، وما سواهما اختيارٌ من متعدّد. **وكلُّ
+     * نوعٍ يمرّ بعدها بفحوص نوعه كاملةً**، فلا يُفلت بالاستنتاج سؤالٌ معيب.
+     *
+     * @param  array<string, mixed>  $question
+     */
+    private function kindOf(array $question): string
+    {
+        $options = array_values(array_filter((array) ($question['options'] ?? []), 'is_array'));
+
+        foreach ($options as $option) {
+            if (($option['evidence_id'] ?? null) !== null && $option['evidence_id'] !== '') {
+                return 'evidence';
+            }
+        }
+
+        $labels = array_map(static fn (array $o): string => Arabic::normalize(trim((string) ($o['text'] ?? ''))), $options);
+        sort($labels);
+        $fixed = [Arabic::normalize(self::TRUE_LABEL), Arabic::normalize(self::FALSE_LABEL)];
+        sort($fixed);
+
+        return $labels === $fixed ? 'true_false' : 'single';
     }
 
     /** @param list<array<string, mixed>> $options */

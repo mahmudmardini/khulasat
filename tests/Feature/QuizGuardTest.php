@@ -175,3 +175,29 @@ it('يفحص تعديل اللوحة بالحارس نفسه', function (): void
         ->and($guard->editProblem('true_false', 'عبارة.', ['نعم', 'لا'], 'شرح.'))->not->toBeNull()
         ->and($guard->editProblem('true_false', 'عبارة.', ['صواب', 'خطأ'], 'شرح.'))->toBeNull();
 });
+
+/*
+ * **النوعُ من شكل الخيارات** — قياسُ المهمّة وجد نماذج تكتب مستوى السؤال في
+ * حقل نوعه، فكان سؤالٌ سليمٌ يسقط لاسمٍ في حقل.
+ */
+it('يستنتج نوع السؤال من خياراته لا من الحقل الذي كتبه النموذج', function (): void {
+    $single = quizQuestion(['kind' => 'understanding']);
+    $evidence = quizQuestion([
+        'kind' => 'recall',
+        'options' => [
+            ['text' => null, 'evidence_id' => 'e1', 'correct' => true],
+            ['text' => null, 'evidence_id' => 'e2', 'correct' => false],
+        ],
+    ]);
+    $trueFalse = quizQuestion([
+        'kind' => 'application',
+        'options' => [
+            ['text' => 'صواب', 'evidence_id' => null, 'correct' => true],
+            ['text' => 'خطأ', 'evidence_id' => null, 'correct' => false],
+        ],
+    ]);
+
+    $kept = quizGuard()->guard(['questions' => [$single, $evidence, $trueFalse]]);
+
+    expect(array_map(static fn ($d): string => $d->kind, $kept))->toBe(['single', 'evidence', 'true_false']);
+});

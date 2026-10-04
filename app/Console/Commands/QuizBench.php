@@ -46,7 +46,8 @@ class QuizBench extends Command
                             {--runs=2 : تشغيلاتٌ لكلّ نموذجٍ على كلّ درس}
                             {--max-usd=2 : سقفُ الإنفاق — يقف قبل أن يتجاوزه}
                             {--out= : مجلّدُ المخرجات}
-                            {--live : ينادي النماذج فعلاً}';
+                            {--live : ينادي النماذج فعلاً}
+                            {--rejudge= : يعيد حكم الحارس على مخرجاتٍ محفوظة بلا نداء}';
 
     protected $description = 'يقيس نماذج اختبار الفهم بالتعليمات والحارس نفسيهما — T-195';
 
@@ -87,6 +88,11 @@ class QuizBench extends Command
             $this->components->error('لا دروس. مرّر --input أو --jobs.');
 
             return self::FAILURE;
+        }
+
+        // **حارسٌ أُصلح لا يستوجب نداءً جديداً** — نظير `bench/rejudge.php` في T-62.
+        if ($this->option('rejudge')) {
+            return $this->rejudge((string) $this->option('rejudge'), $lessons);
         }
 
         $calls = count($lessons) * count($models) * $runs;
@@ -186,7 +192,19 @@ class QuizBench extends Command
         $row['cost'] = round($this->cost($key, $result->inputTokens, $result->outputTokens), 5);
         $row['raw'] = $result->content;
 
-        $decoded = $this->decode($result->content);
+        return $this->judge($row, $name, $lesson);
+    }
+
+    /**
+     * يحكم الحارسُ على الخرج المحفوظ في الصفّ — بعد النداء، أو عند إعادة الحكم.
+     *
+     * @param  array<string, mixed>  $row
+     * @param  array{structure: array<string, mixed>, evidence: list<array{kind: string, text: string, source_line: string}>}  $lesson
+     * @return array<string, mixed>
+     */
+    private function judge(array $row, string $name, array $lesson): array
+    {
+        $decoded = $this->decode((string) $row['raw']);
 
         if ($decoded === null) {
             $row['error'] = 'الخرج ليس JSON صالحاً.';
@@ -194,6 +212,7 @@ class QuizBench extends Command
             return $row;
         }
 
+        $row['error'] = null;
         $row['schema'] = JsonSchema::violations($decoded, (array) StageSchemas::for(Stage::Quiz));
         $row['returned'] = count((array) ($decoded['questions'] ?? []));
 
@@ -223,6 +242,42 @@ class QuizBench extends Command
         ], $kept);
 
         return $row;
+    }
+
+    /**
+     * @param  array<string, array{structure: array<string, mixed>, evidence: list<array{kind: string, text: string, source_line: string}>}>  $lessons
+     */
+    private function rejudge(string $dir, array $lessons): int
+    {
+        $results = [];
+
+        foreach (glob(rtrim($dir, '/').'/*--*--*.json') ?: [] as $file) {
+            $row = json_decode((string) file_get_contents($file), true);
+
+            if (! is_array($row) || ! isset($lessons[$row['lesson']])) {
+                continue;
+            }
+
+            // نداءٌ أخفق قبل أن يصل خرجُه لا يُعاد حكمُه: لا خرجَ له.
+            if ($row['raw'] !== '') {
+                $row = $this->judge($row, $row['lesson'], $lessons[$row['lesson']]);
+                File::put($file, (string) json_encode($row, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            }
+
+            $results[] = $row;
+        }
+
+        usort($results, static fn (array $a, array $b): int => [$a['lesson'], $a['model'], $a['run']] <=> [$b['lesson'], $b['model'], $b['run']]);
+
+        $spent = array_sum(array_column($results, 'cost'));
+        File::put("{$dir}/REPORT.md", $this->report($results, $spent));
+        [$sheet, $key] = $this->blindSheet($results, $lessons);
+        File::put("{$dir}/REVIEW.md", $sheet);
+        File::put("{$dir}/REVIEW-KEY.json", (string) json_encode($key, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+
+        $this->components->info('أُعيد الحكم على '.count($results).' مخرَجاً بلا نداء.');
+
+        return self::SUCCESS;
     }
 
     /** @return array<string, array{structure: array<string, mixed>, evidence: list<array{kind: string, text: string, source_line: string}>}> */

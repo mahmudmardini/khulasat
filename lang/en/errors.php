@@ -140,6 +140,8 @@ return [
          * important line in the file**: it is what used to surface as "change
          * the lecture source", however far the fault was from the source.
          */
+        'corpus_unavailable' => 'The hadiths could not be checked against their sources just now. The fault is on our side, not in your lecture. Nothing was published and the work done so far is kept. Try again shortly.',
+
         'pipeline_failed' => 'An internal error occurred while preparing this summary. It has nothing to do with your lecture source or with anything you entered. Try again, and get in touch if it keeps happening.',
 
     ],

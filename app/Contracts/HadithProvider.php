@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Contracts;
 
+use App\Exceptions\HadithCorpusUnavailable;
 use App\Support\Verification\HadithMatch;
 
 /**
  * A source of hadith texts and rulings — المواصفة §7-3.
  *
  * **سقوط المزوّد لا يُسقط النظام.** من أخفق يرمي استثناءً، ويلتقطه
- * `HadithVerifier` فيجرّب التالي. وإن سقط الجميع عادت النتيجة `none`
- * ورُفعت للمراجعة — والنظام يعمل بلا مزوّد خارجي البتّة، وإن كانت كلّ
- * الشواهد حينها تحتاج إنساناً.
+ * `HadithVerifier` فيجرّب التالي. **وإن لم يُجب مزوّدٌ محكومٌ واحد رُمي
+ * {@see HadithCorpusUnavailable}** (T-213): بحثٌ لم يجرِ
+ * لا يُقال فيه «لم يُعثر عليه». وسقوطُ مزوّدٍ تكميليّ يُتجاوز دائماً.
  */
 interface HadithProvider
 {

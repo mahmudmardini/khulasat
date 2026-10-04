@@ -32,7 +32,11 @@ final class CheckPresenter
             'findings' => $purged ? null : ($check->report['findings'] ?? null),
             'error' => $check->error_code === null ? null : [
                 'code' => $check->error_code,
-                'message' => (string) __($check->error_code === 'spend_cap' ? 'verify.errors.paused' : 'verify.errors.failed'),
+                'message' => (string) __(match ($check->error_code) {
+                    'spend_cap' => 'verify.errors.paused',
+                    'corpus_unavailable' => 'verify.errors.unavailable',
+                    default => 'verify.errors.failed',
+                }),
             ],
             'created_at' => $check->created_at->toIso8601String(),
             'completed_at' => $check->completed_at?->toIso8601String(),

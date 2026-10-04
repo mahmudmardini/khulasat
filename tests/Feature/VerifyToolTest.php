@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Contracts\ModelGateway;
+use App\Contracts\VerifierRegistry;
 use App\Enums\Stage;
 use App\Enums\VerifyCheckStatus;
 use App\Exceptions\ModelCallFailed;
@@ -12,12 +13,14 @@ use App\Models\SummaryJob;
 use App\Models\VerifyCheck;
 use App\Services\Model\ModelCallRecorder;
 use App\Services\Quota\SpendCap;
+use App\Services\Verification\HadithVerifier;
 use App\Support\Arabic;
 use App\Support\Model\ModelResponse;
 use App\Support\Model\StagePrompt;
 use Database\Seeders\HadithTestSeeder;
 use Database\Seeders\QuranTestSeeder;
 use Illuminate\Support\Facades\RateLimiter;
+use Tests\Fixtures\FakeHadithProvider;
 
 /*
  * أداة «تحقّق» — T-181: نصٌّ حرّ ← شواهد ← تقرير.
@@ -231,6 +234,28 @@ it('books a failed extraction too, and tells the reader to retry', function (): 
     $this->getJson("/verify/{$check->id}/status")
         ->assertOk()
         ->assertJsonPath('check.error.message', __('verify.errors.failed'));
+});
+
+/*
+ * ★ T-213 — **بحثٌ لم يجرِ لا يُقال فيه «لم يُعثر عليه»**. حديثٌ في البخاري
+ * والقاعدةُ متعطّلة: كان التقرير يقول إنّه غير موجود.
+ */
+it('fails with a retry message when the hadith corpus is down, instead of reporting not found', function (): void {
+    app()->when(HadithVerifier::class)->needs('$providers')
+        ->give(fn (): array => [new FakeHadithProvider(failWith: 'انقطاع القاعدة', name: 'graded')]);
+    app()->forgetInstance(VerifierRegistry::class);
+
+    verifyGateway([evidence('hadith', 'أحب الأعمال إلى الله أدومها وإن قل')]);
+
+    $check = submitVerify();
+
+    expect($check->status)->toBe(VerifyCheckStatus::Failed)
+        ->and($check->error_code)->toBe('corpus_unavailable')
+        ->and($check->report)->toBeNull();
+
+    $this->getJson("/verify/{$check->id}/status")
+        ->assertOk()
+        ->assertJsonPath('check.error.message', __('verify.errors.unavailable'));
 });
 
 it('refuses before any call when spending is halted', function (): void {

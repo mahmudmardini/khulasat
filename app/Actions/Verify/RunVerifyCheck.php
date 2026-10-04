@@ -10,6 +10,7 @@ use App\Contracts\VerifierRegistry;
 use App\Enums\MatchStatus;
 use App\Enums\Stage;
 use App\Enums\VerifyCheckStatus;
+use App\Exceptions\HadithCorpusUnavailable;
 use App\Exceptions\ModelCallFailed;
 use App\Models\VerifyCheck;
 use App\Services\Model\ModelCallRecorder;
@@ -64,8 +65,13 @@ final class RunVerifyCheck
 
         $findings = [];
 
-        foreach ($extracted as $position => $raw) {
-            $findings[] = $this->verifyOne($position + 1, $raw);
+        try {
+            foreach ($extracted as $position => $raw) {
+                $findings[] = $this->verifyOne($position + 1, $raw);
+            }
+        } catch (HadithCorpusUnavailable) {
+            // ★ T-213: لا تقريرَ فيه «لم يُعثر عليه» عن بحثٍ لم يجرِ.
+            return $this->fail($check, HadithCorpusUnavailable::CODE);
         }
 
         $check->forceFill([

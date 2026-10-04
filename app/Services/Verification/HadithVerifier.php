@@ -6,9 +6,11 @@ namespace App\Services\Verification;
 
 use App\Contracts\EvidenceVerifier;
 use App\Contracts\HadithProvider;
+use App\Contracts\SupplementaryHadithProvider;
 use App\Enums\HadithBook;
 use App\Enums\HadithGrade;
 use App\Enums\MatchStatus;
+use App\Exceptions\HadithCorpusUnavailable;
 use App\Support\Arabic;
 use App\Support\Hadith\NarrationFormulas;
 use App\Support\Hadith\Takhrij;
@@ -144,24 +146,36 @@ class HadithVerifier implements EvidenceVerifier
      * تقادمٍ زائدة على بيانات لا تتغيّر إلّا ببذرٍ نُجريه نحن.
      *
      * @return array{HadithMatch, float, list<HadithBook>}|null
+     *
+     * @throws HadithCorpusUnavailable لم يُجب أيُّ مزوّدٍ محكوم — T-213.
      */
     private function bestCandidate(string $needle): ?array
     {
         $best = null;
         $exactBooks = [];
         $exactThreshold = $this->threshold('exact');
+        $gradedAnswered = false;
+        $gradedFailure = null;
 
         foreach ($this->providers as $provider) {
             try {
                 $matches = $provider->search($needle);
             } catch (Throwable $e) {
-                // سقوط مزوّد لا يُسقط النظام — المواصفة §7-4.
-                Log::warning('مزوّد حديث أخفق', [
+                // سقوط مزوّد لا يُسقط النظام ما أجاب غيرُه — المواصفة §7-4.
+                Log::error('مزوّد حديث أخفق', [
                     'provider' => $provider->name(),
                     'error' => $e->getMessage(),
                 ]);
 
+                if (! $provider instanceof SupplementaryHadithProvider) {
+                    $gradedFailure ??= $e;
+                }
+
                 continue;
+            }
+
+            if (! $provider instanceof SupplementaryHadithProvider) {
+                $gradedAnswered = true;
             }
 
             foreach ($matches as $match) {
@@ -186,6 +200,15 @@ class HadithVerifier implements EvidenceVerifier
             if ($best !== null && $best[1] >= $this->threshold('partial')) {
                 break;
             }
+        }
+
+        /*
+         * ★ **ولا يُقال «لم يُعثر عليه» عن بحثٍ لم يجرِ** — T-213. إن لم
+         * يُجب مزوّدٌ محكومٌ واحد فالنتيجةُ مجهولة لا عدم: الحديثُ قد يكون
+         * في البخاري. فيُرمى ليقف الملخّصُ ويُعاد، ويقول «تحقّق» «تعذّر».
+         */
+        if (! $gradedAnswered && $gradedFailure !== null) {
+            throw new HadithCorpusUnavailable('تعذّر البحث في الكتب المحكومة: '.$gradedFailure->getMessage(), $gradedFailure);
         }
 
         return $best === null ? null : [$best[0], $best[1], $exactBooks];

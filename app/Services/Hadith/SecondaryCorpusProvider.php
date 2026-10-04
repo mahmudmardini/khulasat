@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Hadith;
 
+use App\Contracts\SupplementaryHadithProvider;
 use App\Enums\HadithBook;
 
 /**
@@ -14,7 +15,7 @@ use App\Enums\HadithBook;
  * السنن يبقى بحكمه كما كان، **ولا يُعرف الحديثُ من المسند إلّا إذا لم يوجد
  * في غيره** — فيُقال موضعُه، ولا يُنشر لأنّه بلا حكم.
  */
-class SecondaryCorpusProvider extends LocalCorpusProvider
+class SecondaryCorpusProvider extends LocalCorpusProvider implements SupplementaryHadithProvider
 {
     public function name(): string
     {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Actions\Summary\TransitionJob;
+use App\Contracts\VerifierRegistry;
 use App\Domain\Summary\JobState;
 use App\Enums\ReviewStatus;
 use App\Jobs\RunSummaryPipeline;
@@ -11,9 +12,11 @@ use App\Models\Lecture;
 use App\Models\SummaryJob;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\Verification\HadithVerifier;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
+use Tests\Fixtures\FakeHadithProvider;
 
 /*
  * T-11ب — المشغّل الذي يقود المهمّة من `queued` إلى `published`.
@@ -99,6 +102,30 @@ it('writes the error code with the failing transition, not before it', function 
 
     expect($last->to_state)->toBe(JobState::Failed)
         ->and($last->error_code)->toBe($job->error_code);
+});
+
+/*
+ * ★ T-213 — **القاعدةُ متعطّلة فالملخّصُ يقف، لا يُنشر بلا أحاديثه.** كان
+ * المحقّقُ يقول عن كلّ حديثٍ «لم يُعثر عليه» فيُحذف، ويمضي الخطّ إلى النشر.
+ */
+it('halts at verifying with corpus_unavailable when the hadith corpus is down, and saves no evidence', function (): void {
+    app()->when(HadithVerifier::class)->needs('$providers')
+        ->give(fn (): array => [new FakeHadithProvider(failWith: 'انقطاع القاعدة', name: 'graded')]);
+    app()->forgetInstance(VerifierRegistry::class);
+
+    $job = queuedJob(['evidence_json' => [['kind' => 'hadith', 'raw_text' => 'أحب الأعمال إلى الله أدومها وإن قل']]]);
+
+    foreach ([JobState::Transcribing, JobState::Cleaning, JobState::ExtractingStructure, JobState::ExtractingEvidence, JobState::Verifying] as $state) {
+        app(TransitionJob::class)->handle($job, $state);
+    }
+
+    $job = runPipeline($job);
+
+    expect($job->state)->toBe(JobState::Failed)
+        ->and($job->error_code)->toBe('corpus_unavailable')
+        ->and($job->evidenceItems()->count())->toBe(0)
+        ->and($job->outputs()->count())->toBe(0)
+        ->and($job->transitions()->get()->last()->from_state)->toBe(JobState::Verifying);
 });
 
 it('never leaves a job spinning when a stage fails to advance it', function (): void {

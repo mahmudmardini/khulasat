@@ -16,6 +16,7 @@ use App\Actions\Summary\TransitionJob;
 use App\Domain\Summary\AutomaticRetryRefused;
 use App\Domain\Summary\JobState;
 use App\Enums\TranscriptErrorCode;
+use App\Exceptions\HadithCorpusUnavailable;
 use App\Exceptions\ModelCallFailed;
 use App\Exceptions\TranscriptFailed;
 use App\Models\SummaryJob;
@@ -220,6 +221,8 @@ class RunSummaryPipeline implements ShouldQueue
         return match (true) {
             $failure instanceof ModelCallFailed => [$failure->errorCode, $failure->getMessage()],
             $failure instanceof TranscriptFailed => [$failure->errorCode->value, $failure->getMessage()],
+            // T-213: عطلٌ عندنا لا في الدرس. ولا إعادةَ آلية في `verifying`، فيقف و«أعد المحاولة» يستأنف منها.
+            $failure instanceof HadithCorpusUnavailable => [HadithCorpusUnavailable::CODE, $failure->getMessage()],
             default => ['pipeline_failed', $failure->getMessage()],
         };
     }

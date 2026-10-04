@@ -14,6 +14,7 @@ import { Segmented } from '@/Components/Segmented';
 import { StickyBar } from '@/Components/StickyBar';
 import { cn } from '@/lib/cn';
 import { discardUpload, uploadInChunks, UploadError } from '@/lib/chunkedUpload';
+import { titleFromFileName } from '@/lib/fileTitle';
 import { csrfToken } from '@/lib/csrf';
 import { toGregorian, toHijri } from '@/lib/hijri';
 import { t } from '@/lib/i18n';
@@ -233,6 +234,17 @@ export default function Create({
 
     form.setData('upload_id', '');
     setUpload({ phase: 'idle' });
+  };
+
+  // اسمُ الملفّ عنوانٌ مقترَح — T-213. ولا يُكتب فوق عنوانٍ كتبه المستخدم.
+  const suggestTitleFrom = (fileName: string) => {
+    if (form.data.title_ar !== '' && !suggested.title) {
+      return;
+    }
+
+    const title = titleFromFileName(fileName);
+    form.setData('title_ar', title);
+    setSuggested((state) => ({ ...state, title: title !== '' }));
   };
 
   const startUpload = async (file: File, resumeId?: string) => {
@@ -466,9 +478,13 @@ export default function Create({
                     disabled={form.processing}
                     onSelect={(file) => {
                       dropUpload();
+                      suggestTitleFrom(file.name);
                       void startUpload(file);
                     }}
-                    onClear={dropUpload}
+                    onClear={() => {
+                      dropUpload();
+                      suggestTitleFrom('');
+                    }}
                   />
 
                   <p className="text-[13px] text-text-muted">{t('lectures.create.source.upload_hint')}</p>

@@ -90,7 +90,7 @@ it('keeps the matching limits inside the verifiers and the evidence guard', func
         'hadith.min_fragment_words' => verificationConstant(HadithVerifier::class, 'MIN_FRAGMENT_WORDS'),
         'hadith.min_fragment_coverage' => verificationConstant(HadithVerifier::class, 'MIN_FRAGMENT_COVERAGE'),
         'hadith.citable_words' => verificationConstant(HadithVerifier::class, 'CITABLE_WORDS'),
-        'quran.span_probe_words' => verificationConstant(QuranVerifier::class, 'SPAN_PROBE_WORDS'),
+        'quran.span_candidates' => verificationConstant(QuranVerifier::class, 'SPAN_CANDIDATES'),
         'corpus.candidates' => verificationConstant(LocalCorpusProvider::class, 'CANDIDATES'),
         'corpus.shortlist_threshold' => verificationConstant(LocalCorpusProvider::class, 'SHORTLIST_THRESHOLD'),
         'guard.match_threshold' => verificationConstant(GuardEvidenceText::class, 'MATCH_THRESHOLD'),
@@ -100,7 +100,8 @@ it('keeps the matching limits inside the verifiers and the evidence guard', func
         'hadith.min_fragment_words' => 4,
         'hadith.min_fragment_coverage' => 0.6,
         'hadith.citable_words' => 6,
-        'quran.span_probe_words' => 4,
+        // T-168: المِجسُّ ذو الكلمات الأربع حلّ محلَّه تجريبُ كلّ موضعِ وصل.
+        'quran.span_candidates' => 50,
         'corpus.candidates' => 20,
         'corpus.shortlist_threshold' => 0.45,
         'guard.match_threshold' => 65.0,

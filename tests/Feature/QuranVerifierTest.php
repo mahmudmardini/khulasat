@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Enums\MatchStatus;
+use App\Models\QuranAyah;
 use App\Services\Verification\QuranVerifier;
+use App\Support\Arabic;
 use App\Support\Verification\EvidenceInput;
 use App\Support\Verification\VerificationResult;
 use Database\Seeders\QuranTestSeeder;
@@ -94,4 +96,60 @@ it('does not span two ayat from different surahs', function (): void {
     $r = verifyAyah('وما لهم من دونه من وال إن الإنسان خلق هلوعا');
 
     expect($r->status)->toBe(MatchStatus::None);
+});
+
+/*
+ * ═══ T-168 — آيتان متتاليتان تُطابَقان أينما بدأ الاقتباس ═══
+ *
+ * كان المِجسّ يشترط أن تكون أوّلُ أربع كلماتٍ من الاقتباس آخرَ أربعٍ في
+ * الآية الأولى بالضبط، فلا يُطابَق الممتدّ إلّا صدفة. والقلم ١٠–١١ بلفظها
+ * التامّ كانت تعود `none`.
+ */
+function seedQalam(): void
+{
+    // القلم ١٠–١١ — ليستا في عيّنة الرسم، فتُضافان هنا بلفظهما.
+    foreach ([
+        10 => ['وَلَا تُطِعْ كُلَّ حَلَّافٍ مَّهِينٍ', 'وَلَا تُطِعْ كُلَّ حَلَّافٍ مَّهِينٍ'],
+        11 => ['هَمَّازٍ مَّشَّآءٍۭ بِنَمِيمٍ', 'هَمَّازٍ مَّشَّاءٍ بِنَمِيمٍ'],
+    ] as $ayah => [$uthmani, $imlaei]) {
+        QuranAyah::query()->create([
+            'surah' => 68,
+            'ayah' => $ayah,
+            'surah_name_ar' => 'القلم',
+            'text_uthmani' => $uthmani,
+            'text_imlaei' => $imlaei,
+            'text_normalized' => Arabic::normalize($imlaei),
+        ]);
+    }
+}
+
+it('matches two whole consecutive ayat', function (): void {
+    seedQalam();
+
+    $r = verifyAyah('ولا تطع كل حلاف مهين هماز مشاء بنميم');
+
+    expect($r->status)->toBe(MatchStatus::Exact)
+        ->and($r->sourceMeta)->toMatchArray(['surah_number' => 68, 'ayah_number' => 10, 'ayah_number_end' => 11, 'spans_multiple' => true]);
+});
+
+it('matches a span that starts early in the first ayah', function (): void {
+    // تبدأ قبل آخر الأولى بثلاث كلمات — والمِجسّ القديم يأخذ أربعاً فيتجاوزها.
+    $r = verifyAyah('الإنسان خلق هلوعا إذا مسه الشر جزوعا');
+
+    expect($r->status)->toBe(MatchStatus::Exact)
+        ->and($r->sourceMeta)->toMatchArray(['surah_number' => 70, 'ayah_number' => 19, 'ayah_number_end' => 20]);
+});
+
+it('matches a span whose part in the first ayah is shorter than four words', function (): void {
+    seedQalam();
+
+    expect(verifyAyah('خلق هلوعا إذا مسه الشر')->sourceMeta)->toMatchArray(['ayah_number' => 19, 'ayah_number_end' => 20])
+        ->and(verifyAyah('حلاف مهين هماز مشاء')->sourceMeta)->toMatchArray(['surah_number' => 68, 'ayah_number' => 10]);
+});
+
+it('splits only at word boundaries, never inside a word', function (): void {
+    seedQalam();
+
+    // «هين» بعضُ «مهين»، والوصلُ لا يقع داخل كلمة.
+    expect(verifyAyah('هين هماز مشاء بنميم')->status)->toBe(MatchStatus::None);
 });

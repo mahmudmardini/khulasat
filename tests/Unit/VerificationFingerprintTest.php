@@ -91,6 +91,9 @@ it('keeps the matching limits inside the verifiers and the evidence guard', func
         'hadith.min_fragment_coverage' => verificationConstant(HadithVerifier::class, 'MIN_FRAGMENT_COVERAGE'),
         'hadith.citable_words' => verificationConstant(HadithVerifier::class, 'CITABLE_WORDS'),
         'quran.span_candidates' => verificationConstant(QuranVerifier::class, 'SPAN_CANDIDATES'),
+        'quran.tolerance_max_dropped' => verificationConstant(QuranVerifier::class, 'TOLERANCE_MAX_DROPPED'),
+        'quran.tolerance_min_words' => verificationConstant(QuranVerifier::class, 'TOLERANCE_MIN_WORDS'),
+        'quran.tolerance_candidates' => verificationConstant(QuranVerifier::class, 'TOLERANCE_CANDIDATES'),
         'corpus.candidates' => verificationConstant(LocalCorpusProvider::class, 'CANDIDATES'),
         'corpus.shortlist_threshold' => verificationConstant(LocalCorpusProvider::class, 'SHORTLIST_THRESHOLD'),
         'guard.match_threshold' => verificationConstant(GuardEvidenceText::class, 'MATCH_THRESHOLD'),
@@ -102,6 +105,10 @@ it('keeps the matching limits inside the verifiers and the evidence guard', func
         'hadith.citable_words' => 6,
         // T-168: المِجسُّ ذو الكلمات الأربع حلّ محلَّه تجريبُ كلّ موضعِ وصل.
         'quran.span_candidates' => 50,
+        // T-169: التسامحُ في آيةٍ من الحفظ — قرار مالك المنتج، ٤ أكتوبر ٢٠٢٦.
+        'quran.tolerance_max_dropped' => 3,
+        'quran.tolerance_min_words' => 4,
+        'quran.tolerance_candidates' => 100,
         'corpus.candidates' => 20,
         'corpus.shortlist_threshold' => 0.45,
         'guard.match_threshold' => 65.0,

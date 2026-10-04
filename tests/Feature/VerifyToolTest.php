@@ -370,3 +370,13 @@ it('is linked from the landing page in every language, and says it works in Arab
     'tr' => ['/tr', false],
     'ru' => ['/ru', false],
 ]);
+
+it('says when an ayah matched with tolerance, and names the dropped words', function (): void {
+    verifyGateway([evidence('ayah', 'واذكروا إذ كنتم أعداء فالف بين قلوبكم فأصبحتم بنعمته إخواناً')]);
+
+    $finding = submitVerify()->report['findings'][0];
+
+    expect($finding['verdict'])->toBe('exact')
+        ->and($finding['reason']['code'])->toBe('ayah_tolerant')
+        ->and($finding['notes'][0]['text'])->toBe('سقط من النصّ: «نعمت الله عليكم».');
+});

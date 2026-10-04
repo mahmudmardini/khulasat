@@ -75,6 +75,7 @@ return [
     ],
 
     'create' => [
+        'confirm_action' => 'Preparing the summary starts from the source you chose.',
         'title' => 'New summary',
         'subtitle' => 'Give us the source, the lecture title and its speaker; the rest is on us.',
         'submit' => 'Start preparing',

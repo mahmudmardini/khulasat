@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { router, usePoll } from '@inertiajs/react';
 import { Button } from '@/Components/Button';
+import { CostConfirm } from '@/Components/CostConfirm';
 import { Icon } from '@/Components/Icon';
 import { t } from '@/lib/i18n';
 
@@ -31,6 +32,8 @@ export function AddLocale({
   reload: string[];
 }) {
   const [busy, setBusy] = useState<string | null>(null);
+  // الترجمةُ نداءٌ للنموذج، فتُقرّ بخطوةٍ ثانية تقول كلفتها — T-203.
+  const [confirming, setConfirming] = useState<LocaleAddition | null>(null);
   const waiting = additions.some((item) => item.state === 'translating');
   const poll = usePoll(4_000, { only: reload }, { autoStart: false, keepAlive: false });
 
@@ -84,7 +87,7 @@ export function AddLocale({
                   <Icon name="alert" size={15} />
                   {t('jobs.add_locale.failed', { locale: item.label })}
                 </span>
-                <Button variant="ghost" loading={busy === item.key} disabled={busy !== null} onClick={() => add(item.key)}>
+                <Button variant="ghost" loading={busy === item.key} disabled={busy !== null} onClick={() => setConfirming(item)}>
                   {t('jobs.add_locale.retry')}
                 </Button>
               </span>
@@ -97,7 +100,7 @@ export function AddLocale({
               variant="secondary"
               loading={busy === item.key}
               disabled={busy !== null}
-              onClick={() => add(item.key)}
+              onClick={() => setConfirming(item)}
             >
               <Icon name="create" size={15} />
               {item.label}
@@ -110,6 +113,20 @@ export function AddLocale({
         {t('jobs.add_locale.hint')}
         {published ? ` ${t('jobs.add_locale.published_hint')}` : null}
       </p>
+
+      <CostConfirm
+        open={confirming !== null}
+        title={t('jobs.add_locale.legend')}
+        action={t('jobs.add_locale.confirm_action', { locale: confirming?.label ?? '' })}
+        confirmLabel={t('jobs.add_locale.confirm')}
+        onConfirm={() => {
+          if (confirming !== null) {
+            add(confirming.key);
+          }
+          setConfirming(null);
+        }}
+        onCancel={() => setConfirming(null)}
+      />
     </div>
   );
 }

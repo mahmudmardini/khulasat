@@ -65,6 +65,7 @@ return [
     ],
 
     'follow' => [
+        'retry_action' => 'Özet, hatadan sonra kaynağından yeniden hazırlanır.',
         'title' => 'Hazırlığı izleme',
         'live' => 'Bu sayfa kendiliğinden güncellenir.',
         'review_cta' => 'Denetim kapısını aç',
@@ -229,6 +230,8 @@ return [
      * yalnızca yeni metin için harcama yapılır.
      */
     'carousel' => [
+        'build_action' => 'Slayt metinleri özetten yazılır, sonra kurumunuzun kimliğiyle çizilir.',
+        'recondense_action' => 'Mevcut slayt metinleri yeni bir anlatımla değiştirilir.',
         'title' => 'Instagram slaytları',
         'subtitle' => 'Aynı özetten altı ilâ on slayt, kurumunuzun kimliğiyle.',
 
@@ -281,6 +284,7 @@ return [
      * yeniden üretim sayılır ve çalışmadan önce kalanı gösterir.
      */
     'preview' => [
+        'regenerate_action' => 'Özet baştan yeniden oluşturulur. Mevcut özet, yenisi hazır olana dek olduğu gibi kalır.',
         'title' => 'Özet önizlemesi',
         'subtitle' => 'Burada gördüğünüz, harfi harfine yayımlanacak olandır.',
 
@@ -412,6 +416,8 @@ return [
      * çağrısı: yeni özet değil, kotadan da düşülmez.
      */
     'add_locale' => [
+        'confirm' => 'Çevir',
+        'confirm_action' => 'Özet, aşamalar yeniden çalıştırılmadan kayıtlı halinden :locale diline çevrilir.',
         'legend' => 'Dil ekle',
         'hint' => 'Oluşturma aşamaları yeniden çalıştırılmadan bu özetin kendisinden çevrilir ve kotanızdan düşülmez.',
         'published_hint' => 'Özet yayımlandı; yeni dil, çevirisi bitince tek başına yayımlanır.',

@@ -74,6 +74,7 @@ return [
     ],
 
     'create' => [
+        'confirm_action' => 'Özetin hazırlanması seçtiğiniz kaynaktan başlar.',
         'title' => 'Yeni özet',
         'subtitle' => 'Bize kaynağı, ders adını ve konuşmacısını verin; gerisi bizde.',
         'submit' => 'Hazırlamaya başla',

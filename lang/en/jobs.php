@@ -65,6 +65,7 @@ return [
     ],
 
     'follow' => [
+        'retry_action' => 'The summary is prepared again from its source after the failure.',
         'title' => 'Following preparation',
         'live' => 'This page updates itself.',
         'review_cta' => 'Open the review gate',
@@ -230,6 +231,8 @@ return [
      * is free, and only new text is charged for.
      */
     'carousel' => [
+        'build_action' => 'The slide texts are written from the summary, then drawn in your identity.',
+        'recondense_action' => 'The current slide texts are replaced with a new wording.',
         'title' => 'Instagram slides',
         'subtitle' => 'Six to ten slides from the same summary, in your institution\'s identity.',
 
@@ -283,6 +286,7 @@ return [
      * it shows what remains before it runs.
      */
     'preview' => [
+        'regenerate_action' => 'The summary is created again from the start. The current one stays as it is until the new one is ready.',
         'title' => 'Summary preview',
         'subtitle' => 'What you see here is what gets published, letter for letter.',
 
@@ -414,6 +418,8 @@ return [
      * from what is stored: not a new summary, and not counted against quota.
      */
     'add_locale' => [
+        'confirm' => 'Translate',
+        'confirm_action' => 'The summary is translated into :locale from what is saved, without rerunning the stages.',
         'legend' => 'Add a language',
         'hint' => 'Translated from this same summary without re-running the creation stages, and not counted against your quota.',
         'published_hint' => 'The summary is published, so the new language is published on its own once its translation is done.',

@@ -100,7 +100,7 @@ class SummaryJobController extends Controller
     /** @return array<string, mixed> */
     private function payload(SummaryJob $job): array
     {
-        $job->loadMissing('lecture');
+        $job->loadMissing(['lecture', 'tenant']);
 
         return [
             'job' => [
@@ -127,6 +127,14 @@ class SummaryJobController extends Controller
                 'finished_at' => $job->finished_at?->toIso8601String(),
                 // **رسالة عربية لا كود خطأ** — §القواعد العامّة.
                 'error' => $this->error($job),
+                /*
+                 * إعاداتُ هذا الملخّص — T-203. «أعد المحاولة» بعد الفشل إعادةُ
+                 * توليدٍ تُحتسب منها ومن الحصّة الشهرية، فتُقال قبل الضغط.
+                 */
+                'regenerations' => [
+                    'used' => (int) $job->regeneration_count,
+                    'limit' => (int) ($job->tenant?->regenerations_per_summary ?? 0),
+                ],
                 /*
                  * ★ **زرّ «غيّرْ المصدر» ليس فعلاً لكلّ خطأ** — T-91. وكان
                  * يظهر مع كلّ إخفاق: تعطّل مزوّد النماذج، أو عطلٌ داخليّ —

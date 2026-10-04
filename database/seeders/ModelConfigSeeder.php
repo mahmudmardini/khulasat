@@ -249,23 +249,32 @@ class ModelConfigSeeder extends Seeder
                  * **اختبارُ الفهم** — المرحلة ٨، T-195. تُنادى مرّةً لكلّ اختبار
                  * لا لكلّ مشارك: التصحيحُ حتميٌّ بلا نموذج.
                  *
+                 * ★ **`gemini-3.7-flash` بقرار @HasanSiwi بعد القياس**، ٤ أكتوبر
+                 * ٢٠٢٦ (`khulasah:quiz-bench`، ثلاثة دروس × تشغيلين): لم يُخفق
+                 * مرّة، ولم يُسقط الحارسُ من أسئلته شيئاً، ونحو ستّة أسئلة
+                 * للاختبار بـ‏$0.007 في سبع ثوانٍ. وSonnet 5.5 أكثرُ أسئلةً
+                 * (نحو تسعة) بخمسة أضعاف الكلفة وثلاثة أضعاف الزمن، فهو البديل.
+                 *
+                 * ⚠ **والسعرُ يتضاعف من ١ يناير ٢٠٢٧** إلى ‏$1.50/$7.50 — من صفحة
+                 * Google الرسمية. **فيُحدَّث هذا الصفّ يومئذٍ** من شاشة النماذج،
+                 * وإلّا حُسبت الكلفةُ نصفَها وأُغفل السقف.
+                 *
                  * والجهدُ `low` لا `none`: الخيارُ الخاطئ المعقول يحتاج نظراً
                  * في البنية، وهو ما يفرق اختباراً يُعلِّم عن اختبارٍ يُحزَر.
-                 * وأيُّ النماذج أجودُ وأرخص يحسمه قياسُ المهمّة (القرار ٦).
                  */
                 'stage' => Stage::Quiz->value,
-                'provider' => 'anthropic',
-                'model_id' => 'claude-sonnet-5-5',
+                'provider' => 'google',
+                'model_id' => 'gemini-3.7-flash',
                 'max_tokens' => 8_000,
                 'thinking_level' => 'low',
-                'fallback_provider' => 'google',
-                'fallback_model_id' => 'gemini-3.8-flash',
+                'fallback_provider' => 'anthropic',
+                'fallback_model_id' => 'claude-sonnet-5-5',
                 'timeout_seconds' => 180,
                 'max_retries' => 1,
                 // مخرَجٌ ثانٍ: سقوطُه لا يمسّ الملخّص المنشور.
                 'on_exhausted' => 'degrade',
-                'input_price_per_m' => 2.0,
-                'output_price_per_m' => 10.0,
+                'input_price_per_m' => 0.75,
+                'output_price_per_m' => 3.75,
             ],
             [
                 /*

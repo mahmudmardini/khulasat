@@ -51,3 +51,7 @@ git diff baseline-2026-09-27..main
 | # | الإضافة | الإيداعات | الملفّات الرئيسية |
 |---|---|---|---|
 | 1 | الآية في معاينة الشرائح تُرسم بخطّ المصحف، فتظهر علامةُ «۝» ورقمُها داخلها بدل دائرةٍ منقّطة. ورقمُ الآية في النصّ المنسوخ لإنستغرام بلا العلامة | `02db7a8` · `86d51c1` | `resources/js/Components/SlideBody.tsx` · `resources/js/lib/ayah.ts` · `app/Support/Quran/AyahText.php` |
+| 2 | **وقت المراجعة لا يُحسب وقتَ إعداد.** «استغرق» يجمع المراحل الآلية وحدها، ويقف العدّاد عند انتظار قرار الجهة، وسطرُ المراجعة يقول «حُسمت بقرارك» بدل مدّتها. ولوحة المشرف تفصل زمن الإعداد عن زمن المراجعة | `e9d42dd` · `74b0e6f` | `app/Support/Ui/JobProgress.php` · `resources/js/Pages/Jobs/Show.tsx` · `resources/js/Components/ProcessWizard.tsx` |
+| 3 | **الشاهد المكرَّر سطرٌ واحد في قائمة التخريج**، بموضعه (الكتاب والرقم، أو السورة والآيات) لا بلفظه. والمتن لا يُمسّ | `66fc92a` | `app/Support/Render/RenderedEvidence.php` · `app/Services/Render/PageRenderer.php` |
+| 4 | **الاختبارات تمرّ على لينكس**: مسار صفحات Inertia بحرفه الكبير | `f0d77fb` | `config/inertia.php` |
+| 5 | **الاختبارات لا تتأثّر بـ`APP_URL` المحلّي** | `87e6bfe` | `phpunit.xml` |

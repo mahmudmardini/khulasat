@@ -326,6 +326,8 @@ it('يعيد المشرف التوليدَ بتعليمات الجهة، ويب�
 it('ينشئ الصور بالقالب المختار، وبافتراضيّ الجهة إن لم يُختر', function (): void {
     Storage::fake('local');
     config()->set('khulasah.images.disk', 'local');
+    Storage::fake('public');
+    config()->set('khulasah.publish.disk', 'public');
 
     app()->instance(ShareCardCapturer::class, new class implements ShareCardCapturer
     {

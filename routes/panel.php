@@ -129,10 +129,12 @@ Route::middleware('auth')->group(function (): void {
      *
      * **ولا يُحرَس بحصّة إعادة التوليد**: رسمٌ من أصلٍ موجود، وكلفتُه صفر
      * ما لم يُطلب نصٌّ جديد صراحةً — المواصفة §8-أ.
+     *
+     * ★ **ولا صفحةَ له منفصلة** — T-204: الشرائحُ وصورُها وقالبُها في تبويب
+     * الشرائح بالمعاينة. وحُذفت الصفحةُ ومعاينتُها بلا تحويل، فرابطُها القديم
+     * «غير موجود» — ولذلك صار البناءُ على `carousel/build` لا على عنوانها.
      */
-    Route::get('/jobs/{job}/carousel', [CarouselController::class, 'show'])->name('jobs.carousel');
-    Route::post('/jobs/{job}/carousel', [CarouselController::class, 'store'])->name('jobs.carousel.store');
-    Route::get('/jobs/{job}/carousel/preview', [CarouselController::class, 'preview'])->name('jobs.carousel.preview');
+    Route::post('/jobs/{job}/carousel/build', [CarouselController::class, 'store'])->name('jobs.carousel.store');
 
     /*
      * حزمةُ صور الكاروسيل — T-173. تُنشأ في الطابور، وتُرى صورُها من قرصٍ

@@ -261,11 +261,12 @@ it('يمنع بناء الكاروسيل على شريحةٍ لا تملكه، �
         ->post(route('jobs.carousel.store', $job))
         ->assertSessionHasErrors('carousel');
 
-    // **والشاشة تبقى مفتوحة تشرح ما ينقص** — SCREENS.md §3-ب.
+    // **والشاشة تبقى مفتوحة تشرح ما ينقص** — SCREENS.md §3-ب. والشرائحُ في
+    // تبويبها بالمعاينة منذ T-204، فهي التي تقول إنّها مقفلة.
     $this->actingAs($this->user)
-        ->get(route('jobs.carousel', $job))
+        ->get(route('jobs.preview', $job))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->where('job.locked', true));
+        ->assertInertia(fn ($page) => $page->where('rich_outputs', false));
 });
 
 /**

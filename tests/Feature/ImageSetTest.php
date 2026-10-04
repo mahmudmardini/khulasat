@@ -85,6 +85,11 @@ beforeEach(function (): void {
     Storage::fake('local');
     config()->set('khulasah.images.disk', 'local');
 
+    // الملخّصُ منشور، والشرائحُ لا تُنشر (T-204): فإن نُشرت خطأً وقعت هنا.
+    Storage::fake('public');
+    config()->set('khulasah.publish.disk', 'public');
+    config()->set('khulasah.publish.cdn_url', 'https://cdn.khulasah.test');
+
     $this->capturer = new class implements ShareCardCapturer
     {
         /** @var list<array{html: string, width: int, height: int}> */
@@ -170,17 +175,18 @@ it('ينشئ الحزمة صوراً مرقّمةً بمقاس إنستغرام 
         ->and($caption)->toContain('مُؤْمِنٌ ٩٧﴾')->not->toContain('۝');
 });
 
-// ★ المتصفّحُ الملتقِط يطلب شاهدة العدّ كما يطلبها القارئ، فتُعدّ كلُّ صورةٍ زيارة.
-it('يلتقط الشرائحَ عموداً في وثيقةٍ واحدة، ولا يحمّلها شاهدةَ العدّ', function (): void {
+// ★ المتصفّحُ الملتقِط يطلب شاهدة العدّ كما يطلبها القارئ، فتُعدّ كلُّ صورةٍ زيارة —
+// ولا شاهدةَ في الشرائح أصلاً منذ T-204: لا تُنشر صفحةً تُقرأ.
+it('يلتقط الشرائحَ عموداً في وثيقةٍ واحدة، بلا شاهدة عدّ', function (): void {
     config()->set('khulasah.analytics.enabled', true);
     config()->set('khulasah.analytics.beacon_base', 'https://views.test');
 
     $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
 
-    $published = (new CarouselRenderer(app('view'), imageDeck()))
+    $rendered = (new CarouselRenderer(app('view'), imageDeck()))
         ->render(ContentObject::fromJob($this->job), BrandKit::forTenant($this->tenant))->contents;
 
-    expect($published)->toContain('https://views.test/v/'.$this->job->id)
+    expect($rendered)->not->toContain('views.test')
         ->and($this->capturer->calls)->toHaveCount(1);
 
     $html = $this->capturer->calls[0]['html'];
@@ -338,11 +344,13 @@ it('يرسم الشعار على لوحٍ في الخلفية الداكنة، �
 
 // ★ T-196 — معاينةُ اللوحة مصغَّرةٌ لتُرى في إطارها، وبلا شاهدة عدّ: كان فتحُها
 // من اللوحة يُعدّ قراءة. والالتقاطُ بمقاسه، فلا يمسّه التصغير.
-it('يصغّر معاينة صفحة الشرائح ولا يعدّها قراءة، ولا يمسّ الالتقاط', function (): void {
+it('يصغّر معاينة اللوحة ولا يعدّها قراءة، ولا يمسّ الالتقاط', function (): void {
     config()->set('khulasah.analytics.enabled', true);
     config()->set('khulasah.analytics.beacon_base', 'https://views.test');
 
-    $preview = $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/carousel/preview")->assertOk()->getContent();
+    // معاينةُ اللوحة اليوم معاينةُ القوالب (T-204 حذف صفحة الشرائح)، وكلتاهما منه.
+    $preview = (new CarouselRenderer(app('view'), imageDeck()))
+        ->preview(ContentObject::fromJob($this->job), BrandKit::forTenant($this->tenant));
 
     expect($preview)->toContain(' fit">')->not->toContain('views.test');
 
@@ -441,4 +449,100 @@ it('يعرض التقدّم من أوّل لحظة، قبل أن يبلغ الع
             ->where('outputs.images.state', 'rendering')
             ->where('outputs.images.progress', ['done' => 0, 'total' => 5])
         );
+});
+
+// ── T-204: قالبٌ واحد لشرائح الملخّص ─────────────────────────────────
+
+/** يعتمد للجهة قالباً ليلياً، ويعيده. */
+function approveNight(Tenant $tenant): CarouselDesign
+{
+    $night = CarouselDesign::from([...CarouselDesign::default()->toArray(), 'id' => 'night', 'name' => 'ليلي', 'surface' => 'night']);
+    $tenant->forceFill(['brand_kit' => ['carousel_designs' => [$night->toArray()]]])->save();
+
+    return $night;
+}
+
+it('يجعل القالب المختار قالبَ شرائح الملخّص، ولا ينشر الشرائح', function (): void {
+    approveNight($this->tenant);
+
+    // الجهةُ تختار الأصل للصور، وافتراضيُّها الليليّ: فيتبعه كلُّ شيء.
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images", ['design' => 'default']);
+
+    $job = $this->job->fresh();
+    $carousel = $job->outputs()->where('type', OutputType::Carousel->value)->first();
+
+    expect(CarouselDesign::forJob($job)->id)->toBe(CarouselDesign::DEFAULT_ID)
+        ->and($carousel->meta['design']['id'])->toBe(CarouselDesign::DEFAULT_ID)
+        ->and(imageSetRow($job)->meta['design'])->toBe(CarouselDesign::DEFAULT_ID);
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images", ['design' => 'night']);
+
+    $carousel->refresh();
+
+    expect(CarouselDesign::forJob($this->job->fresh())->id)->toBe('night')
+        ->and($carousel->meta['design']['id'])->toBe('night')
+        ->and(imageSetRow($this->job)->meta['design'])->toBe('night');
+
+    // **والملخّصُ منشورٌ ولا تُنشر شرائحُه** — T-204.
+    expect($carousel->public_url)->toBeNull()
+        ->and($carousel->storage_path)->toBeNull()
+        ->and(collect(Storage::disk('public')->allFiles())->filter(fn (string $path): bool => str_contains($path, 'carousel'))->all())->toBe([]);
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->assertInertia(fn (Assert $page): Assert => $page->where('outputs.images.design', 'night'));
+});
+
+it('يقول إنّ الصور قديمةٌ إذا تغيّرت الشرائح بعدها، ويزول ذلك بإعادة إنشائها', function (): void {
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    $stale = fn (): bool => $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->viewData('page')['props']['outputs']['images']['stale'];
+
+    expect($stale())->toBeFalse();
+
+    // إعادةُ رسم الشرائح بعد الصور (صياغةٌ أو قالبٌ أو هويةٌ تغيّرت).
+    $this->travel(2)->seconds();
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/carousel/build", ['recondense' => false]);
+
+    expect($stale())->toBeTrue();
+
+    $this->travel(2)->seconds();
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    expect($stale())->toBeFalse();
+});
+
+// الشرائحُ لا يُعاد رسمها عند النشر (T-204)، فصورٌ قبله تبقى بلا رابطه في شريحتها الأخيرة.
+it('يقول إنّ الصور قديمةٌ إذا نُشر الملخّص بعدها، ولا يقوله لحزمةٍ لا يُعرف رابطُها', function (): void {
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    $stale = fn (): bool => $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->viewData('page')['props']['outputs']['images']['stale'];
+
+    expect(imageSetRow($this->job)->meta)->toHaveKey('page_url', null)
+        ->and($stale())->toBeFalse();
+
+    Output::query()->create([
+        'summary_job_id' => $this->job->id,
+        'tenant_id' => $this->tenant->id,
+        'type' => OutputType::Page->value,
+        'locale' => Locale::Ar->value,
+        'format' => OutputType::Page->format()->value,
+        'public_url' => 'https://khulasat.io/tenant/anuan-al-drs',
+        'rendered_at' => now(),
+        'renderer_version' => '1.0.0',
+    ]);
+
+    expect($stale())->toBeTrue();
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    expect(imageSetRow($this->job)->meta['page_url'])->toBe('https://khulasat.io/tenant/anuan-al-drs')
+        ->and($stale())->toBeFalse();
+
+    // حزمةٌ قبل تقييد الرابط: لا يُعرف أكان فيها، فلا تُعدّ قديمةً به.
+    $row = imageSetRow($this->job);
+    $row->forceFill(['meta' => collect($row->meta)->except('page_url')->all()])->save();
+
+    expect($stale())->toBeFalse();
 });

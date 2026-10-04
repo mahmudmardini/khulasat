@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\Actions\Render;
 
-use App\Actions\Publish\PublishSummary;
 use App\Actions\Stages\CondenseForCarousel;
-use App\Domain\Summary\JobState;
 use App\Enums\OutputType;
 use App\Models\Output;
 use App\Models\SummaryJob;
 use App\Services\Render\CarouselRenderer;
-use App\Support\Render\BrandKit;
 use App\Support\Render\CarouselDesign;
 use App\Support\Render\ContentObject;
 use App\Support\Render\RenderedOutput;
@@ -30,61 +27,39 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
  *
  * و`$recondense` هو الاستثناء الصريح الوحيد: من أراد نصّاً آخر طلبه، ودفع
  * ثمنه — ولا يُدفع ثمنٌ بلا طلب.
+ *
+ * **ولا يُنشر ما يُرسم هنا** — T-204: الشرائح تُنزَّل صوراً
+ * ({@see RenderImageSet})، ويُقيَّد المخرَج لنصوصه وقالبه.
  */
 final class RenderCarousel
 {
     public function __construct(
         private readonly CondenseForCarousel $condense,
         private readonly RenderOutput $render,
-        private readonly PublishSummary $publish,
         private readonly ViewFactory $views,
     ) {}
 
-    public function handle(SummaryJob $job, bool $recondense = false): RenderedOutput
+    /**
+     * @param  string|null  $design  قالبٌ جديدٌ لشرائح الملخّص (معرّفُ قالبٍ معتمد، أو
+     *                               `default`) — T-204. وغيابُه قالبُه الحاليّ.
+     */
+    public function handle(SummaryJob $job, bool $recondense = false, ?string $design = null): RenderedOutput
     {
         $content = ContentObject::fromJob($job);
 
         $deck = $recondense ? null : $this->stored($job);
         $deck ??= $this->condense->handle($job, $content);
 
-        $output = $this->render->handle(
+        return $this->render->handle(
             $job,
-            new CarouselRenderer($this->views, $deck, $this->pageUrl($job), CarouselDesign::forTenant($job->tenant)),
+            // **بقالب الملخّص لا بافتراضيّ الجهة** — T-204: وبه تُرسم صورُه.
+            new CarouselRenderer(
+                $this->views,
+                $deck,
+                $this->pageUrl($job),
+                $design === null ? CarouselDesign::forJob($job) : CarouselDesign::forTenant($job->tenant, $design),
+            ),
         );
-
-        /*
-         * **ولا يُنشر إلّا ما كان منشوراً.** فمهمّةٌ لم تُنشر بعدُ لو مرّت
-         * على {@see PublishSummary} لانتقلت إلى `published` بكاروسيلٍ وحده
-         * وبلا صفحة — نشرٌ لم يطلبه أحد. والرسم قبل النشر جائزٌ للمعاينة،
-         * والنشر قرارٌ مستقلّ.
-         */
-        if ($job->state === JobState::Published) {
-            $this->publish->handle($job, [$output->type->value => $output->contents]);
-        }
-
-        return $output;
-    }
-
-    /**
-     * المعاينة: ترسم من الشرائح المحفوظة **ولا تكتب شيئاً**.
-     *
-     * و`handle` لا تصلح للمعاينة: تُقيّد الصفّ وتنشر الملفّ. وطلبُ `GET`
-     * يُعاد بكلّ تحديث صفحة، فينشر مخرَجاً لم يطلب أحدٌ نشره ويكتب
-     * `rendered_at` جديداً في كلّ فتحة. **والقراءة لا تُغيّر حالاً.**
-     *
-     * وتعود `null` قبل أن تُبنى الشرائح، فلا شيء يُعاين.
-     */
-    public function preview(SummaryJob $job): ?string
-    {
-        $deck = $this->stored($job);
-
-        if ($deck === null) {
-            return null;
-        }
-
-        // مصغَّرةً وبلا شاهدة عدّ — T-196: كان فتحُها من اللوحة يُعدّ قراءة.
-        return (new CarouselRenderer($this->views, $deck, $this->pageUrl($job), CarouselDesign::forTenant($job->tenant)))
-            ->preview(ContentObject::fromJob($job), BrandKit::forTenant($job->tenant, $job->lecture));
     }
 
     /** الشرائح المحفوظة من تكثيفٍ سابق، إن وُجدت. */

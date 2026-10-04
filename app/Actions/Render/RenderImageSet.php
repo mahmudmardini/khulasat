@@ -67,11 +67,12 @@ final class RenderImageSet
     }
 
     /**
-     * @param  string|null  $design  معرّفُ قالبٍ معتمد، أو `default` للأصل. وغيابُه افتراضيُّ الجهة.
+     * بقالب شرائح الملخّص ({@see CarouselDesign::forJob()}) — T-204: ما رُسمت به
+     * شرائحُه آخرَ مرّة، فلا تفترق الصورُ عن معاينتها.
      *
      * @throws RuntimeException سببُه يُعرض على المستخدم كما هو.
      */
-    public function handle(SummaryJob $job, ?string $design = null): Output
+    public function handle(SummaryJob $job): Output
     {
         // الصورُ تُنشر على إنستغرام بيد الجهة، فحكمُها حكمُ المنشور (§2-٤).
         $pending = $job->pendingEvidenceCount();
@@ -89,7 +90,7 @@ final class RenderImageSet
             throw new RuntimeException(trans('jobs.images.no_carousel'));
         }
 
-        $chosen = CarouselDesign::forTenant($tenant, $design);
+        $chosen = CarouselDesign::forJob($job);
         $pageUrl = $job->outputs()->where('type', OutputType::Page->value)->first()?->public_url;
 
         $renderer = new CarouselRenderer($this->views, $deck, $pageUrl, $chosen);
@@ -97,9 +98,8 @@ final class RenderImageSet
         $brand = BrandKit::forTenant($tenant, $job->lecture);
 
         // ★ **الفيضُ قبل الالتقاط** — T-173. الشريحةُ تقصّ ما فاض صامتة، فنصٌّ
-        // لا يسعها يخرج في الصورة مبتوراً ويُنشر. وبلا شاهدة عدّ: المتصفّحُ
-        // القائس يطلبها كما يطلبها القارئ.
-        $over = $this->probe->overflowing($renderer->render($content->withoutBeacon(), $brand)->contents);
+        // لا يسعها يخرج في الصورة مبتوراً ويُنشر.
+        $over = $this->probe->overflowing($renderer->render($content, $brand)->contents);
 
         if ($over !== null && $over !== []) {
             throw new RuntimeException(trans('jobs.images.overflow', ['slides' => implode('، ', $over)]));
@@ -124,6 +124,8 @@ final class RenderImageSet
             'count' => count($images),
             'design' => $chosen->id,
             'bytes' => strlen($zip),
+            // رابطُ الملخّص في الشريحة الأخيرة — فصورٌ أُنشئت قبل نشره تُعرف بغيابه.
+            'page_url' => $pageUrl,
         ]);
 
         $output->forceFill(['rendered_at' => now()])->save();

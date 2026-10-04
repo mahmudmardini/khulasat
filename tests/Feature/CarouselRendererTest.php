@@ -7,6 +7,7 @@ use App\Actions\Stages\CondenseForCarousel;
 use App\Actions\Stages\RenderAndPublish;
 use App\Actions\Summary\TransitionJob;
 use App\Domain\Summary\JobState;
+use App\Enums\Locale;
 use App\Enums\MatchStatus;
 use App\Enums\OutputType;
 use App\Enums\ReviewStatus;
@@ -15,6 +16,7 @@ use App\Enums\VenueMode;
 use App\Exceptions\ModelCallFailed;
 use App\Models\EvidenceItem;
 use App\Models\Lecture;
+use App\Models\Output;
 use App\Models\SummaryJob;
 use App\Models\Tenant;
 use App\Models\User;
@@ -174,10 +176,50 @@ it('ينشر الصفحة ولو أخفق تكثيف الشرائح', function (
         ->and($job->published_at)->not->toBeNull();
 });
 
-it('يردّ ٤٠٤ على معاينةٍ قبل بناء الشرائح', function (): void {
+// ★ T-204 — الشرائحُ لا تُنشر (قرار @HasanSiwi)، ولا يُعاد رسمها بالنشر ولا بإعادته:
+// كان كلُّ نشرٍ يرسمها ليُحدّث ملفَّها المنشور، فتُعرض صورُها قديمةً وما تغيّر فيها شيء.
+it('لا ينشر الشرائح مع الملخّص، ولا يعيد رسمها بإعادة النشر', function (): void {
+    Storage::fake('public');
+    config()->set('khulasah.publish.disk', 'public');
+
+    $this->tenant->forceFill(['plan' => 'business'])->save();
+    $this->lecture->forceFill(['want_carousel' => true])->save();
+
+    $rendered = now()->subHour()->startOfSecond();
+    $carousel = Output::query()->create([
+        'summary_job_id' => $this->job->id,
+        'tenant_id' => $this->tenant->id,
+        'type' => OutputType::Carousel->value,
+        'locale' => Locale::Ar->value,
+        'format' => OutputType::Carousel->format()->value,
+        'meta' => ['slides' => [['index' => 1, 'kind' => 'cover', 'title' => 'عنوان الدرس', 'body' => '']]],
+        'rendered_at' => $rendered,
+        'renderer_version' => '1.2.0',
+    ]);
+
+    $job = pipelineReady($this->job);
+
+    $urls = app(RenderAndPublish::class)->handle($job);
+
+    expect($urls)->toHaveKey(OutputType::Page->value)
+        ->and($urls)->not->toHaveKey(OutputType::Carousel->value)
+        ->and($job->refresh()->state)->toBe(JobState::Published);
+
+    app(RenderAndPublish::class)->handle($job->refresh());
+
+    $carousel->refresh();
+
+    expect($carousel->rendered_at->equalTo($rendered))->toBeTrue()
+        ->and($carousel->public_url)->toBeNull()
+        ->and($carousel->storage_path)->toBeNull()
+        ->and(collect(Storage::disk('public')->allFiles())->filter(fn (string $path): bool => str_contains($path, 'carousel'))->all())->toBe([]);
+});
+
+// ★ T-204 — صفحةُ الشرائح ومعاينتُها حُذفتا بلا تحويل (قرار @HasanSiwi): الشرائحُ
+// في تبويبها بالمعاينة. فرابطُهما القديم «غير موجود»، لا «طريقةٌ غيرُ مسموحة».
+it('لا صفحةَ شرائح منفصلة ولا معاينةَ لها', function (): void {
     $user = User::factory()->create(['tenant_id' => $this->tenant->id]);
 
-    $this->actingAs($user)
-        ->get(route('jobs.carousel.preview', $this->job))
-        ->assertNotFound();
+    $this->actingAs($user)->get("/panel/jobs/{$this->job->id}/carousel")->assertNotFound();
+    $this->actingAs($user)->get("/panel/jobs/{$this->job->id}/carousel/preview")->assertNotFound();
 });

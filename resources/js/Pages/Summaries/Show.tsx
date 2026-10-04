@@ -26,7 +26,6 @@ interface OutputRow {
 interface Views {
   total: number;
   recent: number;
-  by_output: Record<string, number>;
   /** توزيعُ القراءات على ألسنة الصفحات — T-140. */
   by_locale: LocaleViews[];
 }
@@ -370,12 +369,6 @@ function detail(views: Views): string[] {
 
   if (views.recent !== views.total) {
     lines.push(toArabicIndic(t('jobs.published.visits_recent', { count: views.recent })));
-  }
-
-  const carousel = views.by_output.carousel ?? 0;
-
-  if (carousel > 0) {
-    lines.push(toArabicIndic(t('jobs.published.visits_by_output', { count: carousel })));
   }
 
   return lines;

@@ -134,31 +134,29 @@ class PublicationController extends Controller
     }
 
     /**
-     * ما قُرئ من الصفحة ومن الشرائح — T-31.
+     * ما قُرئ من الملخّص — T-31.
      *
-     * **ويُجمع في استعلامٍ واحد لا استعلامٍ لكلّ مخرَج.** والمجموع الكلّي
-     * وآخرُ ثلاثين يوماً معاً: الأوّل يقول كم بلغت، والثاني يقول أحيّةٌ هي
-     * اليوم — **ورقمٌ تراكميّ وحده يُخفي صفحةً مات عنها القرّاء منذ شهور**.
+     * **ويُجمع في استعلامٍ واحد.** والمجموع الكلّي وآخرُ ثلاثين يوماً معاً:
+     * الأوّل يقول كم بلغت، والثاني يقول أحيّةٌ هي اليوم — **ورقمٌ تراكميّ
+     * وحده يُخفي صفحةً مات عنها القرّاء منذ شهور**.
      *
-     * @return array{total: int, recent: int, by_output: array<string, int>, by_locale: list<array{locale: string|null, locale_label: string, total: int, recent: int}>}
+     * وكان معه عددُ ما قُرئ من الشرائح؛ **ولا شرائح تُنشر بعد T-204**، وما
+     * عُدّ لها قبلُ يبقى في المجموع: زياراتٌ وقعت.
+     *
+     * @return array{total: int, recent: int, by_locale: list<array{locale: string|null, locale_label: string, total: int, recent: int}>}
      */
     private function views(SummaryJob $job): array
     {
-        $rows = PageView::query()
+        $row = PageView::query()
             ->where('summary_job_id', $job->id)
-            ->selectRaw('output_type, sum(views) as total')
-            ->selectRaw('sum(case when day >= ? then views else 0 end) as recent', [now()->subDays(30)->toDateString()])
-            ->groupBy('output_type')
-            ->get();
+            ->selectRaw('coalesce(sum(views), 0) as total')
+            ->selectRaw('coalesce(sum(case when day >= ? then views else 0 end), 0) as recent', [now()->subDays(30)->toDateString()])
+            ->toBase()
+            ->first();
 
         return [
-            'total' => (int) $rows->sum('total'),
-            'recent' => (int) $rows->sum('recent'),
-            // **والمفتاح قيمةُ النوع لا الحالة نفسها**: العمود مصبوبٌ في
-            // {@see PageView}، و`pluck` بمفتاحٍ من نوع enum ترمي.
-            'by_output' => $rows
-                ->mapWithKeys(static fn (PageView $row): array => [$row->output_type->value => (int) $row->total])
-                ->all(),
+            'total' => (int) ($row->total ?? 0),
+            'recent' => (int) ($row->recent ?? 0),
 
             /*
              * ★ **وتوزيعُها على الألسنة — T-140، بلاغُ مالك المنتج.**

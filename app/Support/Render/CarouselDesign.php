@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Support\Render;
 
+use App\Enums\OutputType;
 use App\Enums\SlideKind;
+use App\Models\SummaryJob;
 use App\Models\Tenant;
 use InvalidArgumentException;
 
@@ -165,6 +167,21 @@ final readonly class CarouselDesign
         }
 
         return $designs[0] ?? self::default();
+    }
+
+    /**
+     * قالبُ شرائح هذا الملخّص — T-204.
+     *
+     * **ما رُسم به كاروسيلُه آخرَ مرّة**، وهو ما اختارته الجهة عند إنشاء
+     * الصور. فتُرسم به الصورُ وكاروسيلُ الويب المنشور وكلُّ معاينة، ولا
+     * يفترقان. وملخّصٌ لم يُرسم كاروسيلُه بعد على افتراضيّ الجهة.
+     */
+    public static function forJob(SummaryJob $job): self
+    {
+        $carousel = $job->outputs()->where('type', OutputType::Carousel->value)->first();
+        $id = ((array) ($carousel?->meta['design'] ?? []))['id'] ?? null;
+
+        return self::forTenant($job->tenant, is_string($id) ? $id : null);
     }
 
     public function isDefault(): bool

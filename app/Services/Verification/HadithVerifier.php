@@ -82,6 +82,16 @@ class HadithVerifier implements EvidenceVerifier
             return VerificationResult::none();
         }
 
+        /*
+         * ★ **والطبقةُ الثانية لا يُقبل منها إلّا التامّ** — T-170. لا حكمَ فيها
+         * يُبيَّن، فالمقاربةُ منها لا تفيد إلّا تقريبَ المحرَّف إلى أقرب نصّ:
+         * «أحبّ الأعمال إلى الله أكثرُها» (`H-ALTERED-01`) تقع «قريبةً» من لفظٍ
+         * في المسند وهي محرّفة. والمقاربةُ تُقبل من الكتب المحكومة وحدها.
+         */
+        if ($candidate->bookKey?->isSecondary() && $status !== MatchStatus::Exact) {
+            return VerificationResult::none();
+        }
+
         $grade = $candidate->resolvedGrade();
         $books = $this->matchedBooks($candidate, $exactBooks);
         $takhrij = $books === [] ? $candidate->takhrij : Takhrij::forBooks($books);
@@ -169,8 +179,11 @@ class HadithVerifier implements EvidenceVerifier
                 }
             }
 
-            // أوّل مزوّد يعطي مطابقة تامّة يُعتمد ولا يُسأل من بعده.
-            if ($best !== null && $best[1] >= $exactThreshold) {
+            // ★ **أوّلُ مزوّدٍ يبلغ حدَّ المطابقة الجزئية يُعتمد**، ولا يُسأل من
+            // بعده — T-170. وكان الحدُّ التامّة، والمزوّدُ واحد. فلمّا صار بعده
+            // مسندُ أحمد بلا أحكام، صار سؤالُه بعد مطابقةٍ جزئيةٍ في الصحيحين
+            // يُبدّل نسخةً محكوماً عليها بنسخةٍ لا حكم لها لأنّها أقربُ لفظاً.
+            if ($best !== null && $best[1] >= $this->threshold('partial')) {
                 break;
             }
         }

@@ -229,6 +229,8 @@ final class PageStrings
         'nasai' => ['ar' => 'النسائي', 'en' => 'al-Nasa’i', 'tr' => 'Nesâî', 'ru' => 'ан-Насаи'],
         'ibnmajah' => ['ar' => 'ابن ماجه', 'en' => 'Ibn Majah', 'tr' => 'İbn Mâce', 'ru' => 'Ибн Маджа'],
         'malik' => ['ar' => 'مالك', 'en' => 'Malik', 'tr' => 'Mâlik', 'ru' => 'Малик'],
+        'ahmad' => ['ar' => 'أحمد', 'en' => 'Ahmad', 'tr' => 'Ahmed b. Hanbel', 'ru' => 'Ахмад'],
+        'darimi' => ['ar' => 'الدارمي', 'en' => 'al-Darimi', 'tr' => 'Dârimî', 'ru' => 'ад-Дарими'],
     ];
 
     private function __construct() {}

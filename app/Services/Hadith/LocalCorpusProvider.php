@@ -51,6 +51,16 @@ class LocalCorpusProvider implements HadithProvider
         return 'local_corpus';
     }
 
+    /**
+     * الكتبُ المحكومة — ستّةُ الكتب والموطّأ.
+     *
+     * @return list<HadithBook>
+     */
+    protected function books(): array
+    {
+        return HadithBook::primary();
+    }
+
     /** @return list<HadithMatch> */
     public function search(string $normalized): array
     {
@@ -66,6 +76,8 @@ class LocalCorpusProvider implements HadithProvider
             // مصدَّرٍ بإسناده، و`similarity` العادية تغرقه بطول الإسناد.
             ->selectRaw('*, word_similarity(?, text_normalized) as trgm_similarity', [$normalized])
             ->whereRaw('? <% text_normalized', [$normalized])
+            // كتبُ هذه الطبقة وحدها — T-170. والطبقةُ الثانية مزوّدٌ بعده.
+            ->whereIn('book', array_map(static fn (HadithBook $book): string => $book->value, $this->books()))
             ->orderByDesc('trgm_similarity')
             ->limit(self::CANDIDATES)
             ->get()

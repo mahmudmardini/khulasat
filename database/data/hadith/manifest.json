@@ -49,6 +49,35 @@
       "skipped_empty": 29,
       "bytes": 284587,
       "sha256": "6be5b236b4630a67b1172b44cee17dea116238b413106ae52b58654c29e433c4"
+    },
+    "ahmad": {
+      "rows": 26363,
+      "skipped_empty": 0,
+      "bytes": 3765960,
+      "sha256": "f42bd546ef8576d947bff03e50ea894a3d2c7fbf2b5c69e7c772a82e70c2b9da"
+    },
+    "darimi": {
+      "rows": 3367,
+      "skipped_empty": 0,
+      "bytes": 410652,
+      "sha256": "ea8b453ba11d05ebd6e26d6d430530cdf1eda21cefa284258bb8525729c3c812"
     }
+  },
+  "secondary_source": {
+    "repository": "https://github.com/mhashim6/Open-Hadith-Data",
+    "commit": "1515f6cba21efed20d8916bf55acef1dffa0d2d5",
+    "license": "ODbL 1.0 (database) · DbCL 1.0 (contents)",
+    "origin": "IslamWare (Copyright 2006-2014 Islam Ware) — rights chain accepted by the product owner on 2026-10-04 (T-170)",
+    "books": [
+      "ahmad",
+      "darimi"
+    ],
+    "url_template": "https://raw.githubusercontent.com/mhashim6/Open-Hadith-Data/1515f6cba21efed20d8916bf55acef1dffa0d2d5/{folder}/{file}",
+    "files": {
+      "ahmad": "Musnad_Ahmad_Ibn-Hanbal/musnad_ahmad_ibn-hanbal_ahadith_mushakkala.utf8.csv",
+      "darimi": "Sunan_Al-Darimi/sunan_al-darimi_ahadith_mushakkala_mufassala.utf8.csv"
+    },
+    "grades": "none — matched only, never published (T-170)",
+    "prepared_at": "2026-10-04"
   }
 }

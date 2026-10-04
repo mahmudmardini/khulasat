@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Contracts\ModelGateway;
+use App\Contracts\OverflowProbe;
 use App\Contracts\ShareCardCapturer;
 use App\Domain\Summary\JobState;
 use App\Enums\AuditAction;
@@ -174,6 +175,34 @@ it('يرمي القالب الذي فيه قيمةٌ خارج الكتالوج،
     generateFor($this);
 
     expect(TenantCarouselDesigns::candidates($this->tenant->fresh()))->toHaveCount(1);
+});
+
+// ★ قالبٌ يفيض نصُّه على كاروسيل الإجهاد يُقصّ في الصورة صامتاً، فلا يُعرض.
+it('يرمي القالب الذي يفيض نصُّه على كاروسيل الإجهاد، ولا يرمي ما تعذّر قياسُه', function (): void {
+    app()->instance(OverflowProbe::class, new class implements OverflowProbe
+    {
+        /** @var list<string> */
+        public array $seen = [];
+
+        public function overflowing(string $html): ?array
+        {
+            $this->seen[] = $html;
+
+            // القالبُ الليليّ يفيض في شريحته الثالثة، والباقيان لا يُقاسان.
+            // وصنفُ `.deck` لا نصُّ الأنماط: قواعدُ القوالب كلِّها في كلّ وثيقة.
+            return str_contains($html, 'class="deck surface-night') ? [3] : null;
+        }
+    });
+
+    generateFor($this);
+
+    $names = array_map(fn (array $c): ?string => $c['design']->name, TenantCarouselDesigns::candidates($this->tenant->fresh()));
+    $probe = app(OverflowProbe::class);
+
+    expect($names)->toBe(['ورقيٌّ هادئ', 'حديثٌ مبسَّط'])
+        ->and($probe->seen)->toHaveCount(3)
+        // يُقاس على كاروسيل الإجهاد: الآيةُ تامّةٌ بعلامتها، والحديثُ الطويل.
+        ->and($probe->seen[0])->toContain('۝٩٧')->toContain(e('احفظ الله يحفظك'));
 });
 
 it('يقول إنّ شيئاً لم يصلح، ولا يمسّ المرشّحَ السابق', function (): void {

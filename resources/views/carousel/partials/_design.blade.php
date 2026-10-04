@@ -66,6 +66,18 @@
 .frame-corners .slide.cover .frame,.frame-corners .slide.closing .frame{--c:var(--gold-light)}
 .bookends-paper.frame-corners .slide.cover .frame,.bookends-paper.frame-corners .slide.closing .frame{--c:var(--gold)}
 
+/* ── لوحُ الشعار على الخلفية الداكنة ──
+   ★ **الاستثناءُ الوحيد من «لا قاعدة للافتراضي»**، وهو إصلاحٌ لا اختيار: شعارٌ
+   داكنٌ على الأولى والأخيرة الداكنتين يختفي (وُجد في تجارب T-173). فيُرسم
+   على لوحٍ فاتح كما في رأس صفحة الملخّص (T-90)، ويُرفع بالإعداد نفسه هناك:
+   «شعارٌ فاتحٌ أصلاً» (`logo_transparent`، T-125). وعلى الورق لا لوح. */
+.bookends-deep .crown .logo:not(.no-plate){
+  box-sizing:content-box;
+  padding:18px 26px;
+  background:var(--paper);
+  border-radius:18px;
+}
+
 /* ── زخرفةُ التاج: الجديدات بـ`currentColor` ── */
 .ornament-star .crown,.ornament-rosette .crown{color:var(--gold-light)}
 .bookends-paper.ornament-star .crown,.bookends-paper.ornament-rosette .crown{color:var(--gold)}
@@ -122,11 +134,17 @@
 /* وسام: لفظُ المصدر في إطارٍ مزدوج مستدير. */
 .slide.l-medallion .body{
   margin:12px 0;
-  padding:40px 44px;
+  padding:30px 36px;
   border:4px double var(--gold);
   border-radius:30px;
 }
 .slide.ayah.l-medallion .body{background:rgba(27,77,62,.05)}
+/* الإطارُ يأخذ من المتن عرضاً وارتفاعاً، فيصغُر الخطّ درجةً فيه — ولا يُقتطع
+   النصّ (§8-أ). وُجد بقياس الفيض على كاروسيل الإجهاد: حديثٌ من ٢٥٦ حرفاً فاض. */
+.slide.l-medallion.sz-lg .body{font-size:54px}
+.slide.l-medallion.sz-md .body{font-size:44px}
+.slide.l-medallion.sz-sm .body{font-size:37px}
+.slide.l-medallion.sz-xs .body{font-size:31px}
 .surface-night .slide.l-medallion .body{background:rgba(255,255,255,.05);border-color:var(--gold-light)}
 
 /* ملصق: التاجُ في الأعلى، والعنوانُ كبيراً في الأسفل إلى أوّل السطر. */

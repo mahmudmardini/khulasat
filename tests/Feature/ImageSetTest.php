@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Contracts\OverflowProbe;
 use App\Contracts\ShareCardCapturer;
 use App\Domain\Summary\JobState;
 use App\Enums\Locale;
@@ -21,6 +22,7 @@ use App\Support\Render\BrandKit;
 use App\Support\Render\CarouselDesign;
 use App\Support\Render\ContentObject;
 use App\Support\Render\ImageSet;
+use App\Support\Render\Palette;
 use App\Support\Render\Slide;
 use App\Support\Render\SlideDeck;
 use Illuminate\Support\Facades\Storage;
@@ -200,6 +202,36 @@ it('يُسقط الحزمة كلَّها إن تعذّر التقاط شريحة
     Storage::disk('local')->assertMissing(ImageSet::zipPath($this->job));
 });
 
+// ★ الشريحةُ تقصّ ما فاض صامتة، فيُقاس قبل الالتقاط — ولا التقاطَ إن فاض.
+it('لا يلتقط شيئاً إن فاض نصُّ شريحة، ويقول أيّها، ولا يعدّ القياسَ زيارة', function (): void {
+    config()->set('khulasah.analytics.enabled', true);
+    config()->set('khulasah.analytics.beacon_base', 'https://views.test');
+
+    app()->instance(OverflowProbe::class, $probe = new class implements OverflowProbe
+    {
+        public string $html = '';
+
+        public function overflowing(string $html): ?array
+        {
+            $this->html = $html;
+
+            return [4];
+        }
+    });
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    $row = imageSetRow($this->job);
+
+    expect($row->meta['state'])->toBe('failed')
+        ->and($row->meta['error'])->toBe(trans('jobs.images.overflow', ['slides' => '4']))
+        ->and($this->capturer->calls)->toBe([])
+        ->and(substr_count($probe->html, '<figure class="slide '))->toBe(5)
+        ->and($probe->html)->not->toContain('views.test');
+
+    Storage::disk('local')->assertMissing(ImageSet::zipPath($this->job));
+});
+
 it('لا يُنشئ صوراً وفي الملخّص شاهدٌ لم يُحسم', function (): void {
     EvidenceItem::factory()->for_($this->job)->create(['review_status' => ReviewStatus::Pending]);
 
@@ -268,3 +300,17 @@ it('لا تُرى صورُ جهةٍ ولا تُنشأ من جهةٍ أخرى', f
     $this->actingAs($other)->get("/panel/jobs/{$this->job->id}/download/image_set")->assertNotFound();
     $this->actingAs($other)->post("/panel/jobs/{$this->job->id}/images")->assertNotFound();
 });
+
+// ★ شعارٌ داكنٌ على الأولى والأخيرة الداكنتين يختفي، فيُرسم على لوح — إلّا لمن
+// أعلن أنّ شعاره فاتحٌ أصلاً (T-125)، كما في رأس صفحة الملخّص.
+it('يرسم الشعار على لوحٍ في الخلفية الداكنة، ويرفعه لشعارٍ فاتحٍ أصلاً', function (bool $transparent, string $expected): void {
+    $brand = new BrandKit('اسم الجهة', 'اسم الجهة', 'Venue', Palette::find(null), 'data:image/png;base64,iVBORw0KGgo=', logoTransparent: $transparent);
+
+    $html = (new CarouselRenderer(app('view'), imageDeck()))->render(ContentObject::fromJob($this->job), $brand)->contents;
+
+    expect($html)->toContain('class="deck surface-paper bookends-deep')
+        ->and(substr_count($html, $expected))->toBe(2);
+})->with([
+    'بلوح' => [false, '<img class="logo" '],
+    'بلا لوح' => [true, '<img class="logo no-plate" '],
+]);

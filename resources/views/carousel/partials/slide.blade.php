@@ -12,7 +12,7 @@
         @include('carousel.partials.ornament', ['ornament' => $design->value('ornament')])
 
         @if($brand->logoDataUri)
-          <img class="logo" src="{{ $brand->logoDataUri }}" alt="{{ $brand->venueFull }}">
+          <img class="logo{{ $brand->logoTransparent ? ' no-plate' : '' }}" src="{{ $brand->logoDataUri }}" alt="{{ $brand->venueFull }}">
         @endif
       </div>
     @endif

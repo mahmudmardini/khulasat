@@ -8,6 +8,7 @@ use App\Actions\Auth\ResolveLandingDestination;
 use App\Contracts\HadithProvider;
 use App\Contracts\ModelDriver;
 use App\Contracts\ModelGateway;
+use App\Contracts\OverflowProbe;
 use App\Contracts\PublishStore;
 use App\Contracts\QuranContent;
 use App\Contracts\ShareCardCapturer;
@@ -20,6 +21,8 @@ use App\Services\Model\Drivers\OpenAiDriver;
 use App\Services\Model\FakeModelGateway;
 use App\Services\Model\ModelCallRecorder;
 use App\Services\Quran\QuranFoundationContent;
+use App\Services\Render\ChromeOverflowProbe;
+use App\Services\Render\NullOverflowProbe;
 use App\Services\ShareCard\ChromeShareCardCapturer;
 use App\Services\ShareCard\NullShareCardCapturer;
 use App\Services\Transcript\ManualUpload;
@@ -67,6 +70,19 @@ class AppServiceProvider extends ServiceProvider
                     noSandbox: (bool) $config['no_sandbox'],
                 )
                 : new NullShareCardCapturer;
+        });
+
+        // قياسُ فيض الشرائح — T-173. بالمتصفّح نفسه وبشرطه: مطفأً لا قياس.
+        $this->app->bind(OverflowProbe::class, function (): OverflowProbe {
+            $config = (array) config('khulasah.share_card');
+
+            return ($config['capturer'] ?? 'none') === 'chrome'
+                ? new ChromeOverflowProbe(
+                    binary: (string) $config['chrome_binary'],
+                    timeout: (int) $config['timeout'],
+                    noSandbox: (bool) $config['no_sandbox'],
+                )
+                : new NullOverflowProbe;
         });
 
         // مفرد لكل طلب أو مهمّة — الحاجز كلّه يقرأ منه.

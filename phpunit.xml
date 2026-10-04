@@ -38,6 +38,10 @@
         <env name="APP_LOCALE" value="ar" force="true"/>
         <env name="APP_FALLBACK_LOCALE" value="ar" force="true"/>
 
+        <!-- T-148 — رابطُ الموقع لا يُترك لـ .env: جهازٌ يخدم المشروع على
+             نطاقٍ محلّي غير localhost يُسقط اختباراتِ المضيف بلا علّة في الكود. -->
+        <env name="APP_URL" value="http://localhost" force="true"/>
+
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

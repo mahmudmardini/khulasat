@@ -314,3 +314,20 @@ it('يرسم الشعار على لوحٍ في الخلفية الداكنة، �
     'بلوح' => [false, '<img class="logo" '],
     'بلا لوح' => [true, '<img class="logo no-plate" '],
 ]);
+
+// ★ T-196 — معاينةُ اللوحة مصغَّرةٌ لتُرى في إطارها، وبلا شاهدة عدّ: كان فتحُها
+// من اللوحة يُعدّ قراءة. والالتقاطُ بمقاسه، فلا يمسّه التصغير.
+it('يصغّر معاينة صفحة الشرائح ولا يعدّها قراءة، ولا يمسّ الالتقاط', function (): void {
+    config()->set('khulasah.analytics.enabled', true);
+    config()->set('khulasah.analytics.beacon_base', 'https://views.test');
+
+    $preview = $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/carousel/preview")->assertOk()->getContent();
+
+    expect($preview)->toContain(' fit">')->not->toContain('views.test');
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    foreach ($this->capturer->calls as $call) {
+        expect($call['html'])->not->toContain(' fit">');
+    }
+});

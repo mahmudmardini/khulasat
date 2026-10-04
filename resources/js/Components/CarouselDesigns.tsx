@@ -83,6 +83,11 @@ export function CarouselDesigns({ designs, base, prop, manage, locked = false }:
         {t(locked ? 'jobs.carousel.locked_body' : 'common.carousel_designs.hint')}
       </p>
 
+      {/* الكلفةُ مكتوبةٌ لا مفترَضة — T-196. */}
+      {locked ? null : (
+        <p className="mt-2 text-[13px] text-text-faint">{t('common.carousel_designs.cost_hint')}</p>
+      )}
+
       {error ? (
         <p className="mt-4 rounded-lg border border-danger/35 bg-danger/8 px-4 py-3 text-[14px] text-danger">{error}</p>
       ) : null}

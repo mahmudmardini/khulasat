@@ -185,6 +185,7 @@ return [
     'carousel_designs' => [
         'title' => 'Carousel templates',
         'hint' => 'Templates for your slide images in your identity: the system reads your name, palette and logo, proposes three templates, and you approve the ones that fit. The first one you approve becomes the default for every carousel after it.',
+        'cost_hint' => 'Generating templates calls the model but does not count against your summary quota. Approving them and creating images with them is free.',
         'generate' => 'Generate templates for my identity',
         'regenerate' => 'Generate new templates',
         'generating' => 'Generating templates… this can take a minute; the page updates on its own.',

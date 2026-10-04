@@ -175,6 +175,7 @@ return [
     'carousel_designs' => [
         'title' => 'Karusel şablonları',
         'hint' => 'Kimliğinize uygun slayt görseli şablonları: sistem adınızı, paletinizi ve logonuzu okuyup üç şablon önerir, size uyanları onaylarsınız. İlk onayladığınız, sonraki her karuselin varsayılanı olur.',
+        'cost_hint' => 'Şablon üretmek modeli çağırır ama özet kotanızdan düşülmez. Onaylamak ve onlarla görsel oluşturmak ücretsizdir.',
         'generate' => 'Kimliğime şablon üret',
         'regenerate' => 'Yeni şablonlar üret',
         'generating' => 'Şablonlar üretiliyor… bu bir dakika sürebilir; sayfa kendiliğinden güncellenir.',

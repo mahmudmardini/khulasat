@@ -82,9 +82,9 @@ final class RenderCarousel
             return null;
         }
 
+        // مصغَّرةً وبلا شاهدة عدّ — T-196: كان فتحُها من اللوحة يُعدّ قراءة.
         return (new CarouselRenderer($this->views, $deck, $this->pageUrl($job), CarouselDesign::forTenant($job->tenant)))
-            ->render(ContentObject::fromJob($job), BrandKit::forTenant($job->tenant, $job->lecture))
-            ->contents;
+            ->preview(ContentObject::fromJob($job), BrandKit::forTenant($job->tenant, $job->lecture));
     }
 
     /** الشرائح المحفوظة من تكثيفٍ سابق، إن وُجدت. */

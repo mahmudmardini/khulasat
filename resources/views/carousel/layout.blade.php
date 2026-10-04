@@ -22,6 +22,7 @@
    */
   $design ??= \App\Support\Render\CarouselDesign::default();
   $capture ??= false;
+  $fit ??= false;
   $fonts = implode('', array_map(static fn (string $font): string => '&family='.$font, $design->extraFonts()));
 @endphp
 <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600{!! $fonts !!}&display=swap" rel="stylesheet">
@@ -35,7 +36,7 @@
 </head>
 <body>
 
-<div class="deck {{ $design->deckClasses() }}{{ $capture ? ' capture' : '' }}">
+<div class="deck {{ $design->deckClasses() }}{{ $capture ? ' capture' : '' }}{{ $fit ? ' fit' : '' }}">
   @foreach($deck->slides as $slide)
     @include('carousel.partials.slide', ['slide' => $slide])
   @endforeach

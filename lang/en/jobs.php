@@ -346,6 +346,8 @@ return [
         'not_ready' => 'The body is not finished yet',
         'not_ready_body' => 'The preview is drawn from the written body, and it has not been written yet.',
 
+        'more_title' => 'Download, publish, regenerate',
+        'open_carousel_page' => 'Slides page',
         'images_soon' => 'The image pack has not been built yet',
         'images_soon_body' => 'Once it is, it will be drawn from the same slides, at no cost and with no regeneration.',
 
@@ -437,6 +439,7 @@ return [
         'empty_body' => 'Each slide is captured as an Instagram-sized image (1080×1350) and packed with the post text. Free, and not counted against your quota.',
         'rendering' => 'Creating images…',
         'rendering_body' => 'Slides are captured one by one, which can take a minute. This page updates on its own.',
+        'free_hint' => 'Creating and recreating the images, with any template, is free and does not count against your quota.',
         'ready_hint' => '1080×1350 images numbered in order, with the post text in caption.txt.',
         'failed_title' => 'The images could not be created',
         'needs_carousel' => 'Build the slides first',

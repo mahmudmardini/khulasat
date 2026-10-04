@@ -110,6 +110,22 @@ class CarouselRenderer implements Renderer
         ])->render(), $this->deck->slides);
     }
 
+    /**
+     * الكاروسيلُ في إطارٍ داخل اللوحة — T-196.
+     *
+     * **مصغَّراً ليُرى في إطاره على أيّ عرض**: القالبُ يصغّر نفسه تحت ١٠٨٠ وحده،
+     * وإطارُ اللوحة على شاشةٍ عريضة أعرضُ منه، فكانت الشريحةُ تُرى بمقاسها
+     * ولا تُرى الأولى إلّا بالتمرير. **وبلا شاهدة عدّ**: فتحُ اللوحة ليس قراءة.
+     */
+    public function preview(ContentObject $content, BrandKit $brand): string
+    {
+        return $this->views->make('carousel.layout', [
+            ...$this->data($content, $brand, $this->deck),
+            'beacon' => null,
+            'fit' => true,
+        ])->render();
+    }
+
     /** @return array<string, mixed> ما يشترك فيه الكاروسيل وشرائحُه الملتقَطة. */
     private function data(ContentObject $content, BrandKit $brand, SlideDeck $deck): array
     {

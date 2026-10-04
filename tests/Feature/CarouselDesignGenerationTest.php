@@ -331,7 +331,12 @@ it('ينشئ الصور بالقالب المختار، وبافتراضيّ ا�
     {
         public function capture(string $html, int $width, int $height): ?string
         {
-            return "\x89PNG\r\n\x1a\n".'probe';
+            // صورةٌ صحيحةٌ بنسبة المقاس، فتُقصّ لقطةُ الدفعة (T-197).
+            $image = imagecreatetruecolor(4, max(1, intdiv($height, 270)));
+            ob_start();
+            imagepng($image);
+
+            return (string) ob_get_clean();
         }
     });
 

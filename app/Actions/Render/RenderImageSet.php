@@ -58,7 +58,8 @@ final class RenderImageSet
         $output->forceFill([
             'tenant_id' => $job->tenant_id,
             'format' => OutputType::ImageSet->format()->value,
-            'meta' => [...(array) ($output->meta ?? []), ...$extra, 'state' => $state, 'error' => $error],
+            // `at` لا `updated_at`: جدولُ المخرجات بلا طوابع، وبه تُعرف «جاريةٌ» تعثّرت (T-197).
+            'meta' => [...(array) ($output->meta ?? []), ...$extra, 'state' => $state, 'error' => $error, 'at' => now()->toIso8601String()],
             'renderer_version' => ImageSet::VERSION,
         ])->save();
 
@@ -104,19 +105,7 @@ final class RenderImageSet
             throw new RuntimeException(trans('jobs.images.overflow', ['slides' => implode('، ', $over)]));
         }
 
-        $documents = $renderer->slides($content, $brand);
-
-        $images = [];
-
-        foreach ($documents as $index => $html) {
-            $png = $this->capturer->capture($html, ImageSet::WIDTH, ImageSet::HEIGHT);
-
-            if ($png === null || $png === '') {
-                throw new RuntimeException(trans('jobs.images.capture_failed', ['slide' => $index + 1]));
-            }
-
-            $images[ImageSet::slideName($index + 1)] = $png;
-        }
+        $images = $this->capture($job, $renderer, $content, $brand, $deck->count());
 
         $disk = ImageSet::disk();
 
@@ -140,6 +129,91 @@ final class RenderImageSet
         $output->forceFill(['rendered_at' => now()])->save();
 
         return $output;
+    }
+
+    /**
+     * الصورُ بأسمائها المرقّمة — T-197.
+     *
+     * **دفعاتٌ لا شريحةٌ شريحة**: متصفّحٌ لكلّ شريحة يأخذ ثانيتين، فعشرُ شرائح
+     * عشرون ثانية. والشرائحُ متراصّةً عموداً ({@see CarouselRenderer::strip()})
+     * تُلتقط بلقطةٍ لكلّ ثمانٍ ثمّ تُقصّ. **والتقدّمُ يُكتب بعد كلّ دفعة**،
+     * فتعرضه الشاشة عدداً لا دوّاراً مبهماً.
+     *
+     * ومن غير GD لا قصّ، فتُلتقط الشريحةُ وحدها كما كانت: أبطأُ ولا يسقط.
+     *
+     * @return array<string, string>
+     *
+     * @throws RuntimeException
+     */
+    private function capture(SummaryJob $job, CarouselRenderer $renderer, ContentObject $content, BrandKit $brand, int $total): array
+    {
+        $images = [];
+        $batch = function_exists('imagecreatefromstring') ? ImageSet::BATCH : 1;
+
+        self::mark($job, 'rendering', null, ['progress' => ['done' => 0, 'total' => $total]]);
+
+        for ($offset = 0; $offset < $total; $offset += $batch) {
+            $length = min($batch, $total - $offset);
+
+            $png = $batch === 1
+                ? $this->capturer->capture($renderer->slides($content, $brand)[$offset], ImageSet::WIDTH, ImageSet::HEIGHT)
+                : $this->capturer->capture($renderer->strip($content, $brand, $offset, $length), ImageSet::WIDTH, ImageSet::HEIGHT * $length);
+
+            $slices = $png === null || $png === '' ? null : ($batch === 1 ? [$png] : self::slice($png, $length));
+
+            if ($slices === null) {
+                throw new RuntimeException(trans('jobs.images.capture_failed', ['slide' => $offset + 1]));
+            }
+
+            foreach ($slices as $index => $slice) {
+                $images[ImageSet::slideName($offset + $index + 1)] = $slice;
+            }
+
+            self::mark($job, 'rendering', null, ['progress' => ['done' => $offset + $length, 'total' => $total]]);
+        }
+
+        return $images;
+    }
+
+    /**
+     * لقطةُ الشريط صوراً بقسمة ارتفاعها — كلُّ شريحةٍ بمقاسها الثابت.
+     *
+     * **وارتفاعٌ لا ينقسم يُسقط الدفعة**: قصٌّ على غير حدود الشرائح يخرج صوراً
+     * تبدأ من منتصف شريحة، فلا تُحزم.
+     *
+     * @return list<string>|null
+     */
+    private static function slice(string $png, int $count): ?array
+    {
+        $image = @imagecreatefromstring($png);
+
+        if ($image === false) {
+            return null;
+        }
+
+        $width = imagesx($image);
+        $height = imagesy($image);
+
+        if ($height % $count !== 0) {
+            return null;
+        }
+
+        $step = intdiv($height, $count);
+        $slices = [];
+
+        for ($index = 0; $index < $count; $index++) {
+            $part = imagecrop($image, ['x' => 0, 'y' => $index * $step, 'width' => $width, 'height' => $step]);
+
+            if ($part === false) {
+                return null;
+            }
+
+            ob_start();
+            imagepng($part);
+            $slices[] = (string) ob_get_clean();
+        }
+
+        return $slices;
     }
 
     /**

@@ -42,7 +42,10 @@ class ImageSetController extends Controller
             return back()->withErrors(['images' => trans('jobs.images.pending', ['count' => $pending])]);
         }
 
-        RenderImageSet::mark($job, 'rendering');
+        // والتقدّمُ معلومٌ من أوّل لحظة — T-197: «٠ من ٨» لا شريطٌ بلا عدد.
+        $total = count((array) ($job->outputs()->where('type', OutputType::Carousel->value)->first()?->meta['slides'] ?? []));
+
+        RenderImageSet::mark($job, 'rendering', null, ['progress' => ['done' => 0, 'total' => $total]]);
 
         // القالبُ المختار — T-173. ومعرّفٌ لا تعرفه الجهة يسقط إلى افتراضيّها
         // في `CarouselDesign::forTenant()`، فلا يُرفض طلبٌ لقالبٍ حُذف للتوّ.

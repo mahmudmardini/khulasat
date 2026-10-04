@@ -44,7 +44,7 @@ it('يسمّي كلّ حقلٍ تعرضه الشاشات بلغة القارئ �
     $fields = [
         'email', 'password', 'password_confirmation', 'name', 'role', 'name_ar', 'name_ar_full',
         'name_latin', 'palette', 'template', 'locales', 'youtube_url', 'social_url', 'logo',
-        'disclaimer_text', 'source_url', 'transcript_text', 'title_ar', 'speaker_name',
+        'disclaimer_text', 'source_url', 'upload_id', 'transcript_text', 'title_ar', 'speaker_name',
         'speaker_title', 'venue_mode', 'source_kind',
     ];
 
@@ -104,7 +104,9 @@ it('يجد كلّ مفتاح نصّ يطلبه الخادم', function (): void 
     expect($missing)->toBe([]);
 });
 
-it('يرفض الخادم رفعَ الملفّ مصدراً حتى تُبنى الميزة', function (): void {
+// صار الرفعُ مصدراً مقبولاً (§5-أ-4-ب)، **ورسالتُه بالعربية لا مفتاحاً خاماً**.
+// وتفصيلُ الرفع في `LectureUploadTest`.
+it('يطلب الخادم الملفَّ بالعربية حين يُختار الرفع بلا ملفّ', function (): void {
     Queue::fake();
 
     $tenant = Tenant::factory()->create();
@@ -115,5 +117,6 @@ it('يرفض الخادم رفعَ الملفّ مصدراً حتى تُبنى �
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
-    ])->assertSessionHasErrors('source_kind');
+    ])->assertSessionHasErrors(['upload_id' => 'اختر ملفّ الصوت أو الفيديو.'])
+        ->assertSessionDoesntHaveErrors('source_kind');
 });

@@ -6,11 +6,13 @@ import { Card } from '@/Components/Card';
 import { DeviceFrame, type Device } from '@/Components/DeviceFrame';
 import { ErrorState } from '@/Components/ErrorState';
 import { FieldGroup } from '@/Components/FieldGroup';
+import { FileDropzone } from '@/Components/FileDropzone';
 import { PalettePicker, type Palette } from '@/Components/PalettePicker';
 import { Icon, type IconName } from '@/Components/Icon';
 import { Segmented } from '@/Components/Segmented';
 import { StickyBar } from '@/Components/StickyBar';
 import { cn } from '@/lib/cn';
+import { discardUpload, uploadInChunks, UploadError } from '@/lib/chunkedUpload';
 import { csrfToken } from '@/lib/csrf';
 import { toGregorian, toHijri } from '@/lib/hijri';
 import { t } from '@/lib/i18n';
@@ -18,6 +20,17 @@ import { toArabicIndic } from '@/lib/numerals';
 import type { SharedProps } from '@/types/inertia';
 
 type SourceKind = 'url' | 'upload' | 'text';
+
+/**
+ * حالُ رفع الملفّ — يبدأ لحظةَ اختياره، فيملأ المستخدم بقيّة النموذج وهو يُرفع.
+ * و`paused`: انقطع الاتّصال وما رُفع محفوظ، فيُكمَل من حيث وقف.
+ */
+type Upload =
+  | { phase: 'idle' }
+  | { phase: 'uploading' | 'checking'; file: File; sent: number; id: string | null }
+  | { phase: 'paused'; file: File; sent: number; id: string | null; message: string }
+  | { phase: 'ready'; file: File; id: string; seconds: number }
+  | { phase: 'error'; file: File; message: string };
 
 interface Preflight {
   ok: boolean;
@@ -45,7 +58,12 @@ interface OutputLocale {
 }
 
 interface Props {
-  limits: { max_lecture_minutes: number; upload_max_bytes: number; text_extensions: string[] };
+  limits: {
+    max_lecture_minutes: number;
+    upload_max_bytes: number;
+    text_extensions: string[];
+    media_extensions: string[];
+  };
   rich_outputs: boolean;
   venue_modes: string[];
   templates: OutputTemplate[];
@@ -57,13 +75,13 @@ interface Props {
 }
 
 /**
- * **والرفعُ «قريباً» — T-150.** كان يفتح صندوقاً لا يُرسل شيئاً، فيظنّ من
- * اختار ملفّه أنّ الدرس قيد الإعداد. فيُعرض معطَّلاً بشارته لا مخفيّاً، ليُعرف
- * أنّه آتٍ. وعند بنائه يعود فرعُ `FileDropzone` من تاريخ هذا الملفّ.
+ * المصادر الثلاثة. **والرفعُ يعمل** — §5-أ-4-ب: كان «قريباً» (T-150) حتى
+ * صار له مفرِّغ (Gemini) ومكانٌ ينتظر فيه الملفّ عاملَ الطابور. و`soon`
+ * باقٍ لمصدرٍ يُعرض قبل أن يُبنى، فيُرى آتياً لا مخفيّاً.
  */
 const SOURCES: ReadonlyArray<{ kind: SourceKind; icon: IconName; soon?: boolean }> = [
   { kind: 'url', icon: 'link' },
-  { kind: 'upload', icon: 'upload', soon: true },
+  { kind: 'upload', icon: 'upload' },
   { kind: 'text', icon: 'text' },
 ];
 
@@ -113,6 +131,7 @@ export default function Create({
     // إقرارُ التكرار — T-65. يبدأ مطفأً دائماً، ويُعرض عند التنبيه وحده.
     confirm_duplicate: false,
     transcript_text: '',
+    upload_id: '',
     duration_seconds: 0,
     title_ar: '',
     subtitle_ar: '',
@@ -189,10 +208,98 @@ export default function Create({
     }
   };
 
-  const blocked = preflight?.ok === true && preflight.exceeds_limit === true;
+  /*
+    الرفعُ أجزاءً — `lib/chunkedUpload`. **ولا يبقى على الخادم ما أُلغي**: إزالةُ
+    الملفّ، أو اختيارُ غيره، أو مغادرةُ الصفحة قبل الإرسال — كلّها تحذفه.
+  */
+  const [upload, setUpload] = useState<Upload>({ phase: 'idle' });
+  const uploadAbort = useRef<AbortController | null>(null);
+  const uploadId = useRef<string | null>(null);
+  const submitted = useRef(false);
+
+  const dropUpload = () => {
+    uploadAbort.current?.abort();
+    uploadAbort.current = null;
+
+    if (uploadId.current !== null) {
+      discardUpload(uploadId.current);
+      uploadId.current = null;
+    }
+
+    form.setData('upload_id', '');
+    setUpload({ phase: 'idle' });
+  };
+
+  const startUpload = async (file: File, resumeId?: string) => {
+    const controller = new AbortController();
+    uploadAbort.current = controller;
+    form.setData('upload_id', '');
+    form.clearErrors('upload_id');
+    setUpload({ phase: 'uploading', file, sent: 0, id: resumeId ?? null });
+
+    try {
+      const info = await uploadInChunks(file, {
+        signal: controller.signal,
+        onStarted: (id) => {
+          uploadId.current = id;
+        },
+        onProgress: (sent) => setUpload({ phase: 'uploading', file, sent, id: uploadId.current }),
+        onChecking: () => setUpload({ phase: 'checking', file, sent: file.size, id: uploadId.current }),
+      }, resumeId);
+
+      form.setData('upload_id', info.id);
+      setUpload({ phase: 'ready', file, id: info.id, seconds: info.duration_seconds ?? 0 });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        return;
+      }
+
+      const message = error instanceof UploadError ? error.message : t('lectures.create.source.upload_failed');
+
+      if (error instanceof UploadError && error.resumable && uploadId.current !== null) {
+        setUpload((state) => ({
+          phase: 'paused',
+          file,
+          sent: 'sent' in state ? state.sent : 0,
+          id: uploadId.current,
+          message,
+        }));
+
+        return;
+      }
+
+      // رفضٌ لا يُستأنف (نوع، صوت، مدّة، حصّة): الخادم حذف ما رُفع، فلا معرّف يبقى.
+      uploadId.current = null;
+      setUpload({ phase: 'error', file, message });
+    }
+  };
+
+  // مغادرةُ الصفحة أو إغلاقُها قبل الإرسال: يُحذف الرفع، ولا ينتظر كنسَ الساعات.
+  useEffect(() => {
+    const leave = () => {
+      if (uploadId.current !== null && !submitted.current) {
+        uploadAbort.current?.abort();
+        discardUpload(uploadId.current, true);
+      }
+    };
+
+    window.addEventListener('pagehide', leave);
+
+    return () => {
+      window.removeEventListener('pagehide', leave);
+      leave();
+    };
+  }, []);
+
+  const uploadBusy = upload.phase === 'uploading' || upload.phase === 'checking';
+  const blocked = (preflight?.ok === true && preflight.exceeds_limit === true) || (kind === 'upload' && uploadBusy);
 
   const sourceReady =
-    kind === 'url' ? form.data.source_url.trim() !== '' : kind === 'text' ? form.data.transcript_text.trim() !== '' : false;
+    kind === 'url'
+      ? form.data.source_url.trim() !== ''
+      : kind === 'text'
+        ? form.data.transcript_text.trim() !== ''
+        : upload.phase === 'ready';
   const meetingReady = form.data.title_ar.trim() !== '' && form.data.speaker_name.trim() !== '';
 
   const template = templates.find((item) => item.key === form.data.template);
@@ -214,6 +321,13 @@ export default function Create({
         onSubmit={(event) => {
           event.preventDefault();
           const formEl = event.currentTarget;
+          // ملفٌّ رُفع ثمّ اختير مصدرٌ آخر: لا يبقى على الخادم بلا مهمّة.
+          if (kind !== 'upload' && upload.phase !== 'idle') {
+            dropUpload();
+          }
+
+          // أُرسل: فلا تحذف المغادرةُ رفعاً صار ملكَ المهمّة.
+          submitted.current = true;
           form.post('/panel/lectures', {
             /*
              * خطأٌ كالتكرار (confirm_duplicate) يظهر أعلى الخطوة الأولى،
@@ -222,6 +336,7 @@ export default function Create({
              * فنُمرّر إلى أوّل حقلٍ فيه خطأ بعد أن يرسمه React.
              */
             onError: (errors) => {
+              submitted.current = false;
               const firstKey = Object.keys(errors)[0];
               if (firstKey === undefined) return;
               requestAnimationFrame(() => {
@@ -313,6 +428,48 @@ export default function Create({
                   ) : null}
 
                   {preflight ? <PreflightPanel result={preflight} limit={limits.max_lecture_minutes} /> : null}
+                </div>
+              ) : null}
+
+              {kind === 'upload' ? (
+                <div className="mt-5 flex flex-col gap-2">
+                  <p className="flex items-center gap-2 text-[14px] font-medium text-text">
+                    {t('lectures.create.source.upload_label')}
+                    <span className="text-danger" aria-label={t('common.state.required')}>*</span>
+                  </p>
+
+                  {/*
+                    الفحص في المتصفّح راحةٌ لا أمان — الخادم يفحص المحتوى والمدّة
+                    وحدَّ الاشتراك عند اكتمال الرفع (§5-أ-4-ب).
+                  */}
+                  <FileDropzone
+                    name="upload_id"
+                    accept={limits.media_extensions.map((extension) => `.${extension}`)}
+                    maxBytes={limits.upload_max_bytes}
+                    maxLabel={t('lectures.create.source.upload_max')}
+                    disabled={form.processing}
+                    onSelect={(file) => {
+                      dropUpload();
+                      void startUpload(file);
+                    }}
+                    onClear={dropUpload}
+                  />
+
+                  <p className="text-[13px] text-text-muted">{t('lectures.create.source.upload_hint')}</p>
+
+                  <UploadStatus
+                    upload={upload}
+                    onResume={() => {
+                      if (upload.phase === 'paused') {
+                        void startUpload(upload.file, upload.id ?? undefined);
+                      }
+                    }}
+                    onCancel={dropUpload}
+                  />
+
+                  {form.errors.upload_id ? (
+                    <p role="alert" className="text-[13px] text-danger">{form.errors.upload_id}</p>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -773,9 +930,9 @@ export default function Create({
             <RequestSummary
               rows={[
                 {
-                  icon: kind === 'text' ? 'text' : 'link',
+                  icon: kind === 'text' ? 'text' : kind === 'upload' ? 'upload' : 'link',
                   label: t('lectures.create.summary.source'),
-                  value: sourceLabel(kind, form.data.source_url, form.data.transcript_text, preflight),
+                  value: sourceLabel(kind, form.data.source_url, form.data.transcript_text, upload.phase === 'idle' ? null : upload.file, preflight),
                 },
                 {
                   icon: 'page',
@@ -1220,10 +1377,80 @@ function PreflightPanel({ result, limit }: { result: Preflight; limit: number })
   );
 }
 
+/**
+ * حالُ الرفع تحت صندوق الإفلات — كم رُفع، أو «نفحص»، أو «انقطع فأكمِل»، أو المدّة.
+ * **ملفُّ نصف غيغابايت يأخذ دقائق، والصمتُ طولَها يُظنّ تعطّلاً.**
+ */
+function UploadStatus({ upload, onResume, onCancel }: { upload: Upload; onResume: () => void; onCancel: () => void }) {
+  if (upload.phase === 'idle') {
+    return null;
+  }
+
+  if (upload.phase === 'error') {
+    return <p role="alert" className="text-[13px] text-danger">{upload.message}</p>;
+  }
+
+  if (upload.phase === 'ready') {
+    return (
+      <p className="flex items-center gap-2 text-[13px] text-success" aria-live="polite">
+        <Icon name="check" size={15} />
+        {toArabicIndic(t('lectures.create.source.upload_ready', { minutes: Math.max(1, Math.ceil(upload.seconds / 60)) }))}
+      </p>
+    );
+  }
+
+  const percent = upload.file.size === 0 ? 0 : Math.min(100, Math.round((upload.sent / upload.file.size) * 100));
+
+  return (
+    <div aria-live="polite" className="flex flex-col gap-1.5">
+      <div className="h-1.5 overflow-hidden rounded-full bg-surface-alt">
+        <div
+          className={cn('h-full transition-[width]', upload.phase === 'paused' ? 'bg-warning' : 'bg-primary')}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-text-muted">
+        <span className="min-w-0 flex-1">
+          {upload.phase === 'checking'
+            ? t('lectures.create.source.upload_checking')
+            : toArabicIndic(`${t('lectures.create.source.upload_progress', {
+              sent: megabytes(upload.sent),
+              total: megabytes(upload.file.size),
+            })} · ${percent}%`)}
+        </span>
+
+        {upload.phase === 'paused' ? (
+          <Button type="button" variant="secondary" onClick={onResume}>
+            {t('lectures.create.source.upload_resume')}
+          </Button>
+        ) : null}
+
+        {upload.phase !== 'checking' ? (
+          <button type="button" className="text-text-muted underline hover:text-danger" onClick={onCancel}>
+            {t('lectures.create.source.upload_cancel')}
+          </button>
+        ) : null}
+      </div>
+
+      {upload.phase === 'paused' ? <p className="text-[13px] text-warning">{upload.message}</p> : null}
+    </div>
+  );
+}
+
+/** «١٢٫٥ ميغابايت» — بلفظ اللوحة. */
+function megabytes(bytes: number): string {
+  return t('lectures.create.source.upload_mb', { n: (bytes / (1024 * 1024)).toFixed(1) });
+}
+
 /** ما يُقال عن المصدر في «ملخّص طلبك» — ولا يُقال عن مصدرٍ لم يُعطَ شيء. */
-function sourceLabel(kind: SourceKind, url: string, text: string, preflight: Preflight | null): string | null {
+function sourceLabel(kind: SourceKind, url: string, text: string, file: File | null, preflight: Preflight | null): string | null {
   if (kind === 'text') {
     return text.trim() !== '' ? t('lectures.create.summary.text_source') : null;
+  }
+
+  if (kind === 'upload') {
+    return file !== null ? file.name : null;
   }
 
   if (kind !== 'url' || url.trim() === '') {

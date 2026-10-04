@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Actions\Summary;
 
+use App\Console\Commands\PruneUploads;
 use App\Domain\Summary\JobState;
 use App\Domain\Summary\ReviewIncomplete;
+use App\Enums\TranscriptErrorCode;
 use App\Models\SummaryJob;
 use App\Models\SummaryJobTransition;
+use App\Support\Transcript\UploadStore;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -82,7 +85,41 @@ final class TransitionJob
             ]);
         });
 
+        $this->releaseUpload($job, $to, $errorCode);
+
         return $job;
+    }
+
+    /**
+     * Drop the uploaded recording once no retry can use it — §5-أ-4-ب.
+     *
+     * **والملفّ يُحذف عند الإلغاء، وعند إخفاقٍ لا يُصلحه إلّا رفعٌ جديد**
+     * (درسٌ أطول من الحدّ، أو نصٌّ أقصر من أن يُلخَّص): إبقاؤه حينئذٍ نصفُ
+     * غيغابايت لا يقرؤه أحد. **ويُبقى عند الإخفاق العارض** — عطلٌ عند المزوّد
+     * أو مهلة — فـ«أعد المحاولة» تُفرّغه بلا رفعٍ ثانٍ، ثمّ يُكنس بعد
+     * `UPLOAD_RETENTION_DAYS` ({@see PruneUploads}).
+     *
+     * وهنا لا في كلّ مُلغٍ ومُوقِف: الإلغاءُ من شاشة الجهة ومن لوحة المشرف،
+     * والوقوفُ من الخطّ — كلّها تمرّ من هذا الانتقال.
+     */
+    private function releaseUpload(SummaryJob $job, JobState $to, ?string $errorCode): void
+    {
+        if ($job->upload_path === null) {
+            return;
+        }
+
+        $transient = in_array($errorCode, [
+            TranscriptErrorCode::TranscriptionFailed->value,
+            TranscriptErrorCode::YtdlpTimeout->value,
+        ], true);
+
+        if ($to !== JobState::Cancelled && ($to !== JobState::Failed || $transient)) {
+            return;
+        }
+
+        UploadStore::delete($job->upload_path);
+
+        $job->forceFill(['upload_path' => null, 'upload_name' => null])->save();
     }
 
     /**

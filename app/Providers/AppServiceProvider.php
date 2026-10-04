@@ -24,6 +24,7 @@ use App\Services\ShareCard\ChromeShareCardCapturer;
 use App\Services\ShareCard\NullShareCardCapturer;
 use App\Services\Transcript\ManualUpload;
 use App\Services\Transcript\Speech\FakeSpeechToText;
+use App\Services\Transcript\Speech\GeminiSpeech;
 use App\Services\Transcript\Speech\WhisperApi;
 use App\Services\Transcript\TranscriptResolver;
 use App\Services\Transcript\WhisperAudio;
@@ -115,9 +116,13 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SpeechToText::class, function (): SpeechToText {
             $provider = trim((string) config('khulasah.transcript.whisper.provider'));
 
-            return $provider === '' || $provider === 'fake'
-                ? new FakeSpeechToText
-                : $this->app->make(WhisperApi::class);
+            return match ($provider) {
+                '', 'fake' => new FakeSpeechToText,
+                // قرار الفريق، 4 أكتوبر 2026 — {@see GeminiSpeech}.
+                'gemini' => $this->app->make(GeminiSpeech::class),
+                // وما سواهما خدمةٌ بصيغة Whisper: OpenAI أو Groq أو غيرهما.
+                default => $this->app->make(WhisperApi::class),
+            };
         });
     }
 

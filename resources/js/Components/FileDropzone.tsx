@@ -14,6 +14,8 @@ interface Props {
    */
   onClear?: () => void;
   disabled?: boolean;
+  /** اسمُ الحقل — يبلغه التمريرُ إلى أوّل خطأٍ بعد الإرسال. */
+  name?: string;
 }
 
 /**
@@ -23,7 +25,7 @@ interface Props {
  * بالامتداد (§12)، وهذا يمنع رحلةً ضائعة إلى الخادم فقط. ومن اعتمد على
  * فحص المتصفّح فقد وثق بما يملكه المهاجم.
  */
-export function FileDropzone({ accept, maxBytes, maxLabel, onSelect, onClear, disabled = false }: Props) {
+export function FileDropzone({ accept, maxBytes, maxLabel, onSelect, onClear, disabled = false, name }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +93,7 @@ export function FileDropzone({ accept, maxBytes, maxLabel, onSelect, onClear, di
         <input
           ref={input}
           type="file"
+          name={name}
           className="sr-only"
           accept={accept.join(',')}
           disabled={disabled}

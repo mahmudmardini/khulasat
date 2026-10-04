@@ -50,6 +50,28 @@ class Ffmpeg
     }
 
     /**
+     * Does the file carry a sound track at all?
+     *
+     * فيديو شاشةٍ بلا صوت تُقرأ مدّتُه سليمةً، ولا يظهر عيبُه إلّا في الطابور
+     * بعد أن خُصمت الحصّة. فيُسأل عند الرفع.
+     *
+     * @throws TranscriptFailed إن لم يكن الملفّ وسائطَ مقروءة أصلاً.
+     */
+    public function hasAudioTrack(string $path): bool
+    {
+        $output = $this->run([
+            $this->ffprobe(),
+            '-v', 'error',
+            '-select_streams', 'a:0',
+            '-show_entries', 'stream=index',
+            '-of', 'csv=p=0',
+            $path,
+        ]);
+
+        return trim($output) !== '';
+    }
+
+    /**
      * Detect the silent stretches — المواصفة §5-أ-4.
      *
      * ‏`silencedetect` يكتب على `stderr` لا `stdout`، وهذا سلوكُ ffmpeg في
@@ -61,9 +83,34 @@ class Ffmpeg
      */
     public function silences(string $path): array
     {
-        $noise = (string) config('khulasah.transcript.silence_noise_db', '-30dB');
-        $minimum = (string) config('khulasah.transcript.silence_min_seconds', '0.5');
+        return $this->detectSilences(
+            $path,
+            (string) config('khulasah.transcript.silence_noise_db', '-30dB'),
+            (string) config('khulasah.transcript.silence_min_seconds', '0.5'),
+        );
+    }
 
+    /**
+     * Shorter, less quiet pauses — the fallback when no clear silence is near a cut.
+     *
+     * قاعةٌ فيها مروحةٌ أو صدى لا يهبط صوتُها إلى -30dB أبداً، فلا يجد الكشفُ
+     * الصارم سكتةً واحدة ويقع كلّ قطعٍ عند الدقيقة العاشرة بالضبط. **لكنّ بين
+     * الجملتين نَفَساً** يهبط عن صوت الكلام، وهذا ما يلتقطه هذا الكشف.
+     *
+     * @return list<array{start: float, end: float}>
+     */
+    public function softSilences(string $path): array
+    {
+        return $this->detectSilences(
+            $path,
+            (string) config('khulasah.transcript.silence_soft_noise_db', '-20dB'),
+            (string) config('khulasah.transcript.silence_soft_min_seconds', '0.2'),
+        );
+    }
+
+    /** @return list<array{start: float, end: float}> */
+    private function detectSilences(string $path, string $noise, string $minimum): array
+    {
         $stderr = $this->run([
             $this->ffmpeg(),
             '-i', $path,
@@ -76,6 +123,41 @@ class Ffmpeg
     }
 
     /**
+     * One compact speech track for every source — mono, 16 kHz, AAC.
+     *
+     * **التقطيع نسخٌ بلا إعادة ترميز** ({@see splitAtSilence()})، فيحمل كلُّ
+     * مقطعٍ شكلَ أصله: فيديو مرفوع يخرج مقطعُه بصورته، و`wav` يخرج بحجمه، وكلاهما
+     * يتجاوز حدّ المزوّد بعد التقطيع نفسه. فيُوحَّد الشكل هنا مرّةً قبل التقطيع.
+     *
+     * **ولا يُفقد ما يُسمع**: Whisper وGemini كلاهما يُنزلان الصوت إلى قناةٍ
+     * واحدة بـ16 كيلوهرتز قبل أن يسمعاه. و48kbps تجعل الدقيقة نحو 360KB، فالحجم
+     * يُنبئ بالمدّة — وحدُّ المزوّد بالبايت يصير حدّاً بالدقائق تقريباً.
+     *
+     * @throws TranscriptFailed
+     */
+    public function toSpeechAudio(string $path, string $directory): string
+    {
+        $output = $directory.'/speech.m4a';
+
+        $this->run([
+            $this->ffmpeg(),
+            '-nostdin',
+            '-loglevel', 'error',
+            '-i', $path,
+            // أوّلُ مسار صوت وحده: لا صورة، ولا مسار تعليقٍ ثانٍ.
+            '-map', '0:a:0',
+            '-ac', '1',
+            '-ar', '16000',
+            '-c:a', 'aac',
+            '-b:a', '48k',
+            '-y',
+            $output,
+        ]);
+
+        return $output;
+    }
+
+    /**
      * Cut the recording into ordered chunks at silence — المواصفة §5-أ-4.
      *
      * @return list<string> مسارات المقاطع **بترتيبها**، فالترتيب هو الدرس.
@@ -85,7 +167,14 @@ class Ffmpeg
     public function splitAtSilence(string $path, string $directory, int $chunkSeconds): array
     {
         $duration = $this->durationSeconds($path);
-        $segments = SilenceCutPoints::segments($duration, $this->silences($path), $chunkSeconds);
+        $silences = $this->silences($path);
+
+        // السكتاتُ الليّنة لا تُطلب إلّا إن بقي قطعٌ أعمى، فلا يُفكّ الصوتُ مرّتين بلا داعٍ.
+        $soft = SilenceCutPoints::blindCuts($duration, $silences, $chunkSeconds) > 0
+            ? $this->softSilences($path)
+            : [];
+
+        $segments = SilenceCutPoints::segments($duration, $silences, $chunkSeconds, $soft);
 
         if (count($segments) <= 1) {
             return [$path];

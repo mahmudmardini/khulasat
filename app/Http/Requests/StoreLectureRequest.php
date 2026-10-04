@@ -9,6 +9,8 @@ use App\Enums\SummaryTemplate;
 use App\Enums\VenueMode;
 use App\Http\Controllers\LectureController;
 use App\Models\Lecture;
+use App\Models\MediaUpload;
+use App\Services\Transcript\ChunkedUploads;
 use App\Support\Render\Palette;
 use App\Support\Transcript\SourceKey;
 use App\Support\Transcript\SourceUrlGuard;
@@ -26,13 +28,16 @@ use Throwable;
  */
 class StoreLectureRequest extends FormRequest
 {
+    private ?MediaUpload $mediaUpload = null;
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
-            // **`upload` غير مقبول بعد** — T-150: الشاشة تعرضه «قريباً»، والطلبُ المصنوعُ باليد يُرفض كذلك.
-            'source_kind' => ['required', Rule::in(['url', 'text'])],
+            'source_kind' => ['required', Rule::in(['url', 'upload', 'text'])],
             'source_url' => ['nullable', 'string', 'max:2048'],
+            // رفعٌ اكتمل أجزاءً وفُحص — §5-أ-4-ب، و{@see \App\Http\Controllers\UploadController}.
+            'upload_id' => ['nullable', 'string', 'uuid'],
             // إقرارُ المستخدم بأنّ المصدر مكرَّرٌ عن قصد — T-65.
             'confirm_duplicate' => ['nullable', 'boolean'],
             'transcript_text' => ['nullable', 'string', 'max:2000000'],
@@ -75,10 +80,61 @@ class StoreLectureRequest extends FormRequest
                 $this->validateNotDuplicate($validator);
             }
 
+            if ($kind === 'upload' && ! $validator->errors()->has('upload_id')) {
+                $this->validateUpload($validator);
+            }
+
             if ($kind === 'text' && trim((string) $this->input('transcript_text')) === '') {
                 $validator->errors()->add('transcript_text', trans('errors.transcript.transcript_too_short'));
             }
         });
+    }
+
+    /** الرفعُ الذي يُربط بالمهمّة — مكتملٌ ومفحوص. */
+    public function mediaUpload(): ?MediaUpload
+    {
+        return $this->mediaUpload;
+    }
+
+    /**
+     * الملفّ المرفوع — §5-أ-4-ب. **فُحص عند اكتمال رفعه** (المحتوى، ووجود
+     * الصوت، والمدّة) في {@see ChunkedUploads::complete()}،
+     * فالمستخدم عرف عيبَه قبل أن يملأ بقيّة النموذج. ويبقى هنا أن يكون الرفعُ
+     * لهذه الجهة، مكتملاً، لم يُكنس — وأن تتّسع له حدودُ الاشتراك الآن.
+     */
+    private function validateUpload(Validator $validator): void
+    {
+        $id = (string) $this->input('upload_id');
+
+        if ($id === '') {
+            $validator->errors()->add('upload_id', trans('lectures.create.source.upload_required'));
+
+            return;
+        }
+
+        // تحت نطاق الجهة: رفعُ جهةٍ أخرى لا يوجد هنا.
+        $upload = MediaUpload::query()->find($id);
+
+        if ($upload === null || ! $upload->isReady()) {
+            $validator->errors()->add('upload_id', trans('lectures.create.source.upload_expired'));
+
+            return;
+        }
+
+        $limit = (int) ($this->user()?->tenant?->max_lecture_minutes ?? 0);
+        $seconds = (int) $upload->duration_seconds;
+
+        // والحدُّ يُفحص ثانيةً: قد يتبدّل الاشتراك بين الرفع والإرسال.
+        if ($limit > 0 && $seconds > $limit * 60) {
+            $validator->errors()->add('upload_id', trans('lectures.create.preflight.too_long', [
+                'minutes' => (int) ceil($seconds / 60),
+                'limit' => $limit,
+            ]));
+
+            return;
+        }
+
+        $this->mediaUpload = $upload;
     }
 
     /** @return array<string, string> */
@@ -86,6 +142,7 @@ class StoreLectureRequest extends FormRequest
     {
         return [
             'source_url' => trans('lectures.create.source.url_label'),
+            'upload_id' => trans('lectures.create.source.upload_label'),
             'transcript_text' => trans('lectures.create.source.text_label'),
             'title_ar' => trans('lectures.create.meeting.title'),
             'speaker_name' => trans('lectures.create.meeting.speaker'),

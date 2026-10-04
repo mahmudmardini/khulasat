@@ -71,6 +71,11 @@ return [
         'silence_noise_db' => env('SILENCE_NOISE_DB', '-30dB'),
         'silence_min_seconds' => env('SILENCE_MIN_SECONDS', '0.5'),
 
+        // والبديلُ حين لا سكتةَ صريحة قرب القطع: نَفَسٌ أقصر وأقلّ هدوءاً
+        // بين جملتين — قاعةٌ فيها مروحة أو صدى لا تهبط إلى -30dB أبداً.
+        'silence_soft_noise_db' => env('SILENCE_SOFT_NOISE_DB', '-20dB'),
+        'silence_soft_min_seconds' => env('SILENCE_SOFT_MIN_SECONDS', '0.2'),
+
         /*
          * خدمة التفريغ — §5-أ-4 و§13.
          * **الافتراضي وهميّ** ولا يُبدَّل إلا بـ WHISPER_PROVIDER صريحاً
@@ -96,6 +101,41 @@ return [
         ],
 
         /*
+         * Gemini مزوّداً للتفريغ — `WHISPER_PROVIDER=gemini`، قرار الفريق
+         * 4 أكتوبر 2026. **والمفتاح والعنوان من `model.google`**:
+         * حسابٌ واحد عند جوجل، لا مفتاحٌ ثانٍ يُنسى تجديده.
+         */
+        'gemini' => [
+            // على اسم ما في `ModelConfigSeeder` — عائلةٌ واحدة في البوّابة والتفريغ.
+            'model' => env('GEMINI_TRANSCRIBE_MODEL', 'gemini-3.7-flash'),
+            'timeout' => (int) env('GEMINI_TRANSCRIBE_TIMEOUT', 300),
+
+            // أدنى درجات التفكير: التفريغ سماعٌ لا استنتاج، والتفكير يُغري بالتصحيح.
+            'thinking_level' => env('GEMINI_TRANSCRIBE_THINKING', 'low'),
+
+            // مقطعُ عشر دقائق نحو 1500 كلمة. والسقفُ أوسع منه بكثير، فلا يُقطع.
+            'max_output_tokens' => (int) env('GEMINI_TRANSCRIBE_MAX_OUTPUT_TOKENS', 32_768),
+
+            /*
+             * **حدُّ الطلب عند Gemini 20MB بعد base64**، وbase64 يزيد الثلث.
+             * و5MB من صوت {@see \App\Services\Transcript\Ffmpeg::toSpeechAudio()}
+             * نحو ربع ساعة — فما زاد قُطّع عند الصمت مقاطعَ من عشر دقائق،
+             * ولا يُرسَل درسٌ كامل في طلبٍ واحد يطول فيه نصُّ النموذج فيزيغ.
+             */
+            'max_bytes' => (int) env('GEMINI_TRANSCRIBE_MAX_BYTES', 5 * 1024 * 1024),
+
+            /*
+             * **تقديرٌ لا سعرٌ معلن** — Gemini يُسعَّر بالتوكنز لا بالدقيقة:
+             * الدقيقةُ 1920 توكن صوت (نحو 0.002$ بسعر Flash) ونصُّها نحو
+             * 400 توكن خرج (نحو 0.001$). يُراجَع على فاتورة أوّل شهر.
+             */
+            'price_per_minute' => (float) env('GEMINI_TRANSCRIBE_PRICE_PER_MINUTE', 0.003),
+
+            // مهلةُ ما بين محاولات 429 و5xx — {@see \App\Services\Transcript\Speech\GeminiSpeech}.
+            'retry_sleep_ms' => (int) env('GEMINI_TRANSCRIBE_RETRY_SLEEP_MS', 2_000),
+        ],
+
+        /*
          * رفع ملفّ من الجهاز — §5-أ-4-ب: «حتى 500MB».
          * **والنوع يُفحص بالمحتوى لا بالامتداد**: الامتداد يكتبه المستخدم.
          */
@@ -103,10 +143,42 @@ return [
             'max_bytes' => (int) env('UPLOAD_MAX_BYTES', 500 * 1024 * 1024),
 
             'media_mimes' => [
-                'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a', 'audio/aac',
+                // و`x-hx-aac-adts` هو ما يقوله فاحصُ المحتوى عن ملفّ `.aac` فعلاً، لا `audio/aac`.
+                'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/x-hx-aac-adts',
                 'audio/wav', 'audio/x-wav', 'audio/vnd.wave',
                 'video/mp4', 'video/quicktime',
+                // رسائلُ واتساب وتلغرام الصوتية، وتسجيلُ المتصفّح — حيث تُسجَّل
+                // دروسٌ كثيرة ولا تُرفع إلى يوتيوب.
+                'audio/ogg', 'audio/opus', 'audio/webm', 'video/webm',
             ],
+
+            // ما يعرضه المتصفّح في نافذة الاختيار — **راحةٌ لا أمان**: الخادم
+            // يفحص المحتوى بـ`media_mimes` أعلاه، لا اللاحقة.
+            'media_extensions' => ['mp3', 'm4a', 'wav', 'aac', 'mp4', 'mov', 'ogg', 'opus', 'webm'],
+
+            /*
+             * أين ينتظر الملفّ عاملَ الطابور — {@see \App\Support\Transcript\UploadStore}.
+             * **محلّيٌّ** لأنّ ffmpeg يحتاج مساراً على القرص.
+             */
+            'disk' => env('UPLOAD_DISK', 'local'),
+
+            /*
+             * **حجمُ الجزء** — الملفّ يُرفع أجزاءً لا في طلبٍ واحد
+             * ({@see \App\Services\Transcript\ChunkedUploads}). عشرةُ ميغابايت
+             * تُرفع في ثوانٍ على اتّصالٍ معقول، وتُعاد وحدها إن سقطت. ولا يتجاوز
+             * `post_max_size` في PHP أبداً — يُنزَل إليه آليّاً. ويلزم nginx أن
+             * يقبلها: `client_max_body_size 11m` على الأقلّ.
+             */
+            'chunk_bytes' => (int) env('UPLOAD_CHUNK_BYTES', 10 * 1024 * 1024),
+
+            // رفعٌ لم يكتمل أو اكتمل ولم يُرسَل: يُكنس بأجزائه بعد هذه الساعات.
+            'stale_hours' => (int) env('UPLOAD_STALE_HOURS', 24),
+
+            /*
+             * ملفُّ مهمّةٍ أخفقت إخفاقاً عارضاً يُبقى لـ«أعد المحاولة» هذه الأيّام،
+             * ثمّ يُكنس. وما أخفق لعيبٍ في الملفّ نفسه يُحذف فوراً — {@see \App\Actions\Summary\TransitionJob}.
+             */
+            'retention_days' => (int) env('UPLOAD_RETENTION_DAYS', 3),
 
             // المسار اليدوي: لصقٌ أو ملفّ ترجمة أو نصّ — §5-أ-5.
             'text_extensions' => ['srt', 'vtt', 'txt'],

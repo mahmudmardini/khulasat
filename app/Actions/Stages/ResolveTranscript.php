@@ -11,6 +11,7 @@ use App\Exceptions\TranscriptFailed;
 use App\Models\SummaryJob;
 use App\Services\Transcript\TranscriptResolver;
 use App\Support\Transcript\TranscriptRequest;
+use App\Support\Transcript\UploadStore;
 
 /**
  * مرحلة `transcribing`: تُحضر نصّ الدرس — المواصفة §5-أ.
@@ -51,6 +52,16 @@ final class ResolveTranscript
             $request = $request->withPastedText($pasted);
         }
 
+        /*
+         * الملفّ المرفوع — §5-أ-4-ب. **والنصّ مقدَّمٌ عليه**: مهمّةٌ استُؤنفت
+         * بعد التفريغ تحمل نصَّها، فلا يُفرَّغ ملفُّها ثانيةً ويُدفع ثمنه مرّتين.
+         */
+        $upload = UploadStore::localPath($job->upload_path);
+
+        if ($pasted === '' && $upload !== null) {
+            $request = $request->withUploadedFile($upload, $job->upload_name);
+        }
+
         $result = $this->resolver->resolve($request);
 
         /*
@@ -64,11 +75,18 @@ final class ResolveTranscript
             );
         }
 
+        $stored = $job->upload_path;
+
         $job->forceFill([
             'transcript_text' => $result->text,
             'transcript_source' => $result->source,
             'transcript_word_count' => $result->wordCount(),
+            // صار نصّاً، فلا حاجة إلى التسجيل — ولا نحتفظ بتسجيل درسٍ بلا حاجة.
+            'upload_path' => null,
+            'upload_name' => null,
         ])->save();
+
+        UploadStore::delete($stored);
 
         $this->transition->handle($job, JobState::Cleaning);
 

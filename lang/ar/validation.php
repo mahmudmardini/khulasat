@@ -192,6 +192,7 @@ return [
         'logo' => 'الشعار',
         'disclaimer_text' => 'نصّ التنبيه',
         'source_url' => 'رابط الدرس',
+        'upload_id' => 'ملفّ الدرس',
         'transcript_text' => 'التفريغ النصّي',
         'title_ar' => 'عنوان الدرس',
         'speaker_name' => 'اسم الملقي',

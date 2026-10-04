@@ -8,6 +8,7 @@ use App\Actions\Publish\UnpublishSummary;
 use App\Actions\Summary\ResumeFailedJob;
 use App\Domain\Summary\JobState;
 use App\Models\SummaryJob;
+use Carbon\CarbonInterface;
 
 /**
  * Projects a job's state onto the screens' vocabulary — SCREENS.md §الحالات و§4.
@@ -135,7 +136,7 @@ final class JobProgress
      * **أوّلُ دخولٍ وآخرُ خروج**: فإعادةُ المحاولة الآلية داخل الحالة لا تكتب
      * انتقالاً، وإن كُتب فالمدّةُ كلُّها ما قضاه الخطّ فيها.
      *
-     * @return array{0: array<string, \Carbon\CarbonInterface>, 1: array<string, \Carbon\CarbonInterface>}
+     * @return array{0: array<string, CarbonInterface>, 1: array<string, CarbonInterface>}
      */
     private static function timeline(SummaryJob $job): array
     {

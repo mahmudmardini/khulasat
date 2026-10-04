@@ -15,17 +15,27 @@
 <title>{{ $title }} — شرائح</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600&display=swap" rel="stylesheet">
+@php
+  /*
+   * مواصفةُ التصميم — T-173. وغيابُها هو الافتراضيّ: القالب كما كان.
+   * و`$capture` شريحةٌ واحدة في وثيقتها لتُلتقط صورةً بمقاسها.
+   */
+  $design ??= \App\Support\Render\CarouselDesign::default();
+  $capture ??= false;
+  $fonts = implode('', array_map(static fn (string $font): string => '&family='.$font, $design->extraFonts()));
+@endphp
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600{!! $fonts !!}&display=swap" rel="stylesheet">
 <style>
 :root{
 {!! $palette->css() !!}
 }
 @include('carousel.partials._style')
+@include('carousel.partials._design')
 </style>
 </head>
 <body>
 
-<div class="deck">
+<div class="deck {{ $design->deckClasses() }}{{ $capture ? ' capture' : '' }}">
   @foreach($deck->slides as $slide)
     @include('carousel.partials.slide', ['slide' => $slide])
   @endforeach

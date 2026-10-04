@@ -9,6 +9,7 @@ use App\Contracts\Renderer;
 use App\Enums\OutputType;
 use App\Support\Publish\Beacon;
 use App\Support\Render\BrandKit;
+use App\Support\Render\CarouselDesign;
 use App\Support\Render\ContentObject;
 use App\Support\Render\RenderedOutput;
 use App\Support\Render\Slide;
@@ -25,12 +26,15 @@ use Illuminate\Contracts\View\Factory as ViewFactory;
  * العرض لا تُعيد تشغيل الخطّ ولا تُحتسب من حصّة إعادة التوليد».
  *
  * والمخرَج ملفٌّ واحد قائم بذاته كالصفحة: الشرائح متجاورة، وكلّ شريحة
- * ١٠٨٠×١٣٥٠ بقياسٍ ثابت بالبكسل — فـ`ImageRenderer` (T-20) يلتقطها كما هي
- * بلا حساب.
+ * ١٠٨٠×١٣٥٠ بقياسٍ ثابت بالبكسل — فـ`RenderImageSet` (T-173) يلتقطها كما هي
+ * بلا حساب، كلَّ شريحةٍ في وثيقتها ({@see self::slides()}).
+ *
+ * **وشكلُها من مواصفة الجهة** ({@see CarouselDesign}) — T-173. وغيابُها هو
+ * المواصفة الافتراضية: القالب كما كان قبلها.
  */
 class CarouselRenderer implements Renderer
 {
-    private const VERSION = '1.1.0';
+    private const VERSION = '1.2.0';
 
     public function __construct(
         private readonly ViewFactory $views,
@@ -43,6 +47,7 @@ class CarouselRenderer implements Renderer
          * يُطبع على شريحةٍ تُنشر على إنستغرام ثمّ لا يفتح شيئاً.
          */
         private readonly ?string $pageUrl = null,
+        private readonly ?CarouselDesign $design = null,
     ) {}
 
     public function type(): OutputType
@@ -57,16 +62,8 @@ class CarouselRenderer implements Renderer
 
     public function render(ContentObject $content, BrandKit $brand): RenderedOutput
     {
-        $majlis = $content->majlis;
-
         $html = $this->views->make('carousel.layout', [
-            'brand' => $brand,
-            'palette' => $brand->palette,
-            'deck' => $this->deck,
-            'title' => (string) ($majlis['title'] ?? ''),
-            'sheikh' => $majlis['sheikh_full'] ?? $majlis['sheikh'] ?? null,
-            'pageUrl' => $this->pageUrl,
-            'sizeClass' => static fn (Slide $slide): string => self::sizeClass($slide),
+            ...$this->data($content, $brand, $this->deck),
 
             // شاهدة العدّ — T-31. والشرائح مخرَجٌ منشور، فتُعدّ كالصفحة.
             // واللسانُ فيها كذلك (T-140): الكاروسيل يُبنى بلغةٍ بعينها.
@@ -91,8 +88,48 @@ class CarouselRenderer implements Renderer
                 'slides' => $this->deck->toArray(),
                 'plain_text' => $this->deck->toPlainText(),
                 'page_url' => $this->pageUrl,
+                'design' => $this->design()->toArray(),
             ],
         );
+    }
+
+    /**
+     * كلُّ شريحةٍ في وثيقتها، بمقاسها وبلا هامش — لتُلتقط صورةً (T-173).
+     *
+     * ★ **وبلا شاهدة عدّ**: المتصفّحُ الملتقِط يطلبها كما يطلبها القارئ، فتُعدّ
+     * كلُّ صورةٍ زيارةً لم يزرها أحد.
+     *
+     * @return list<string>
+     */
+    public function slides(ContentObject $content, BrandKit $brand): array
+    {
+        return array_map(fn (Slide $slide): string => $this->views->make('carousel.layout', [
+            ...$this->data($content, $brand, new SlideDeck([$slide])),
+            'beacon' => null,
+            'capture' => true,
+        ])->render(), $this->deck->slides);
+    }
+
+    /** @return array<string, mixed> ما يشترك فيه الكاروسيل وشرائحُه الملتقَطة. */
+    private function data(ContentObject $content, BrandKit $brand, SlideDeck $deck): array
+    {
+        $majlis = $content->majlis;
+
+        return [
+            'brand' => $brand,
+            'palette' => $brand->palette,
+            'deck' => $deck,
+            'design' => $this->design(),
+            'title' => (string) ($majlis['title'] ?? ''),
+            'sheikh' => $majlis['sheikh_full'] ?? $majlis['sheikh'] ?? null,
+            'pageUrl' => $this->pageUrl,
+            'sizeClass' => static fn (Slide $slide): string => self::sizeClass($slide),
+        ];
+    }
+
+    private function design(): CarouselDesign
+    {
+        return $this->design ?? CarouselDesign::default();
     }
 
     /**

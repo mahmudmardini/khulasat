@@ -23,6 +23,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\CarouselController;
 use App\Http\Controllers\EvidenceReviewController;
+use App\Http\Controllers\ImageSetController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\LectureController;
 use App\Http\Controllers\LocaleController;
@@ -113,6 +114,15 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/jobs/{job}/carousel', [CarouselController::class, 'show'])->name('jobs.carousel');
     Route::post('/jobs/{job}/carousel', [CarouselController::class, 'store'])->name('jobs.carousel.store');
     Route::get('/jobs/{job}/carousel/preview', [CarouselController::class, 'preview'])->name('jobs.carousel.preview');
+
+    /*
+     * حزمةُ صور الكاروسيل — T-173. تُنشأ في الطابور، وتُرى صورُها من قرصٍ
+     * خاصّ عبر اللوحة، وتُنزَّل حزمةً من `jobs.download`.
+     */
+    Route::post('/jobs/{job}/images', [ImageSetController::class, 'store'])->name('jobs.images.store');
+    Route::get('/jobs/{job}/images/{slide}.png', [ImageSetController::class, 'show'])
+        ->whereNumber('slide')
+        ->name('jobs.images.show');
 
     /*
      * بوّابة المراجعة — SCREENS.md الشاشة 5. وهي التي يستأنف بها الخطّ

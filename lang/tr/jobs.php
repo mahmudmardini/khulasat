@@ -425,4 +425,25 @@ return [
             'unavailable' => 'Bu dil özette zaten var ya da eklenemez.',
         ],
     ],
+
+    // حزمةُ صور الكاروسيل — T-173.
+    'images' => [
+        'create' => 'Görselleri oluştur',
+        'recreate' => 'Görselleri yeniden oluştur',
+        'download' => 'Paketi indir',
+        'empty' => 'Slayt görselleri henüz oluşturulmadı',
+        'empty_body' => 'Her slayt Instagram boyutunda (1080×1350) bir görsel olarak yakalanır ve gönderi metniyle paketlenir. Ücretsizdir ve kotanızdan düşülmez.',
+        'rendering' => 'Görseller oluşturuluyor…',
+        'rendering_body' => 'Slaytlar tek tek yakalanır; bu bir dakika sürebilir. Sayfa kendiliğinden güncellenir.',
+        'ready_hint' => 'Sırasıyla numaralanmış 1080×1350 görseller ve caption.txt içinde gönderi metni.',
+        'failed_title' => 'Görseller oluşturulamadı',
+        'needs_carousel' => 'Önce slaytları oluşturun',
+        'needs_carousel_body' => 'Görseller slaytlardan yakalanır, bu yüzden önce slaytlar gelir.',
+        'disabled' => 'Bu sunucuda görsel yakalama etkin değil.',
+        'no_carousel' => 'Önce slaytları oluşturun; görseller onlardan yakalanır.',
+        'pending' => 'Çözülmemiş :count kanıt varken görseller oluşturulmaz.',
+        'capture_failed' => ':slide. slayt yakalanamadı. Biraz sonra yeniden deneyin.',
+        'failed' => 'Görseller oluşturulamadı. Biraz sonra yeniden deneyin.',
+        'slide_alt' => 'Slayt :slide',
+    ],
 ];

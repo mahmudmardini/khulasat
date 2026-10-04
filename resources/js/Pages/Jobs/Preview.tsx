@@ -1,5 +1,5 @@
-import { useRef, useState, type RefObject } from 'react';
-import { Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { Link, router, usePage, usePoll } from '@inertiajs/react';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { AddLocale, type LocaleAddition } from '@/Components/AddLocale';
 import { Button } from '@/Components/Button';
@@ -53,7 +53,15 @@ interface Props {
   outputs: {
     page: { produced: boolean; public_url: string | null };
     carousel: { produced: boolean; public_url: string | null; slides: Slide[]; plain_text: string };
-    images: { produced: boolean; public_url: string | null };
+    /** حزمة الصور — T-173. `state` حالُها في الطابور، و`urls` صورُها بترتيبها. */
+    images: {
+      produced: boolean;
+      public_url: string | null;
+      state: 'rendering' | 'ready' | 'failed' | null;
+      error: string | null;
+      enabled: boolean;
+      urls: string[];
+    };
   };
   regenerations: { used: number; limit: number };
   can_publish: boolean;
@@ -91,6 +99,21 @@ export default function Preview({
 
   const left = Math.max(0, regenerations.limit - regenerations.used);
 
+  // حزمة الصور تُنشأ في الطابور — T-173. فتتحدّث الشاشة وحدها ما دامت جارية.
+  const rendering = outputs.images.state === 'rendering';
+  const poll = usePoll(3_000, { only: ['outputs'] }, { autoStart: false, keepAlive: false });
+
+  useEffect(() => {
+    if (rendering) {
+      poll.start();
+    } else {
+      poll.stop();
+    }
+
+    return () => poll.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rendering]);
+
   function publish(): void {
     setBusy(true);
     router.post(`/panel/summaries/${job.id}`, {}, { preserveScroll: true, onFinish: () => setBusy(false) });
@@ -103,6 +126,11 @@ export default function Preview({
       { recondense: false },
       { preserveScroll: true, onFinish: () => setBusy(false) },
     );
+  }
+
+  function buildImages(): void {
+    setBusy(true);
+    router.post(`/panel/jobs/${job.id}/images`, {}, { preserveScroll: true, onFinish: () => setBusy(false) });
   }
 
   function regenerate(): void {
@@ -161,15 +189,22 @@ export default function Preview({
               <CarouselPane
                 job={job}
                 carousel={outputs.carousel}
+                images={outputs.images}
                 rich={rich_outputs}
                 busy={busy}
                 onBuild={buildCarousel}
               />
             ) : null}
             {tab === 'images' ? (
-              <Card>
-                <EmptyState title={t('jobs.preview.images_soon')} body={t('jobs.preview.images_soon_body')} />
-              </Card>
+              <ImagesPane
+                job={job}
+                images={outputs.images}
+                carouselProduced={outputs.carousel.produced}
+                rich={rich_outputs}
+                busy={busy}
+                onBuild={buildImages}
+                onOpenCarousel={() => setTab('carousel')}
+              />
             ) : null}
 
             <Actions
@@ -509,10 +544,11 @@ function QuickButton({
 
 /** الشرائح متجاورةً، لكلٍّ نسخ النصّ، وزرّ نسخ الكلّ — §6. */
 function CarouselPane({
-  job, carousel, rich, busy, onBuild,
+  job, carousel, images, rich, busy, onBuild,
 }: {
   job: Props['job'];
   carousel: Props['outputs']['carousel'];
+  images: Props['outputs']['images'];
   rich: boolean;
   busy: boolean;
   onBuild: () => void;
@@ -552,9 +588,20 @@ function CarouselPane({
       >
         <SlideCarousel
           label={t('jobs.preview.slides')}
-          slides={carousel.slides.map((slide) => (
-            <SlideFace key={slide.index} slide={slide} />
-          ))}
+          slides={carousel.slides.map((slide, position) =>
+            // **الصورةُ الملتقَطة متى وُجدت** — T-173: فلا تختلف المعاينة عن
+            // التنزيل. وعددٌ لا يطابق الشرائح يعني صوراً من كاروسيلٍ سابق.
+            images.produced && images.urls.length === carousel.slides.length ? (
+              <img
+                key={slide.index}
+                src={images.urls[position]}
+                alt={t('jobs.images.slide_alt', { slide: toArabicIndic(slide.index) })}
+                className="aspect-[4/5] w-full max-w-md rounded-lg border border-border"
+              />
+            ) : (
+              <SlideFace key={slide.index} slide={slide} />
+            ),
+          )}
         />
       </Card>
 
@@ -600,6 +647,131 @@ function CarouselPane({
         </Link>
       </p>
     </>
+  );
+}
+
+/**
+ * حزمة الصور — T-173، وتستوعب T-20.
+ *
+ * تُنشأ من الشرائح المحفوظة بلا نموذج ولا كلفة، فزرُّها بوزن «ابنِ الشرائح» لا
+ * بوزن «أعد التوليد». والتنزيلُ رابطٌ لا زرّ، كسائر التنزيلات هنا.
+ */
+function ImagesPane({
+  job, images, carouselProduced, rich, busy, onBuild, onOpenCarousel,
+}: {
+  job: Props['job'];
+  images: Props['outputs']['images'];
+  carouselProduced: boolean;
+  rich: boolean;
+  busy: boolean;
+  onBuild: () => void;
+  onOpenCarousel: () => void;
+}) {
+  if (!rich) {
+    return (
+      <Card>
+        <EmptyState
+          title={t('jobs.carousel.locked')}
+          body={t('jobs.carousel.locked_body')}
+          action={
+            <Button variant="secondary" onClick={() => router.visit('/panel/settings/billing')}>
+              {t('jobs.carousel.locked_cta')}
+            </Button>
+          }
+        />
+      </Card>
+    );
+  }
+
+  if (!images.enabled) {
+    return (
+      <Card>
+        <EmptyState title={t('jobs.images.failed_title')} body={t('jobs.images.disabled')} />
+      </Card>
+    );
+  }
+
+  if (!carouselProduced) {
+    return (
+      <Card>
+        <EmptyState
+          title={t('jobs.images.needs_carousel')}
+          body={t('jobs.images.needs_carousel_body')}
+          action={
+            <Button variant="secondary" onClick={onOpenCarousel}>
+              <Icon name="carousel" size={16} />
+              {t('jobs.preview.tabs.carousel')}
+            </Button>
+          }
+        />
+      </Card>
+    );
+  }
+
+  if (images.state === 'rendering') {
+    return (
+      <Card>
+        <EmptyState title={t('jobs.images.rendering')} body={t('jobs.images.rendering_body')} />
+      </Card>
+    );
+  }
+
+  const create = (
+    <Button loading={busy} onClick={onBuild} variant={images.produced ? 'secondary' : 'primary'}>
+      <Icon name="images" size={16} />
+      {t(images.produced ? 'jobs.images.recreate' : 'jobs.images.create')}
+    </Button>
+  );
+
+  if (!images.produced) {
+    return (
+      <Card>
+        <EmptyState
+          title={images.state === 'failed' ? t('jobs.images.failed_title') : t('jobs.images.empty')}
+          body={images.state === 'failed' && images.error !== null ? images.error : t('jobs.images.empty_body')}
+          action={create}
+        />
+      </Card>
+    );
+  }
+
+  return (
+    <Card
+      title={t('jobs.preview.tabs.images')}
+      action={
+        <div className="flex flex-wrap items-center gap-2">
+          {create}
+          <a
+            href={`/panel/jobs/${job.id}/download/image_set`}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-[15px] font-medium whitespace-nowrap text-white transition-colors duration-150 hover:bg-primary-hover"
+          >
+            <Icon name="upload" size={16} className="rotate-180" />
+            {t('jobs.images.download')}
+          </a>
+        </div>
+      }
+    >
+      {images.state === 'failed' && images.error !== null ? (
+        <p className="mb-4 rounded-lg border border-danger/35 bg-danger/8 px-4 py-3 text-[14px] text-danger">
+          {images.error}
+        </p>
+      ) : null}
+
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {images.urls.map((url, position) => (
+          <li key={url}>
+            <img
+              src={url}
+              loading="lazy"
+              alt={t('jobs.images.slide_alt', { slide: toArabicIndic(position + 1) })}
+              className="aspect-[4/5] w-full rounded-md border border-border"
+            />
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-4 text-[13px] text-text-faint">{t('jobs.images.ready_hint')}</p>
+    </Card>
   );
 }
 

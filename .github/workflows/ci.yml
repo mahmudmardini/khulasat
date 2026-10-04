@@ -67,6 +67,16 @@ jobs:
       - name: تنسيق PHP
         run: ./vendor/bin/pint --test
 
+      # الشاشاتُ تُختبر بقالب Inertia الحقيقي، وهو يقرأ ملفّ Vite المبنيّ. ومن
+      # غيره يسقط كلُّ اختبارٍ يفتح شاشة («Vite manifest not found») — T-202.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: بناء الواجهة للاختبارات
+        run: npm ci && npm run build
+
       - name: الاختبارات
         run: php artisan test
 

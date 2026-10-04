@@ -184,6 +184,7 @@ return [
 
     // قوالبُ كاروسيل الجهة — T-173.
     'carousel_designs' => [
+        'generate_action' => 'The system reads your identity and proposes three new templates. Your approved templates stay as they are.',
         'title' => 'Carousel templates',
         'hint' => 'Templates for your slide images in your identity: the system reads your name, palette and logo, proposes three templates, and you approve the ones that fit. The first one you approve becomes the default for every carousel after it.',
         'cost_hint' => 'Generating templates calls the model but does not count against your summary quota. Approving them and creating images with them is free.',
@@ -213,5 +214,16 @@ return [
         'prompt_using_default' => 'Using the default',
         'choose' => 'Template',
         'default_original' => 'Original template',
+    ],
+
+    // إقرارُ الكلفة — T-203.
+    'cost' => [
+        'title' => 'Cost',
+        'regeneration' => 'One of this summary\'s regenerations is used: :left of :limit left after it.',
+        'regeneration_none' => 'This summary\'s regenerations are used up (:limit of :limit).',
+        'monthly' => 'One summary from your monthly quota is used: :left of :limit left after it.',
+        'monthly_none' => 'You have reached your monthly quota (:limit of :limit).',
+        'free' => 'Not counted against your quota or regenerations.',
+        'model' => 'Calls an AI model.',
     ],
 ];

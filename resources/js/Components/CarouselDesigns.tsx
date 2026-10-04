@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { router, usePage, usePoll } from '@inertiajs/react';
 import { Button } from '@/Components/Button';
 import { Card } from '@/Components/Card';
+import { CostConfirm } from '@/Components/CostConfirm';
 import { Icon } from '@/Components/Icon';
 import { t } from '@/lib/i18n';
 
@@ -33,6 +34,8 @@ interface Props {
  */
 export function CarouselDesigns({ designs, base, prop, manage, locked = false }: Props) {
   const [busy, setBusy] = useState(false);
+  // التوليدُ نداءٌ للنموذج، فيُقرّ بخطوةٍ ثانية — T-203.
+  const [confirming, setConfirming] = useState(false);
   const error = usePage<{ errors: Record<string, string> }>().props.errors?.[prop];
   const generating = designs.status.state === 'generating';
 
@@ -71,7 +74,7 @@ export function CarouselDesigns({ designs, base, prop, manage, locked = false }:
           <Button
             variant={hasAny ? 'secondary' : 'primary'}
             loading={busy || generating}
-            onClick={() => act('post', base)}
+            onClick={() => setConfirming(true)}
           >
             <Icon name="images" size={16} />
             {t(hasAny ? 'common.carousel_designs.regenerate' : 'common.carousel_designs.generate')}
@@ -172,6 +175,18 @@ export function CarouselDesigns({ designs, base, prop, manage, locked = false }:
       {!hasAny && !generating && !locked ? (
         <p className="mt-4 text-[13.5px] text-text-faint">{t('common.carousel_designs.empty')}</p>
       ) : null}
+
+      <CostConfirm
+        open={confirming}
+        title={t(hasAny ? 'common.carousel_designs.regenerate' : 'common.carousel_designs.generate')}
+        action={t('common.carousel_designs.generate_action')}
+        confirmLabel={t(hasAny ? 'common.carousel_designs.regenerate' : 'common.carousel_designs.generate')}
+        onConfirm={() => {
+          setConfirming(false);
+          act('post', base);
+        }}
+        onCancel={() => setConfirming(false)}
+      />
     </Card>
   );
 }

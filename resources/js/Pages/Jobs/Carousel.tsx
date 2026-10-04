@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { Button } from '@/Components/Button';
 import { Card } from '@/Components/Card';
+import { CostConfirm } from '@/Components/CostConfirm';
 import { EmptyState } from '@/Components/EmptyState';
 import { Icon } from '@/Components/Icon';
 import { SlideBody } from '@/Components/SlideBody';
@@ -45,6 +46,9 @@ interface Props {
 export default function Carousel({ job, carousel }: Props) {
   const { errors } = usePage<SharedProps & { errors: Record<string, string> }>().props;
   const [busy, setBusy] = useState(false);
+  // بناءُ النصّ وإعادةُ صياغته نداءان للنموذج، فيُقرّان بخطوةٍ ثانية — T-203.
+  // وإعادةُ الرسم من النصّ المحفوظ مجّانيّةٌ بلا نافذة.
+  const [confirming, setConfirming] = useState<'build' | 'recondense' | null>(null);
 
   function build(recondense: boolean): void {
     setBusy(true);
@@ -98,7 +102,7 @@ export default function Carousel({ job, carousel }: Props) {
               title={t('jobs.carousel.empty')}
               body={t('jobs.carousel.empty_body')}
               action={
-                <Button loading={busy} onClick={() => build(false)}>
+                <Button loading={busy} onClick={() => setConfirming('build')}>
                   <Icon name="grid" size={16} />
                   {t('jobs.carousel.build')}
                 </Button>
@@ -106,20 +110,35 @@ export default function Carousel({ job, carousel }: Props) {
             />
           </Card>
         ) : (
-          <Deck job={job} carousel={carousel} busy={busy} onBuild={build} />
+          <Deck job={job} carousel={carousel} busy={busy} onBuild={build} onRecondense={() => setConfirming('recondense')} />
         )}
       </div>
+
+      <CostConfirm
+        open={confirming !== null}
+        title={t(confirming === 'recondense' ? 'jobs.carousel.recondense' : 'jobs.carousel.build')}
+        action={t(confirming === 'recondense' ? 'jobs.carousel.recondense_action' : 'jobs.carousel.build_action')}
+        replaces={confirming === 'recondense'}
+        confirmLabel={t(confirming === 'recondense' ? 'jobs.carousel.recondense' : 'jobs.carousel.build')}
+        onConfirm={() => {
+          const recondense = confirming === 'recondense';
+          setConfirming(null);
+          build(recondense);
+        }}
+        onCancel={() => setConfirming(null)}
+      />
     </AppLayout>
   );
 }
 
 function Deck({
-  job, carousel, busy, onBuild,
+  job, carousel, busy, onBuild, onRecondense,
 }: {
   job: Props['job'];
   carousel: NonNullable<Props['carousel']>;
   busy: boolean;
   onBuild: (recondense: boolean) => void;
+  onRecondense: () => void;
 }) {
   return (
     <>
@@ -161,11 +180,7 @@ function Deck({
         <Button
           variant="ghost"
           loading={busy}
-          onClick={() => {
-            if (window.confirm(t('jobs.carousel.recondense_confirm'))) {
-              onBuild(true);
-            }
-          }}
+          onClick={onRecondense}
         >
           {t('jobs.carousel.recondense')}
         </Button>

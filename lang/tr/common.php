@@ -174,6 +174,7 @@ return [
 
     // قوالبُ كاروسيل الجهة — T-173.
     'carousel_designs' => [
+        'generate_action' => 'Sistem kimliğinizi okur ve üç yeni şablon önerir. Onaylı şablonlarınız olduğu gibi kalır.',
         'title' => 'Karusel şablonları',
         'hint' => 'Kimliğinize uygun slayt görseli şablonları: sistem adınızı, paletinizi ve logonuzu okuyup üç şablon önerir, size uyanları onaylarsınız. İlk onayladığınız, sonraki her karuselin varsayılanı olur.',
         'cost_hint' => 'Şablon üretmek modeli çağırır ama özet kotanızdan düşülmez. Onaylamak ve onlarla görsel oluşturmak ücretsizdir.',
@@ -203,5 +204,16 @@ return [
         'prompt_using_default' => 'Varsayılan kullanılıyor',
         'choose' => 'Şablon',
         'default_original' => 'Özgün şablon',
+    ],
+
+    // إقرارُ الكلفة — T-203.
+    'cost' => [
+        'title' => 'Maliyet',
+        'regeneration' => 'Bu özetin yeniden üretim haklarından biri kullanılır: sonrasında :limit hakkın :left tanesi kalır.',
+        'regeneration_none' => 'Bu özetin yeniden üretim hakları bitti (:limit / :limit).',
+        'monthly' => 'Aylık kotanızdan bir özet kullanılır: sonrasında :limit özetin :left tanesi kalır.',
+        'monthly_none' => 'Aylık kotanıza ulaştınız (:limit / :limit).',
+        'free' => 'Kotanızdan ve yeniden üretim haklarınızdan düşülmez.',
+        'model' => 'Bir yapay zekâ modelini çağırır.',
     ],
 ];

@@ -4,7 +4,7 @@ import { AppLayout } from '@/Layouts/AppLayout';
 import { AddLocale, type LocaleAddition } from '@/Components/AddLocale';
 import { Button } from '@/Components/Button';
 import { Card } from '@/Components/Card';
-import { ConfirmDialog } from '@/Components/ConfirmDialog';
+import { CostConfirm } from '@/Components/CostConfirm';
 import { DeviceFrame, type Device } from '@/Components/DeviceFrame';
 import { EmptyState } from '@/Components/EmptyState';
 import { Icon, type IconName } from '@/Components/Icon';
@@ -102,6 +102,8 @@ export default function Preview({
   const [tab, setTab] = useState<TabKey>('page');
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // بناءُ الشرائح نداءٌ للنموذج، فيُقرّ بخطوةٍ ثانية — T-203.
+  const [confirmingCarousel, setConfirmingCarousel] = useState(false);
 
   const left = Math.max(0, regenerations.limit - regenerations.used);
 
@@ -201,7 +203,7 @@ export default function Preview({
                 images={outputs.images}
                 rich={rich_outputs}
                 busy={busy}
-                onBuild={buildCarousel}
+                onBuild={() => setConfirmingCarousel(true)}
                 onBuildImages={buildImages}
               />
             ) : null}
@@ -213,7 +215,7 @@ export default function Preview({
               canPublish={can_publish}
               busy={busy}
               left={left}
-              onBuildCarousel={buildCarousel}
+              onBuildCarousel={() => setConfirmingCarousel(true)}
               onRegenerate={() => setConfirming(true)}
             />
           </>
@@ -244,15 +246,31 @@ export default function Preview({
         )}
       </div>
 
-      <ConfirmDialog
+      {/*
+        **إقرارُ الكلفة بأرقامها** — T-203: إعادةٌ من إعادات الملخّص، وملخّصٌ من
+        الحصّة الشهرية (كلاهما يُحتسب)، وكم يبقى بعد كلٍّ منهما.
+      */}
+      <CostConfirm
         open={confirming}
         title={t('jobs.preview.regenerate')}
-        consequence={toArabicIndic(
-          `${t('jobs.preview.regenerate_confirm')} ${t('jobs.preview.regenerate_left', { count: left })}`,
-        )}
+        action={t('jobs.preview.regenerate_action')}
+        regenerations={regenerations}
+        monthly
         confirmLabel={t('jobs.preview.regenerate')}
         onConfirm={regenerate}
         onCancel={() => setConfirming(false)}
+      />
+
+      <CostConfirm
+        open={confirmingCarousel}
+        title={t('jobs.preview.add_carousel')}
+        action={t('jobs.carousel.build_action')}
+        confirmLabel={t('jobs.preview.add_carousel')}
+        onConfirm={() => {
+          setConfirmingCarousel(false);
+          buildCarousel();
+        }}
+        onCancel={() => setConfirmingCarousel(false)}
       />
     </AppLayout>
   );

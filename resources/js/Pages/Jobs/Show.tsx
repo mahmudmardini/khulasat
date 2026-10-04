@@ -3,6 +3,7 @@ import { router } from '@inertiajs/react';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { Button } from '@/Components/Button';
 import { ConfirmDialog } from '@/Components/ConfirmDialog';
+import { CostConfirm } from '@/Components/CostConfirm';
 import { ErrorState } from '@/Components/ErrorState';
 import { Icon, type IconName } from '@/Components/Icon';
 import { KnowledgeNuggets, type Nugget } from '@/Components/KnowledgeNuggets';
@@ -39,6 +40,8 @@ interface Job {
   error: string | null;
   /** أيصلح تبديلُ المصدر هذا الخطأ فعلاً؟ — T-91. */
   error_offers_change_source: boolean;
+  /** إعاداتُ هذا الملخّص — T-203، لإقرار «أعد المحاولة» بأرقامها. */
+  regenerations: { used: number; limit: number };
   /** أُزيلت الصفحة من النشر، ونصّ ما يُبلَّغ به صاحبها — T-28. */
   takedown: { reason: string; at: string } | null;
   /** ما أُنتج حتى الآن — T-83. */
@@ -65,6 +68,8 @@ const POLL_MS = 3000;
 export default function Show({ job: initial }: { job: Job }) {
   const [job, setJob] = useState(initial);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  // «أعد المحاولة» إعادةُ توليدٍ تُحتسب — T-203، فتُقرّ بخطوةٍ ثانية.
+  const [confirmingRetry, setConfirmingRetry] = useState(false);
   const alert = useCompletionAlert(`job-${initial.id}`);
 
   const running = !job.settled && !job.needs_review;
@@ -126,6 +131,7 @@ export default function Show({ job: initial }: { job: Job }) {
         <Outcome
           job={job}
           onCancelClick={() => setConfirmingCancel(true)}
+          onRetryClick={() => setConfirmingRetry(true)}
           notify={
             <NotifyToggle
               enabled={alert.enabled}
@@ -163,6 +169,20 @@ export default function Show({ job: initial }: { job: Job }) {
           </aside>
         </div>
       </div>
+
+      <CostConfirm
+        open={confirmingRetry}
+        title={t('common.actions.retry')}
+        action={t('jobs.follow.retry_action')}
+        regenerations={job.regenerations}
+        monthly
+        confirmLabel={t('common.actions.retry')}
+        onConfirm={() => {
+          setConfirmingRetry(false);
+          router.post(`/panel/jobs/${job.id}/retry`);
+        }}
+        onCancel={() => setConfirmingRetry(false)}
+      />
 
       <ConfirmDialog
         open={confirmingCancel}
@@ -276,7 +296,14 @@ function Tally({ job, elapsed }: { job: Job; elapsed: number | null }) {
  * وكانت هذه البطاقات مبعثرةً أسفل الصفحة تحت المراحل، فمن فتح شاشةً
  * حالُها `needs_review` رأى سبعَ مراحل قبل أن يرى أنّ الوقوف عنده هو.
  */
-function Outcome({ job, onCancelClick, notify }: { job: Job; onCancelClick: () => void; notify: ReactNode }) {
+function Outcome({
+  job, onCancelClick, onRetryClick, notify,
+}: {
+  job: Job;
+  onCancelClick: () => void;
+  onRetryClick: () => void;
+  notify: ReactNode;
+}) {
   /*
    * ★ **الإزالة تُقال قبل كلّ شيء** — T-28.
    *
@@ -311,7 +338,7 @@ function Outcome({ job, onCancelClick, notify }: { job: Job; onCancelClick: () =
     return (
       <ErrorState
         message={job.error}
-        onRetry={() => router.post(`/panel/jobs/${job.id}/retry`)}
+        onRetry={onRetryClick}
         secondary={
           job.error_offers_change_source ? (
             <Button variant="ghost" onClick={() => router.visit('/panel/lectures/create')}>

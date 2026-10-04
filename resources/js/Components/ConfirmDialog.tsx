@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { t } from '@/lib/i18n';
 import { Button } from './Button';
 
@@ -13,6 +13,10 @@ interface Props {
    * التراجع» ولا يُلوَّن الزرّ خطراً: التأكيدُ المبالغ فيه يُعلّم تجاهلَ التأكيد.
    */
   reversible?: boolean;
+  /** تفصيلٌ تحت العاقبة — كلفةُ الفعل في {@see CostConfirm} (T-203). */
+  details?: ReactNode;
+  /** فعلٌ لا يُمضى الآن (حدٌّ استُنفد): يبقى «إلغاء» وحده نافذاً. */
+  blocked?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -28,7 +32,7 @@ interface Props {
  * لقارئ الشاشة — كلّه بلا شيفرة نكتبها ونخطئ فيها.
  */
 export function ConfirmDialog({
-  open, title, consequence, confirmLabel, reversible = false, onConfirm, onCancel,
+  open, title, consequence, confirmLabel, reversible = false, details, blocked = false, onConfirm, onCancel,
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
 
@@ -56,10 +60,11 @@ export function ConfirmDialog({
         <h2 className="text-[17px] font-semibold">{title ?? t('common.confirm.title')}</h2>
 
         <p className="mt-2 text-[15px] leading-relaxed text-text-muted">{consequence}</p>
+        {details}
         {reversible ? null : <p className="mt-1 text-[14px] text-danger">{t('common.confirm.irreversible')}</p>}
 
         <div className="mt-5 flex gap-2">
-          <Button variant={reversible ? 'primary' : 'danger'} onClick={onConfirm}>
+          <Button variant={reversible ? 'primary' : 'danger'} onClick={onConfirm} disabled={blocked}>
             {confirmLabel ?? t('common.actions.confirm')}
           </Button>
           <Button variant="secondary" onClick={onCancel}>

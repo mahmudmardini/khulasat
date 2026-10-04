@@ -3,6 +3,7 @@ import { useForm, usePage } from '@inertiajs/react';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { Button } from '@/Components/Button';
 import { Card } from '@/Components/Card';
+import { CostConfirm } from '@/Components/CostConfirm';
 import { DeviceFrame, type Device } from '@/Components/DeviceFrame';
 import { ErrorState } from '@/Components/ErrorState';
 import { FieldGroup } from '@/Components/FieldGroup';
@@ -216,6 +217,9 @@ export default function Create({
   const uploadAbort = useRef<AbortController | null>(null);
   const uploadId = useRef<string | null>(null);
   const submitted = useRef(false);
+  // الإرسالُ يستهلك ملخّصاً من الحصّة، فيُقرّ بخطوةٍ ثانية بأرقامها — T-203.
+  const formRef = useRef<HTMLFormElement>(null);
+  const [confirmingCreate, setConfirmingCreate] = useState(false);
 
   const dropUpload = () => {
     uploadAbort.current?.abort();
@@ -315,40 +319,51 @@ export default function Create({
       : null,
   ].filter((line): line is string => line !== null).join(' ');
 
+  function send(): void {
+    const formEl = formRef.current;
+
+    if (formEl === null) {
+      return;
+    }
+
+    // ملفٌّ رُفع ثمّ اختير مصدرٌ آخر: لا يبقى على الخادم بلا مهمّة.
+    if (kind !== 'upload' && upload.phase !== 'idle') {
+      dropUpload();
+    }
+
+    // أُرسل: فلا تحذف المغادرةُ رفعاً صار ملكَ المهمّة.
+    submitted.current = true;
+    form.post('/panel/lectures', {
+      /*
+       * خطأٌ كالتكرار (confirm_duplicate) يظهر أعلى الخطوة الأولى،
+       * وزرّ الإرسال في أسفلها أو في الشريط السفليّ على الجوال — فيضغط
+       * المستخدم ولا يرى شيئاً تغيّر حتى يُعيد التمرير للأعلى بنفسه.
+       * فنُمرّر إلى أوّل حقلٍ فيه خطأ بعد أن يرسمه React.
+       */
+      onError: (errors) => {
+        submitted.current = false;
+        const firstKey = Object.keys(errors)[0];
+        if (firstKey === undefined) return;
+        requestAnimationFrame(() => {
+          const target = formEl.querySelector<HTMLElement>(`[name="${firstKey}"]`);
+          target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          target?.focus?.();
+        });
+      },
+    });
+  }
+
   return (
     <AppLayout title={t('lectures.create.title')} description={t('lectures.create.subtitle')}>
       <form
+        ref={formRef}
         onSubmit={(event) => {
           event.preventDefault();
-          const formEl = event.currentTarget;
-          // ملفٌّ رُفع ثمّ اختير مصدرٌ آخر: لا يبقى على الخادم بلا مهمّة.
-          if (kind !== 'upload' && upload.phase !== 'idle') {
-            dropUpload();
-          }
-
-          // أُرسل: فلا تحذف المغادرةُ رفعاً صار ملكَ المهمّة.
-          submitted.current = true;
-          form.post('/panel/lectures', {
-            /*
-             * خطأٌ كالتكرار (confirm_duplicate) يظهر أعلى الخطوة الأولى،
-             * وزرّ الإرسال في أسفلها أو في الشريط السفليّ على الجوال — فيضغط
-             * المستخدم ولا يرى شيئاً تغيّر حتى يُعيد التمرير للأعلى بنفسه.
-             * فنُمرّر إلى أوّل حقلٍ فيه خطأ بعد أن يرسمه React.
-             */
-            onError: (errors) => {
-              submitted.current = false;
-              const firstKey = Object.keys(errors)[0];
-              if (firstKey === undefined) return;
-              requestAnimationFrame(() => {
-                const target = formEl.querySelector<HTMLElement>(`[name="${firstKey}"]`);
-                target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                target?.focus?.();
-              });
-            },
-          });
+          setConfirmingCreate(true);
         }}
         className="pb-2"
       >
+
         {/*
           عمودان على الحاسوب: الخطواتُ، و«ملخّص طلبك» ثابتاً بجانبها — يقول
           ما سيُنتج وكم يكلّف قبل الضغط. وعلى الجوال عمودٌ واحد وشريطٌ سفليّ.
@@ -977,6 +992,18 @@ export default function Create({
         palette={form.data.palette}
         venueMode={form.data.venue_mode}
         onClose={() => setPreviewOpen(false)}
+      />
+      <CostConfirm
+        open={confirmingCreate}
+        title={t('lectures.create.submit')}
+        action={t('lectures.create.confirm_action')}
+        monthly
+        confirmLabel={t('lectures.create.submit')}
+        onConfirm={() => {
+          setConfirmingCreate(false);
+          send();
+        }}
+        onCancel={() => setConfirmingCreate(false)}
       />
     </AppLayout>
   );

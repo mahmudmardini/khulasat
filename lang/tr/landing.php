@@ -38,6 +38,7 @@ return [
         'anatomy' => 'Ne alırsınız',
         'how' => 'Nasıl çalışır',
         'verify' => 'Doğruluk',
+        'tool' => 'Doğrulama aracı',
         'audience' => 'Kimler için',
         'faq' => 'Sorular',
         'login' => 'Giriş',
@@ -157,6 +158,12 @@ return [
         ],
         'note_title' => 'Durduğumuz bir çizgi',
         'note_body' => 'Metni kaynağına dayandırırız; hadisin sıhhati hakkında hüküm vermeyiz. Bir aletle bir müftü arasındaki fark, platformun hiçbir sayfada ve hiçbir ekranda aşmadığı bir çizgidir.',
+        'tool' => [
+            'title' => 'Kendi metninizde deneyin',
+            'body' => 'Herhangi bir makaleyi, hutbeyi ya da elden ele dolaşan bir mesajı yapıştırın. İçindeki her ayet ve hadisi çıkarır, her birini kaynağıyla eşleştirir ve her hükmün gerekçesini belirtiriz. Hesap gerekmez.',
+            'cta' => 'Doğrulama aracını açın',
+            'arabic_only' => 'Araç Arapçadır ve Arapça metinler üzerinde çalışır.',
+        ],
     ],
 
     'audience' => [

@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { AppLayout } from '@/Layouts/AppLayout';
 import { Button } from '@/Components/Button';
 import { Card } from '@/Components/Card';
 import { ConfirmDialog } from '@/Components/ConfirmDialog';
@@ -41,19 +40,19 @@ interface QuizData {
   questions: Question[];
 }
 
-interface Props {
+export interface QuizTab {
   job: { id: number; title: string | null; published: boolean; pending_evidence: number; has_structure: boolean };
   can_edit: boolean;
   quiz: QuizData | null;
 }
 
 /**
- * اختبارُ الفهم في اللوحة — T-195.
+ * اختبارُ الفهم في اللوحة — T-195. تبويبٌ في المعاينة بجوار الصفحة والشرائح.
  *
  * **والمحاولاتُ تُقفل البنية**: بعد أوّل محاولةٍ يُعطَّل الحذفُ وإعادةُ
  * التوليد ويُقال السبب، ويبقى تعديلُ النصّ — بالحارس نفسه في الخادم.
  */
-export default function Quiz({ job, can_edit, quiz }: Props) {
+export function QuizManager({ job, can_edit, quiz }: QuizTab) {
   const { errors } = usePage<SharedProps & { errors: Record<string, string> }>().props;
   const [busy, setBusy] = useState(false);
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
@@ -64,128 +63,126 @@ export default function Quiz({ job, can_edit, quiz }: Props) {
   }
 
   return (
-    <AppLayout title={t('quiz.panel.title')} description={job.title ?? undefined}>
-      <div className="flex flex-col gap-5">
-        {errors.quiz !== undefined ? (
-          <p role="alert" className="rounded-lg border border-danger/35 bg-danger/8 px-4 py-3 text-[14px] text-danger">
-            {errors.quiz}
-          </p>
-        ) : null}
+    <div className="flex flex-col gap-5">
+      {errors.quiz !== undefined ? (
+        <p role="alert" className="rounded-lg border border-danger/35 bg-danger/8 px-4 py-3 text-[14px] text-danger">
+          {errors.quiz}
+        </p>
+      ) : null}
 
-        {job.pending_evidence > 0 && quiz === null ? (
-          <Card>
-            <EmptyState
-              title={t('quiz.panel.blocked')}
-              body={t('quiz.panel.blocked_body')}
-              action={
-                <Button onClick={() => router.visit(`/panel/jobs/${job.id}/review`)}>
-                  {t('jobs.follow.review_cta')}
+      {job.pending_evidence > 0 && quiz === null ? (
+        <Card>
+          <EmptyState
+            title={t('quiz.panel.blocked')}
+            body={t('quiz.panel.blocked_body')}
+            action={
+              <Button onClick={() => router.visit(`/panel/jobs/${job.id}/review`)}>
+                {t('jobs.follow.review_cta')}
+              </Button>
+            }
+          />
+        </Card>
+      ) : quiz === null ? (
+        <Card>
+          <EmptyState
+            title={t('quiz.panel.empty')}
+            body={job.has_structure ? t('quiz.panel.empty_body') : t('quiz.panel.no_structure')}
+            action={
+              can_edit && job.has_structure ? (
+                <Button loading={busy} onClick={build}>
+                  <Icon name="check" size={16} />
+                  {t('quiz.panel.build')}
                 </Button>
-              }
-            />
-          </Card>
-        ) : quiz === null ? (
-          <Card>
-            <EmptyState
-              title={t('quiz.panel.empty')}
-              body={job.has_structure ? t('quiz.panel.empty_body') : t('quiz.panel.no_structure')}
-              action={
-                can_edit && job.has_structure ? (
-                  <Button loading={busy} onClick={build}>
-                    <Icon name="check" size={16} />
-                    {t('quiz.panel.build')}
-                  </Button>
-                ) : undefined
-              }
-            />
-          </Card>
-        ) : quiz.state === 'failed' ? (
-          <Card>
-            <EmptyState
-              title={t('quiz.panel.failed_title')}
-              body={t('quiz.panel.failed_body')}
-              action={
-                can_edit ? (
-                  <Button loading={busy} onClick={build}>
-                    {t('quiz.panel.retry')}
-                  </Button>
-                ) : undefined
-              }
-            />
-          </Card>
-        ) : (
-          <>
-            <LinkCard job={job} quiz={quiz} />
-            {can_edit ? <Settings job={job} quiz={quiz} /> : (
-              <p className="text-[13px] text-text-muted">{t('quiz.panel.read_only')}</p>
-            )}
+              ) : undefined
+            }
+          />
+        </Card>
+      ) : quiz.state === 'failed' ? (
+        <Card>
+          <EmptyState
+            title={t('quiz.panel.failed_title')}
+            body={t('quiz.panel.failed_body')}
+            action={
+              can_edit ? (
+                <Button loading={busy} onClick={build}>
+                  {t('quiz.panel.retry')}
+                </Button>
+              ) : undefined
+            }
+          />
+        </Card>
+      ) : (
+        <>
+          <LinkCard job={job} quiz={quiz} />
+          {can_edit ? <Settings job={job} quiz={quiz} /> : (
+            <p className="text-[13px] text-text-muted">{t('quiz.panel.read_only')}</p>
+          )}
 
-            {quiz.attempts > 0 ? (
-              <p className="flex items-start gap-2 rounded-lg border border-border bg-surface-alt px-4 py-3 text-[13.5px] text-text-muted">
-                <Icon name="shield" size={16} className="mt-0.5 shrink-0" />
-                {t('quiz.panel.locked_note')}
-              </p>
-            ) : null}
+          {quiz.attempts > 0 ? (
+            <p className="flex items-start gap-2 rounded-lg border border-border bg-surface-alt px-4 py-3 text-[13.5px] text-text-muted">
+              <Icon name="shield" size={16} className="mt-0.5 shrink-0" />
+              {t('quiz.panel.locked_note')}
+            </p>
+          ) : null}
 
-            <Card
-              title={t('quiz.panel.questions_title')}
-              action={
-                <span className="nums-tabular text-[13px] text-text-muted">
-                  {toArabicIndic(quiz.questions.length)}
-                </span>
-              }
-            >
-              <ol className="flex flex-col gap-4">
-                {quiz.questions.map((question) => (
-                  <QuestionCard
-                    key={question.id}
-                    job={job}
-                    question={question}
-                    canEdit={can_edit}
-                    locked={quiz.attempts > 0}
-                    error={errors[`question.${question.id}`]}
-                  />
-                ))}
-              </ol>
-            </Card>
+          <Card
+            title={t('quiz.panel.questions_title')}
+            action={
+              <span className="nums-tabular text-[13px] text-text-muted">
+                {toArabicIndic(quiz.questions.length)}
+              </span>
+            }
+          >
+            <ol className="flex flex-col gap-4">
+              {quiz.questions.map((question) => (
+                <QuestionCard
+                  key={question.id}
+                  job={job}
+                  question={question}
+                  canEdit={can_edit}
+                  locked={quiz.attempts > 0}
+                  error={errors[`question.${question.id}`]}
+                />
+              ))}
+            </ol>
+          </Card>
 
-            {can_edit ? (
-              <div className="flex flex-col gap-1.5">
-                <div>
-                  <Button
-                    variant="ghost"
-                    loading={busy}
-                    disabled={quiz.attempts > 0}
-                    onClick={() => setConfirmRegenerate(true)}
-                  >
-                    {t('quiz.panel.regenerate')}
-                  </Button>
-                </div>
-                <span className="text-[13px] text-text-faint">
-                  {quiz.attempts > 0 ? t('quiz.panel.locked_regenerate') : t('quiz.panel.regenerate_consequence')}
-                </span>
+          {can_edit ? (
+            <div className="flex flex-col gap-1.5">
+              <div>
+                <Button
+                  variant="ghost"
+                  loading={busy}
+                  disabled={quiz.attempts > 0}
+                  onClick={() => setConfirmRegenerate(true)}
+                >
+                  {t('quiz.panel.regenerate')}
+                </Button>
               </div>
-            ) : null}
+              <span className="text-[13px] text-text-faint">
+                {quiz.attempts > 0 ? t('quiz.panel.locked_regenerate') : t('quiz.panel.regenerate_consequence')}
+              </span>
+            </div>
+          ) : null}
 
-            <ConfirmDialog
-              open={confirmRegenerate}
-              title={t('quiz.panel.regenerate')}
-              consequence={t('quiz.panel.regenerate_consequence')}
-              confirmLabel={t('quiz.panel.regenerate')}
-              onConfirm={() => {
-                setConfirmRegenerate(false);
-                build();
-              }}
-              onCancel={() => setConfirmRegenerate(false)}
-            />
-          </>
-        )}
-      </div>
-    </AppLayout>
+          <ConfirmDialog
+            open={confirmRegenerate}
+            title={t('quiz.panel.regenerate')}
+            consequence={t('quiz.panel.regenerate_consequence')}
+            confirmLabel={t('quiz.panel.regenerate')}
+            onConfirm={() => {
+              setConfirmRegenerate(false);
+              build();
+            }}
+            onCancel={() => setConfirmRegenerate(false)}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
-function LinkCard({ job, quiz }: { job: Props['job']; quiz: QuizData }) {
+function LinkCard({ job, quiz }: { job: QuizTab['job']; quiz: QuizData }) {
   const [copied, setCopied] = useState(false);
 
   async function copy(): Promise<void> {
@@ -237,7 +234,7 @@ function LinkCard({ job, quiz }: { job: Props['job']; quiz: QuizData }) {
   );
 }
 
-function Settings({ job, quiz }: { job: Props['job']; quiz: QuizData }) {
+function Settings({ job, quiz }: { job: QuizTab['job']; quiz: QuizData }) {
   function save(data: Partial<Pick<QuizData, 'status' | 'feedback'>>): void {
     router.put(`/panel/jobs/${job.id}/quiz`, data, { preserveScroll: true });
   }
@@ -281,7 +278,7 @@ function Settings({ job, quiz }: { job: Props['job']; quiz: QuizData }) {
 function QuestionCard({
   job, question, canEdit, locked, error,
 }: {
-  job: Props['job'];
+  job: QuizTab['job'];
   question: Question;
   canEdit: boolean;
   locked: boolean;

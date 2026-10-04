@@ -65,7 +65,7 @@ export default function Show({ quiz, report }: Props) {
             {t('quiz.reports.export')}
           </a>
           <Link
-            href={`/panel/jobs/${quiz.job_id}/quiz`}
+            href={`/panel/jobs/${quiz.job_id}/preview?tab=quiz`}
             className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[14px] font-medium text-primary transition-colors hover:bg-surface-alt"
           >
             <Icon name="pen" size={16} />

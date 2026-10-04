@@ -304,13 +304,19 @@ it('يردّ ٤٠٤ على رمزٍ مجهول وعلى اختبارٍ تعذّ�
  * ─── اللوحة ───────────────────────────────────────────────────────────
  */
 
-it('يعرض صفحة الاختبار في اللوحة', function (): void {
+it('يعرض الاختبارَ تبويباً في المعاينة، ويحيل مسارَه القديم إليه', function (): void {
     quizFor($this->job);
 
     $this->actingAs($this->owner)
         ->get(route('jobs.quiz', $this->job))
+        ->assertRedirect(route('jobs.preview', ['job' => $this->job, 'tab' => 'quiz']));
+
+    $this->actingAs($this->owner)
+        ->get(route('jobs.preview', $this->job))
         ->assertOk()
-        ->assertInertia(fn ($page) => $page->component('Jobs/Quiz')->has('quiz.questions', 5));
+        ->assertInertia(fn ($page) => $page->component('Jobs/Preview')
+            ->has('quiz.quiz.questions', 5)
+            ->where('quiz.can_edit', true));
 });
 
 it('يمرّ تعديلُ النصّ بالحارس', function (): void {

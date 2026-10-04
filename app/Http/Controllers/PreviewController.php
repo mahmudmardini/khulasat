@@ -111,6 +111,8 @@ class PreviewController extends Controller
         $pending = $job->pendingEvidenceCount();
 
         return [
+            // تبويبُ الاختبار — T-195، بجوار الصفحة والشرائح.
+            'quiz' => app(JobQuizController::class)->props($request, $job),
             'job' => [
                 'id' => $job->id,
                 'title' => $job->lecture?->title_ar,

@@ -8,6 +8,7 @@ import { CostConfirm } from '@/Components/CostConfirm';
 import { DeviceFrame, type Device } from '@/Components/DeviceFrame';
 import { EmptyState } from '@/Components/EmptyState';
 import { Icon, type IconName } from '@/Components/Icon';
+import { QuizManager, type QuizTab } from '@/Components/QuizManager';
 import { Segmented } from '@/Components/Segmented';
 import { SlideBody } from '@/Components/SlideBody';
 import { SlideCarousel } from '@/Components/SlideCarousel';
@@ -76,10 +77,21 @@ interface Props {
   locales: LocaleOption[];
   primary_locale: string;
   locale_additions: LocaleAddition[];
+  quiz: QuizTab;
 }
 
-// تبويبان — T-199: الصورُ في تبويب الشرائح تحت عارضها، لا تبويباً ثالثاً يكرّرها.
-type TabKey = 'page' | 'carousel';
+// T-199: الصورُ في تبويب الشرائح تحت عارضها، لا تبويباً يكرّرها. والاختبارُ
+// تبويبٌ ثالث — بطلب @HasanSiwi، ٤ أكتوبر ٢٠٢٦، وكان شاشةً منفصلة لا يُعثر عليها.
+type TabKey = 'page' | 'carousel' | 'quiz';
+
+const TAB_KEYS: TabKey[] = ['page', 'carousel', 'quiz'];
+
+/** التبويبُ في الرابط (`?tab=quiz`) — فيعود إليه الحفظُ ورابطُ «أدِر الاختبار». */
+function tabFromUrl(): TabKey {
+  const requested = new URLSearchParams(window.location.search).get('tab');
+
+  return TAB_KEYS.find((key) => key === requested) ?? 'page';
+}
 
 const DEVICE_ICONS: Record<Device, IconName> = { mobile: 'phone', tablet: 'tablet', desktop: 'desktop' };
 const DEVICE_KEY = 'khulasah.preview.device';
@@ -98,10 +110,22 @@ const DEVICE_KEY = 'khulasah.preview.device';
  * - نسخُ الرابط والمشاركة وPDF وHTML **فوق المعاينة**، لا خلف شاشةٍ أخرى.
  */
 export default function Preview({
-  job, outputs, regenerations, can_publish, rich_outputs, locales, primary_locale, locale_additions,
+  job, outputs, regenerations, can_publish, rich_outputs, locales, primary_locale, locale_additions, quiz,
 }: Props) {
   const { errors } = usePage<SharedProps & { errors: Record<string, string> }>().props;
-  const [tab, setTab] = useState<TabKey>('page');
+  const [tab, setTab] = useState<TabKey>(tabFromUrl);
+
+  function changeTab(next: TabKey): void {
+    setTab(next);
+    const url = new URL(window.location.href);
+    if (next === 'page') {
+      url.searchParams.delete('tab');
+    } else {
+      url.searchParams.set('tab', next);
+    }
+    // `replaceState` وحده لا يكفي مع Inertia: سجلُّها يحمل الرابطَ أيضاً.
+    router.replace({ url: url.pathname + url.search, preserveScroll: true, preserveState: true });
+  }
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   // بناءُ الشرائح نداءٌ للنموذج، فيُقرّ بخطوةٍ ثانية — T-203.
@@ -182,7 +206,8 @@ export default function Preview({
       }
     >
       <div className="flex flex-col gap-5">
-        {Object.entries(errors).map(([key, message]) => (
+        {/* أخطاءُ الاختبار تُعرض في تبويبه، عند سؤالها. */}
+        {Object.entries(errors).filter(([key]) => key !== 'quiz' && !key.startsWith('question.')).map(([key, message]) => (
           <p
             key={key}
             className="rounded-lg border border-danger/35 bg-danger/8 px-4 py-3 text-[14px] text-danger"
@@ -195,10 +220,11 @@ export default function Preview({
           <>
             <Tabs
               active={tab}
-              onChange={setTab}
+              onChange={changeTab}
               produced={{
                 page: outputs.page.produced,
                 carousel: outputs.carousel.produced,
+                quiz: quiz.quiz?.state === 'ready',
               }}
             />
 
@@ -222,6 +248,7 @@ export default function Preview({
                 onRecondense={() => setConfirmingRecondense(true)}
               />
             ) : null}
+            {tab === 'quiz' ? <QuizManager {...quiz} /> : null}
 
             <Actions
               job={job}
@@ -337,6 +364,7 @@ function Tabs({
   const tabs: Array<{ key: TabKey; icon: IconName }> = [
     { key: 'page', icon: 'page' },
     { key: 'carousel', icon: 'carousel' },
+    { key: 'quiz', icon: 'check' },
   ];
 
   return (

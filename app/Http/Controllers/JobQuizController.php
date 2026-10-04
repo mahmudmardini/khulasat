@@ -18,8 +18,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
-use Inertia\Inertia;
-use Inertia\Response as InertiaResponse;
 use RuntimeException;
 use Throwable;
 
@@ -35,12 +33,26 @@ use Throwable;
  */
 class JobQuizController extends Controller
 {
-    public function show(Request $request, SummaryJob $job): InertiaResponse
+    /**
+     * الاختبارُ تبويبٌ في المعاينة بجوار الصفحة والشرائح — بطلب @HasanSiwi،
+     * ٤ أكتوبر ٢٠٢٦. فالمسارُ القديم يحيل إليه، ولا تنكسر روابطُه المحفوظة.
+     */
+    public function show(SummaryJob $job): RedirectResponse
+    {
+        return redirect()->route('jobs.preview', ['job' => $job, 'tab' => 'quiz']);
+    }
+
+    /**
+     * ما يحتاجه تبويبُ الاختبار — يُضمّ إلى حمولة المعاينة.
+     *
+     * @return array<string, mixed>
+     */
+    public function props(Request $request, SummaryJob $job): array
     {
         $job->loadMissing('lecture');
         $quiz = $job->quiz()->first();
 
-        return Inertia::render('Jobs/Quiz', [
+        return [
             'job' => [
                 'id' => $job->id,
                 'title' => $job->structure_json['title_ar'] ?? $job->lecture?->title_ar,
@@ -50,7 +62,7 @@ class JobQuizController extends Controller
             ],
             'can_edit' => $request->user()?->role->canPublish() ?? false,
             'quiz' => $quiz === null ? null : $this->payload($job, $quiz),
-        ]);
+        ];
     }
 
     /** يبني الاختبار أو يعيد توليده — نداءٌ مدفوع، ولا يُحتسب من الحصّة. */

@@ -425,7 +425,7 @@ function QuizCard({ jobId, quiz }: { jobId: number; quiz: Props['quiz'] }) {
               {t('quiz.reports.report')}
             </Link>
           ) : null}
-          <Link href={`/panel/jobs/${jobId}/quiz`} className={linkClass}>
+          <Link href={`/panel/jobs/${jobId}/preview?tab=quiz`} className={linkClass}>
             <Icon name="check" size={16} />
             {quiz === null ? t('quiz.panel.build') : t('quiz.panel.manage')}
           </Link>

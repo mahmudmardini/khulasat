@@ -15,6 +15,7 @@ use App\Services\Render\PageRenderer;
 use App\Support\Publish\LocaleAdditions;
 use App\Support\Render\BrandKit;
 use App\Support\Render\ContentObject;
+use App\Support\Render\SlideDeck;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Inertia\Inertia;
@@ -125,7 +126,8 @@ class PreviewController extends Controller
                     'produced' => $carousel !== null,
                     'public_url' => $carousel?->public_url,
                     'slides' => $meta['slides'] ?? [],
-                    'plain_text' => $meta['plain_text'] ?? '',
+                    // من الشرائح لا من المحفوظ — انظر `carouselText()`.
+                    'plain_text' => SlideDeck::fromArray($meta['slides'] ?? [])->toPlainText(),
                 ],
                 /*
                  * حزمة الصور عارضٌ مؤجَّل (T-20) — §8-أ. **وتُعرض معطَّلةً
@@ -219,10 +221,15 @@ class PreviewController extends Controller
             ->contents;
     }
 
+    /**
+     * نصّ الشرائح للنسخ والتنزيل — يُبنى من الشرائح المحفوظة لا من
+     * `plain_text` المحفوظ معها (T-172): ما حُفظ قبل إسقاط «۝» من النصّ
+     * المنسوخ يحملها، والشرائحُ هي الأصل.
+     */
     private function carouselText(SummaryJob $job): ?string
     {
         $meta = (array) ($this->output($job, OutputType::Carousel)?->meta ?? []);
-        $text = (string) ($meta['plain_text'] ?? '');
+        $text = SlideDeck::fromArray($meta['slides'] ?? [])->toPlainText();
 
         return $text === '' ? null : $text;
     }

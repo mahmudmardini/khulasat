@@ -21,6 +21,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Model\FakeModelGateway;
 use App\Services\Quota\SpendCap;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 /*
@@ -88,10 +89,10 @@ function quizRenderingReady(SummaryJob $job): SummaryJob
     return $job->refresh();
 }
 
-function startQuiz(Quiz $quiz, string $name = 'اسم المشارك', string $ip = '203.0.113.7'): QuizAttempt
+function startQuiz(Quiz $quiz, string $ip = '203.0.113.7'): QuizAttempt
 {
     test()->withServerVariables(['REMOTE_ADDR' => $ip])
-        ->post(route('quiz.start', $quiz->token), ['name' => $name])
+        ->post(route('quiz.start', $quiz->token))
         ->assertRedirect();
 
     return QuizAttempt::acrossTenants()->latest('id')->firstOrFail();
@@ -165,28 +166,34 @@ it('لا يُظهر الزرّ في المعاينة', function (): void {
  * ─── المشارك ──────────────────────────────────────────────────────────
  */
 
-it('يبدأ المشارك باسمه وحده، ويُحفظ اسمُه وIP', function (): void {
+/*
+ * ★ **لا يُطلب من المشارك شيءٌ ولا يُحفظ عنه شيء** — قرار @HasanSiwi، ٤ أكتوبر
+ * ٢٠٢٦: لا اسمَ ولا IP.
+ */
+it('يبدأ المشارك بلا اسمٍ ولا حقل، ولا يُحفظ عنه شيء', function (): void {
     $quiz = quizFor($this->job);
 
     $this->get(route('quiz.show', $quiz->token))
         ->assertOk()
         ->assertSee('عنوان الدرس')
-        ->assertSee('عنوان IP');
+        ->assertDontSee('name="name"', false)
+        ->assertDontSee('عنوان IP');
 
-    $attempt = startQuiz($quiz, '  اسمُ   المشارك  ');
+    startQuiz($quiz);
 
-    expect($attempt->participant_name)->toBe('اسمُ المشارك')
-        ->and($attempt->ip)->toBe('203.0.113.7')
-        ->and($attempt->attempt_number)->toBe(1)
-        ->and($quiz->refresh()->opens_count)->toBe(1);
+    expect(QuizAttempt::acrossTenants()->count())->toBe(1)
+        ->and($quiz->refresh()->opens_count)->toBe(1)
+        ->and(Schema::getColumnListing('quiz_attempts'))->not->toContain('ip')
+        ->and(Schema::getColumnListing('quiz_attempts'))->not->toContain('participant_name');
 });
 
-it('يرفض اسماً فارغاً', function (): void {
+it('يُري اسمَ الملقي بلا لقبه', function (): void {
+    $this->lecture->forceFill(['speaker_title' => 'لقبٌ ما'])->save();
     $quiz = quizFor($this->job);
 
-    $this->post(route('quiz.start', $quiz->token), ['name' => ' '])->assertSessionHasErrors('name');
-
-    expect(QuizAttempt::acrossTenants()->count())->toBe(0);
+    $this->get(route('quiz.show', $quiz->token))
+        ->assertSee('اسم الملقي')
+        ->assertDontSee('لقبٌ ما');
 });
 
 it('لا يحمل HTML الأسئلة ولا ردُّ الحفظ الجوابَ الصحيح في وضع «في الآخر»', function (): void {
@@ -215,7 +222,7 @@ it('يُري لفظ الشاهد من مصدره', function (): void {
 
 it('يصحّح على الخادم، ويهنّئ عند ٨٠٪ فأكثر وحدها', function (bool $allRight): void {
     $quiz = quizFor($this->job);
-    $attempt = startQuiz($quiz, 'اسم المشارك');
+    $attempt = startQuiz($quiz);
 
     $answers = [];
     foreach ($quiz->questions()->get() as $question) {
@@ -231,7 +238,7 @@ it('يصحّح على الخادم، ويهنّئ عند ٨٠٪ فأكثر وح�
         ->and($attempt->finished_at)->not->toBeNull()
         ->and($attempt->duration_seconds)->toBeGreaterThanOrEqual(0);
 
-    $result = $this->get(route('quiz.result', [$quiz->token, $attempt->token]))->assertOk()->assertSee('اسم المشارك');
+    $result = $this->get(route('quiz.result', [$quiz->token, $attempt->token]))->assertOk()->assertSee('عنوان الدرس');
 
     $allRight ? $result->assertSee('مبارك') : $result->assertDontSee('مبارك');
 })->with(['كلّه صحيح' => true, 'كلّه خطأ' => false]);
@@ -251,27 +258,24 @@ it('يكشف الحكم بعد كلّ سؤال في وضع «بعد كلّ سؤ�
         ->assertStatus(409);
 });
 
-it('يزيد رقمَ المحاولة لـ(الاسم + IP) نفسه', function (): void {
+/*
+ * **ستّون بدءاً في الساعة من عنوانٍ واحد** — المشاركون بلا أسماء، وحلقةٌ على
+ * شبكةٍ واحدة تخرج بعنوانٍ واحد. وما بعد الستّين يُردّ.
+ */
+it('يردّ البدء الحادي والستّين في الساعة من IP واحد بـ429', function (): void {
     $quiz = quizFor($this->job);
 
-    startQuiz($quiz, 'محمّد');
-    $second = startQuiz($quiz, 'محمد');
-    $other = startQuiz($quiz, 'محمد', '198.51.100.4');
-
-    expect($second->attempt_number)->toBe(2)
-        ->and($other->attempt_number)->toBe(1);
-});
-
-it('يردّ المحاولة الحادية عشرة في الساعة من IP واحد بـ429', function (): void {
-    $quiz = quizFor($this->job);
-
-    foreach (range(1, 10) as $i) {
-        startQuiz($quiz, "مشارك {$i}");
+    foreach (range(1, 60) as $i) {
+        startQuiz($quiz);
     }
 
     $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.7'])
-        ->post(route('quiz.start', $quiz->token), ['name' => 'مشارك آخر'])
+        ->post(route('quiz.start', $quiz->token))
         ->assertStatus(429);
+
+    startQuiz($quiz, '198.51.100.4');
+
+    expect(QuizAttempt::acrossTenants()->count())->toBe(61);
 });
 
 it('يُغلق الاختبار مع إغلاقه ومع إلغاء نشر ملخّصه', function (string $how): void {
@@ -282,7 +286,7 @@ it('يُغلق الاختبار مع إغلاقه ومع إلغاء نشر مل�
         : $this->job->forceFill(['published_at' => null])->save();
 
     $this->get(route('quiz.show', $quiz->token))->assertOk()->assertSee('هذا الاختبار مغلق');
-    $this->post(route('quiz.start', $quiz->token), ['name' => 'اسم المشارك'])->assertRedirect();
+    $this->post(route('quiz.start', $quiz->token))->assertRedirect();
 
     expect(QuizAttempt::acrossTenants()->count())->toBe(0);
 })->with(['closed', 'unpublished']);

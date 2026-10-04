@@ -13,7 +13,6 @@ use App\Models\Quiz;
 use App\Models\QuizAnswer;
 use App\Models\QuizAttempt;
 use App\Models\QuizQuestion;
-use App\Support\Arabic;
 use App\Support\Render\BrandKit;
 use App\Support\Render\RenderedEvidence;
 use Illuminate\Http\JsonResponse;
@@ -23,7 +22,10 @@ use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
- * صفحاتُ المشارك في الاختبار — T-195. **عامّةٌ بلا دخول**: يكفي الاسم.
+ * صفحاتُ المشارك في الاختبار — T-195. **عامّةٌ بلا دخول ولا اسم**.
+ *
+ * ★ **ولا يُطلب من المشارك شيءٌ ولا يُحفظ عنه شيء** — قرار @HasanSiwi، ٤
+ * أكتوبر ٢٠٢٦: لا اسمَ ولا IP. فالمحاولةُ إجاباتٌ ودرجةٌ ووقت، بلا صاحب.
  *
  * ★ **والخادمُ يصحّح، والمتصفّحُ لا يعرف الصحيح قبل أوانه.** فلا يحمل HTML
  * صفحة الأسئلة الجوابَ الصحيح، ولا ردُّ حفظ الجواب في وضع «في الآخر». ومن فتح
@@ -36,12 +38,7 @@ use Illuminate\View\View;
  */
 class QuizController extends Controller
 {
-    /** أقلُّ الاسم وأكثرُه — حرفان يكفيان لاسمٍ عربيّ، وستّون لاسمٍ رباعيّ. */
-    private const NAME_MIN = 2;
-
-    private const NAME_MAX = 60;
-
-    public function show(Request $request, string $token): View
+    public function show(string $token): View
     {
         $quiz = $this->quiz($token);
         $available = $this->available($quiz);
@@ -54,11 +51,11 @@ class QuizController extends Controller
         return view('quiz.start', $this->frame($quiz) + [
             'available' => $available,
             'count' => $quiz->questions()->count(),
-            'name' => mb_substr((string) $request->query('name', ''), 0, self::NAME_MAX),
         ]);
     }
 
-    public function start(Request $request, string $token): RedirectResponse
+    /** «ابدأ» — بلا حقلٍ واحد. والمحاولةُ تُعرف برمزها في رابطها وحده. */
+    public function start(string $token): RedirectResponse
     {
         $quiz = $this->quiz($token);
 
@@ -66,31 +63,10 @@ class QuizController extends Controller
             return redirect()->route('quiz.show', $quiz->token);
         }
 
-        $name = self::cleanName((string) $request->input('name', ''));
-
-        if (mb_strlen($name) < self::NAME_MIN || mb_strlen($name) > self::NAME_MAX) {
-            return back()
-                ->withInput(['name' => $name])
-                ->withErrors(['name' => trans('quiz.public.name_invalid', ['min' => self::NAME_MIN, 'max' => self::NAME_MAX], 'ar')]);
-        }
-
-        $key = self::nameKey($name);
-        $ip = (string) $request->ip();
-
-        $previous = QuizAttempt::acrossTenants()
-            ->where('quiz_id', $quiz->id)
-            ->where('name_key', $key)
-            ->where('ip', $ip)
-            ->count();
-
         $attempt = QuizAttempt::acrossTenants()->create([
             'tenant_id' => $quiz->tenant_id,
             'quiz_id' => $quiz->id,
             'token' => Str::random(40),
-            'participant_name' => $name,
-            'name_key' => $key,
-            'ip' => $ip,
-            'attempt_number' => $previous + 1,
             'total' => $quiz->questions()->count(),
             'started_at' => now(),
         ]);
@@ -240,7 +216,8 @@ class QuizController extends Controller
             'brand' => $brand,
             'palette' => $brand->palette,
             'title' => (string) ($job->structure_json['title_ar'] ?? $lecture?->title_ar ?? ''),
-            'speaker' => trim(($lecture?->speaker_title ?? '').' '.($lecture?->speaker_name ?? '')) ?: null,
+            // اسمُ الملقي بلا لقبه — قرار @HasanSiwi، ٤ أكتوبر ٢٠٢٦.
+            'speaker' => trim((string) ($lecture?->speaker_name ?? '')) ?: null,
             'summaryUrl' => $job->published_at === null ? null : Output::acrossTenants()
                 ->where('summary_job_id', $job->id)
                 ->where('type', OutputType::Page->value)
@@ -315,20 +292,5 @@ class QuizController extends Controller
             'correct_index' => $question->correct_index,
             'explanation' => $question->explanation,
         ];
-    }
-
-    /** اسمٌ نظيف: بلا وسومٍ ولا محارفِ تحكّم، ومسافاتُه مفردة. */
-    public static function cleanName(string $name): string
-    {
-        $name = strip_tags($name);
-        $name = preg_replace('/[\p{Cc}\p{Cf}]+/u', ' ', $name) ?? $name;
-
-        return trim(preg_replace('/\s+/u', ' ', $name) ?? $name);
-    }
-
-    /** مفتاحُ الاسم بعد التطبيع — «محمّد» و«محمد» مشاركٌ واحد. */
-    public static function nameKey(string $name): string
-    {
-        return mb_substr(mb_strtolower(Arabic::normalize($name)), 0, self::NAME_MAX);
     }
 }

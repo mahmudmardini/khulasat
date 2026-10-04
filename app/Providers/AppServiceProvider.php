@@ -108,16 +108,24 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * حدودُ الاختبار العامّ — T-195. **مفتاحُها IP والاختبار معاً**: حدٌّ
-     * بـIP وحده يُشرك الاختبارات كلَّها في عدّادٍ واحد، فيُردّ مشاركٌ عن
-     * اختبارٍ ثانٍ لأنّه أعاد الأوّل.
+     * بـIP وحده يُشرك الاختبارات كلَّها في عدّادٍ واحد.
+     *
+     * ★ **وستّون بدءاً في الساعة لا عشرة**: المشاركون بلا أسماء، وحلقةٌ في
+     * مسجدٍ على شبكةٍ واحدة يخرج أهلُها كلُّهم بعنوانٍ واحد.
+     *
+     * ★★ **والعنوانُ لا يُحفظ** (قرار @HasanSiwi): يدخل مفتاحَ العدّاد المؤقّت
+     * مُجزَّأً (hash)، ولا يبلغ جدولاً.
      */
     private function quizLimits(): void
     {
-        RateLimiter::for('quiz-start', static fn (Request $request): Limit => Limit::perHour(10)
-            ->by('quiz-start|'.$request->ip().'|'.$request->route('token')));
+        $key = static fn (string $name, Request $request): string => $name.'|'
+            .hash('sha256', $request->ip().'|'.$request->route('token'));
 
-        RateLimiter::for('quiz-answer', static fn (Request $request): Limit => Limit::perMinute(120)
-            ->by('quiz-answer|'.$request->ip().'|'.$request->route('token')));
+        RateLimiter::for('quiz-start', static fn (Request $request): Limit => Limit::perHour(60)
+            ->by($key('quiz-start', $request)));
+
+        RateLimiter::for('quiz-answer', static fn (Request $request): Limit => Limit::perMinute(240)
+            ->by($key('quiz-answer', $request)));
     }
 
     /**

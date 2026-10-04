@@ -50,17 +50,7 @@ body.kq{
   padding:28px 22px;
 }
 .kq-lead{margin:0 0 20px;font:400 19px/1.7 "Amiri",serif;text-align:center}
-.kq-label{display:block;font:700 20px/1.5 "Amiri",serif;margin-bottom:8px}
-.kq-input{
-  width:100%;min-height:54px;padding:10px 16px;
-  font:500 18px/1.4 "IBM Plex Sans Arabic",sans-serif;color:var(--ink);
-  background:#fff;border:1.5px solid var(--paper-3);border-radius:12px;
-}
-.kq-input:focus{outline:none;border-color:var(--emerald);box-shadow:0 0 0 3px color-mix(in srgb, var(--emerald) 22%, transparent)}
-.kq-input[aria-invalid="true"]{border-color:var(--clay)}
-.kq-hint{margin:6px 0 0;font-size:14px;color:var(--ink-soft)}
-.kq-error{margin:6px 0 0;font-size:14px;font-weight:600;color:var(--clay)}
-.kq-form .kq-btn{width:100%;margin-top:22px}
+.kq-form .kq-btn{width:100%;margin-top:4px}
 .kq-privacy{margin:18px 0 0;padding-top:14px;border-top:1px solid var(--rule);font-size:13.5px;color:var(--ink-soft);text-align:center}
 .kq-closed-title{margin:0 0 8px;text-align:center;font:700 26px/1.4 "Amiri",serif;color:var(--emerald-deep)}
 .kq-start > .kq-btn{display:flex}
@@ -164,8 +154,7 @@ body.kq{
 }
 .kq-card-hail{margin:0;font:700 clamp(30px,8.5vw,42px)/1.3 "Aref Ruqaa",serif;color:var(--gold)}
 .kq-card.is-honoured .kq-card-hail{font-size:clamp(38px,11vw,56px)}
-.kq-card-name{margin:6px 0 0;font:700 clamp(28px,8.5vw,44px)/1.35 "Aref Ruqaa",serif;color:var(--emerald-deep);overflow-wrap:anywhere}
-.kq-card-line{margin:8px auto 0;max-width:34ch;font-size:15.5px;color:var(--ink-soft)}
+.kq-card-line{margin:10px auto 0;max-width:34ch;font-size:15.5px;color:var(--ink-soft)}
 
 .kq-medal{position:relative;width:176px;height:176px;margin:22px auto 8px}
 .kq-medal svg{width:100%;height:100%;display:block;overflow:visible}

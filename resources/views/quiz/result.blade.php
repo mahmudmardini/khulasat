@@ -1,9 +1,9 @@
 {{--
   بطاقةُ النتيجة ومراجعةُ الأسئلة — T-195.
 
-  **البطاقةُ باسم المشارك وعنوان الدرس وهوية الجهة** (قرار @HasanSiwi):
-  تهنئةٌ عند ٨٠٪ فأكثر، وما دونه سطرٌ يدلّ على المراجعة بلا تقريع. وتُطبع
-  صفحةً مرتّبة، فتُحفظ أو تُرسل.
+  **البطاقةُ بعنوان الدرس وهوية الجهة، بلا اسم** (قرار @HasanSiwi): المشاركُ
+  لا يُسأل عن شيء. تهنئةٌ عند ٨٠٪ فأكثر، وما دونه سطرٌ يدلّ على المراجعة بلا
+  تقريع. وتُطبع صفحةً مرتّبة، فتُحفظ أو تُرسل.
 --}}
 @extends('quiz.layout', ['pageTitle' => trans('quiz.public.result_title', [], 'ar')])
 
@@ -13,10 +13,9 @@
 @php($ring = 2 * M_PI * 52)
 
 @section('content')
-<section class="kq-card {{ $honoured ? 'is-honoured' : '' }}" aria-labelledby="kq-card-name">
+<section class="kq-card {{ $honoured ? 'is-honoured' : '' }}" aria-labelledby="kq-card-hail">
   <div class="kq-card-frame">
-    <p class="kq-card-hail">{{ $honoured ? trans('quiz.public.hail_honoured', [], 'ar') : trans('quiz.public.hail_done', [], 'ar') }}</p>
-    <p class="kq-card-name" id="kq-card-name">{{ $attempt->participant_name }}</p>
+    <p class="kq-card-hail" id="kq-card-hail">{{ $honoured ? trans('quiz.public.hail_honoured', [], 'ar') : trans('quiz.public.hail_done', [], 'ar') }}</p>
     <p class="kq-card-line">{{ $honoured ? trans('quiz.public.line_honoured', [], 'ar') : trans('quiz.public.line_done', [], 'ar') }}</p>
 
     <div class="kq-medal" role="img" aria-label="{{ trans('quiz.public.score_aria', ['score' => $attempt->score, 'total' => $attempt->total], 'ar') }}">
@@ -34,9 +33,6 @@
     <dl class="kq-card-facts">
       <div><dt>{{ trans('quiz.public.fact_percent', [], 'ar') }}</dt><dd>{{ $digits($percent) }}٪</dd></div>
       <div><dt>{{ trans('quiz.public.fact_time', [], 'ar') }}</dt><dd>{{ $duration }}</dd></div>
-      @if ($attempt->attempt_number > 1)
-        <div><dt>{{ trans('quiz.public.fact_attempt', [], 'ar') }}</dt><dd>{{ $digits($attempt->attempt_number) }}</dd></div>
-      @endif
     </dl>
 
     <p class="kq-card-lesson">{{ trans('quiz.public.card_lesson', ['title' => $title], 'ar') }}</p>
@@ -52,7 +48,7 @@
 </section>
 
 <div class="kq-actions">
-  <a class="kq-btn kq-btn-primary" href="{{ route('quiz.show', [$quiz->token, 'name' => $attempt->participant_name]) }}">{{ trans('quiz.public.retake', [], 'ar') }}</a>
+  <a class="kq-btn kq-btn-primary" href="{{ route('quiz.show', $quiz->token) }}">{{ trans('quiz.public.retake', [], 'ar') }}</a>
   @if ($summaryUrl)
     <a class="kq-btn" href="{{ $summaryUrl }}">{{ trans('quiz.public.read_summary', [], 'ar') }}</a>
   @endif

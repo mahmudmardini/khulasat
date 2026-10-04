@@ -229,7 +229,7 @@ return [
             'page_always' => 'Her zaman üretilir',
             'carousel' => 'Instagram karuseli',
             'quiz' => 'Anlama testi',
-            'quiz_hint' => 'Paylaşılabilir bir bağlantıda 5–10 soru. Katılımcılar adlarıyla girer, sonuçları panelinizde görürsünüz.',
+            'quiz_hint' => 'Paylaşılabilir bir bağlantıda 5–10 soru. Herkes ad vermeden çözebilir; genel sonuçları panelinizde görürsünüz.',
             'images' => 'Görsel paketi',
             'locked' => 'Kurum paketi ve üzerinde.',
             /*

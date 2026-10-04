@@ -10,10 +10,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * محاولةُ مشاركٍ — T-195. يدخل باسمه وحده، ويُحفظ معه IP (قرار @HasanSiwi).
- *
- * **و`attempt_number` لـ(الاسم + IP)**: الأولى وحدها تدخل الإحصاءات (T-201)،
- * وما بعدها يُعرض في جدول المشاركين.
+ * محاولةٌ في اختبار — T-195. **بلا صاحب**: لا اسمَ ولا IP (قرار @HasanSiwi،
+ * ٤ أكتوبر ٢٠٢٦). إجاباتٌ ودرجةٌ ووقت، تدخل التقارير مجموعةً (T-201).
  */
 class QuizAttempt extends Model
 {
@@ -26,7 +24,6 @@ class QuizAttempt extends Model
     protected function casts(): array
     {
         return [
-            'attempt_number' => 'integer',
             'total' => 'integer',
             'score' => 'integer',
             'duration_seconds' => 'integer',

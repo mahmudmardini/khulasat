@@ -15,9 +15,9 @@ return new class extends Migration
      * صفٌّ يشير إليه. فنسبةُ صواب السؤال وأكثرُ خياراته الخاطئة استعلامٌ
      * مجمَّع، لا فكُّ JSON لكلّ محاولةٍ في الذاكرة.
      *
-     * **وIP يُحفظ كاملاً** — قرار @HasanSiwi، ٤ أكتوبر ٢٠٢٦: يراه صاحبُ
-     * الملخّص في التقارير، وبه تُعرف إعادةُ المحاولة من الجهاز نفسه. وصفحةُ
-     * البداية تقول ذلك للمشارك قبل أن يكتب اسمه.
+     * ★ **ولا شيءَ عن المشارك** — قرار @HasanSiwi، ٤ أكتوبر ٢٠٢٦: يبدأ
+     * الاختبارَ أيُّ أحدٍ بلا اسمٍ ولا بريد، **ولا يُحفظ عنوانُ IP**. فالمحاولةُ
+     * صفٌّ بلا صاحب: إجاباتٌ ودرجةٌ ووقت، تُجمع في التقارير ولا تُعرض فرادى.
      */
     public function up(): void
     {
@@ -81,14 +81,8 @@ return new class extends Migration
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();
             $table->foreignId('quiz_id')->constrained()->cascadeOnDelete();
 
-            // رمزُ المحاولة في رابطها — فلا كوكي ولا حساب.
+            // رمزُ المحاولة في رابطها — فلا حسابَ ولا اسم.
             $table->string('token', 40)->unique();
-
-            $table->string('participant_name', 60);
-            // الاسمُ بعد التطبيع: به وبـIP تُعرف إعادةُ المحاولة.
-            $table->string('name_key', 60);
-            $table->string('ip', 45);
-            $table->unsignedSmallInteger('attempt_number')->default(1);
 
             $table->unsignedSmallInteger('total');
             $table->unsignedSmallInteger('score')->nullable();
@@ -98,8 +92,6 @@ return new class extends Migration
             $table->unsignedInteger('duration_seconds')->nullable();
 
             $table->index(['quiz_id', 'finished_at']);
-            $table->index(['quiz_id', 'name_key', 'ip']);
-            $table->index(['quiz_id', 'ip', 'started_at']);
         });
 
         Schema::create('quiz_answers', function (Blueprint $table): void {

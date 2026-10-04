@@ -231,7 +231,7 @@ return [
             'page_always' => 'Always produced',
             'carousel' => 'Instagram carousel',
             'quiz' => 'Comprehension quiz',
-            'quiz_hint' => '5 to 10 questions at a shareable link. Participants enter with their name, and you see the results in your panel.',
+            'quiz_hint' => '5 to 10 questions at a shareable link. Anyone can take it without a name, and you see the overall results in your panel.',
             'images' => 'Image pack',
             'locked' => 'On the Institution plan and above.',
             /*

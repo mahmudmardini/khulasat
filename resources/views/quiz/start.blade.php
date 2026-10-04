@@ -1,4 +1,4 @@
-{{-- صفحةُ البداية — خانةٌ واحدة: الاسم. T-195. --}}
+{{-- صفحةُ البداية — T-195. **بلا حقلٍ واحد**: زرٌّ يبدأ، ولا يُطلب من المشارك شيء. --}}
 @extends('quiz.layout')
 
 @section('content')
@@ -9,18 +9,8 @@
   @if ($available)
     <p class="kq-lead">{{ trans('quiz.public.lead', ['count' => $n, 'minutes' => $minutes], 'ar') }}</p>
 
-    <form method="post" action="{{ route('quiz.start', $quiz->token) }}" class="kq-form" novalidate>
+    <form method="post" action="{{ route('quiz.start', $quiz->token) }}" class="kq-form">
       @csrf
-      <label for="kq-name" class="kq-label">{{ trans('quiz.public.name_label', [], 'ar') }}</label>
-      <input id="kq-name" name="name" type="text" class="kq-input" required minlength="2" maxlength="60"
-             autocomplete="name" value="{{ old('name', $name) }}"
-             aria-describedby="kq-name-hint{{ $errors->has('name') ? ' kq-name-error' : '' }}"
-             @if ($errors->has('name')) aria-invalid="true" @endif>
-      <p id="kq-name-hint" class="kq-hint">{{ trans('quiz.public.name_hint', [], 'ar') }}</p>
-      @error('name')
-        <p id="kq-name-error" class="kq-error" role="alert">{{ $message }}</p>
-      @enderror
-
       <button type="submit" class="kq-btn kq-btn-primary">{{ trans('quiz.public.start', [], 'ar') }}</button>
     </form>
 

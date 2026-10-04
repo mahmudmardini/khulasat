@@ -217,6 +217,46 @@ it('لا ينزّل شرائح لم تُبنَ ولا نوعاً لا يعرفه
     $this->actingAs($this->user)->get("/panel/jobs/{$job->id}/download/anything")->assertNotFound();
 });
 
+// T-172 — رقمُ الآية في النصّ المنسوخ بلا «۝»، ولو حُفظ المخرَج قبل القرار.
+it('ينسخ رقم الآية بلا علامتها ويُبقيها في الشريحة', function (): void {
+    $job = readyJob();
+    $ayah = '﴿وَمَا خَلَقْتُ الْجِنَّ وَالْإِنْسَ إِلَّا لِيَعْبُدُونِ ۝٥٦﴾';
+
+    // مخرَجٌ حُفظ قبل T-172: نصُّه المنسوخ يحمل العلامة.
+    Output::query()->create([
+        'summary_job_id' => $job->id,
+        'tenant_id' => $job->tenant_id,
+        'type' => OutputType::Carousel->value,
+        'locale' => Locale::Ar->value,
+        'format' => OutputType::Carousel->format()->value,
+        'storage_path' => 'tenant-a/slug/carousel.html',
+        'rendered_at' => now(),
+        'renderer_version' => '1.1.0',
+        'meta' => [
+            'slides' => [[
+                'index' => 1, 'kind' => 'ayah', 'heading' => 'الآية المفتاح', 'body' => $ayah,
+                'source_line' => 'الذاريات · ٥٦', 'anchored' => true,
+            ]],
+            'plain_text' => "١. الآية المفتاح\n{$ayah}\nالذاريات · ٥٦",
+        ],
+    ]);
+
+    $copied = fn (string $text): bool => str_contains($text, 'لِيَعْبُدُونِ ٥٦﴾') && ! str_contains($text, '۝');
+
+    $download = $this->actingAs($this->user)->get("/panel/jobs/{$job->id}/download/carousel")->assertOk();
+    expect($copied($download->streamedContent()))->toBeTrue();
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$job->id}/preview")
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('outputs.carousel.plain_text', $copied)
+            // **والشريحةُ تبقى بعلامتها**: تُرسم بخطّ المصحف لا تُنسخ.
+            ->where('outputs.carousel.slides.0.body', $ayah)
+        );
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$job->id}/carousel")
+        ->assertInertia(fn (Assert $page): Assert => $page->where('carousel.plain_text', $copied));
+});
+
 // ── ٢. النشر ─────────────────────────────────────────────────────
 
 it('ينشر من الشاشة فيرفع الملفّ ويعطي الرابط', function (): void {

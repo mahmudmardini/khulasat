@@ -100,6 +100,18 @@ final class AyahText
         );
     }
 
+    /**
+     * النصّ كما يُلصق في منشور — T-172، قرارُ ٤ أكتوبر ٢٠٢٦.
+     *
+     * **الرقمُ يبقى والعلامةُ تسقط**: «۝٥٦» تصير «٥٦». فالنصّ المنسوخ يُلصق
+     * في إنستغرام وأمثاله، ولا يُضمن لخطّه أن يعرف «۝»، فيرسمها دائرةً منقّطة
+     * والرقمُ خارجها. والقوسان باقيان، والشذرةُ لا علامة فيها أصلاً.
+     */
+    public static function forPost(string $text): string
+    {
+        return (string) preg_replace(self::MARKED, '$1', $text);
+    }
+
     private static function mark(int|string $number): string
     {
         return self::MARK.Arabic::toArabicIndicDigits((string) $number);

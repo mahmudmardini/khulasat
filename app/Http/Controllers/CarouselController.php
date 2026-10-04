@@ -9,6 +9,7 @@ use App\Enums\OutputType;
 use App\Exceptions\ModelCallFailed;
 use App\Models\Output;
 use App\Models\SummaryJob;
+use App\Support\Render\SlideDeck;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -99,7 +100,9 @@ class CarouselController extends Controller
             ],
             'carousel' => $output === null ? null : [
                 'slides' => $meta['slides'] ?? [],
-                'plain_text' => $meta['plain_text'] ?? '',
+                // من الشرائح لا من `plain_text` المحفوظ: ما حُفظ قبل T-172
+                // يحمل «۝» في النصّ المنسوخ، والشرائحُ هي الأصل.
+                'plain_text' => SlideDeck::fromArray($meta['slides'] ?? [])->toPlainText(),
                 'public_url' => $output->public_url,
                 'rendered_at' => $output->rendered_at?->toIso8601String(),
                 'renderer_version' => $output->renderer_version,

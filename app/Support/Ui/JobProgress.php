@@ -9,6 +9,7 @@ use App\Actions\Summary\ResumeFailedJob;
 use App\Domain\Summary\JobState;
 use App\Models\SummaryJob;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 
 /**
  * Projects a job's state onto the screens' vocabulary — SCREENS.md §الحالات و§4.
@@ -103,7 +104,7 @@ final class JobProgress
         $index = self::indexOf($stalled ?? $current);
         [$entered, $left] = self::timeline($job);
 
-        return array_values(array_map(
+        $steps = array_values(array_map(
             static function (array $step, int $position) use ($current, $index, $entered, $left): array {
                 $state = self::stateOf($position, $index, $current);
                 $value = $step['state']->value;
@@ -128,6 +129,61 @@ final class JobProgress
             self::STEPS,
             array_keys(self::STEPS),
         ));
+
+        return self::withQuiz($job, $steps);
+    }
+
+    /**
+     * «بناء الاختبار» — T-195، ظاهرةً لمن طلبه.
+     *
+     * ★ **ليست حالةً في الآلة**: يُبنى في أوّل الإخراج قبل رسم الصفحة،
+     * فتُقرأ حالُها من الاختبار نفسه. ما دام يُبنى فالإخراجُ لم يبدأ بعد في
+     * العرض، وإلّا ظهرت مرحلتان جاريتان معاً.
+     *
+     * **وتعذُّرُه لا يُسقط الملخّص** — فيُعلَّم «توقّفت» عنده وحده، والصفحةُ
+     * تمضي إلى النشر.
+     *
+     * @param  list<array{key: string, state: string, started_at: string|null, seconds: int|null, skipped: bool}>  $steps
+     * @return list<array{key: string, state: string, started_at: string|null, seconds: int|null, skipped: bool}>
+     */
+    private static function withQuiz(SummaryJob $job, array $steps): array
+    {
+        if ($job->lecture?->want_quiz !== true) {
+            return $steps;
+        }
+
+        $at = array_search('rendering', array_column($steps, 'key'), true);
+        $rendering = $steps[$at];
+        $quiz = $job->quiz()->first(['id', 'state', 'generated_at', 'updated_at']);
+        $began = $rendering['started_at'];
+
+        $step = ['key' => 'quiz', 'state' => 'pending', 'started_at' => null, 'seconds' => null, 'skipped' => false];
+
+        if ($quiz !== null) {
+            $end = $quiz->generated_at ?? $quiz->updated_at;
+            $step['state'] = $quiz->isReady() ? 'done' : 'failed';
+            $step['started_at'] = $began;
+            $step['seconds'] = $began !== null && $end !== null
+                ? max(0, $end->getTimestamp() - Carbon::parse($began)->getTimestamp())
+                : null;
+
+            // والإخراجُ يبدأ في العرض حيث انتهى الاختبار، فلا يُعدّ زمنُه مرّتين.
+            if ($end !== null && $rendering['started_at'] !== null) {
+                $steps[$at]['started_at'] = $end->toIso8601String();
+            }
+            if ($rendering['seconds'] !== null && $step['seconds'] !== null) {
+                $steps[$at]['seconds'] = max(0, $rendering['seconds'] - $step['seconds']);
+            }
+        } elseif ($rendering['state'] === 'active') {
+            $step['state'] = 'active';
+            $step['started_at'] = $began;
+            $steps[$at]['state'] = 'pending';
+            $steps[$at]['started_at'] = null;
+        }
+
+        array_splice($steps, $at, 0, [$step]);
+
+        return $steps;
     }
 
     /**

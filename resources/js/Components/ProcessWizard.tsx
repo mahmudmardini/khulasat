@@ -23,11 +23,12 @@ export type PhaseKey = 'listen' | 'understand' | 'write';
  * المراحل الكبرى الثلاث — تجمع الثماني الحقيقية ولا تخترع غيرها.
  *
  * فلا مرحلة «ترجمة»: الترجمة داخل الإخراج، ولا حالة لها في آلة الحالات.
+ * و«بناء الاختبار» وحدها تظهر لمن طلبه (T-195)، فما لم يرسله الخادم لا يُرسم.
  */
 const PHASES: ReadonlyArray<{ key: PhaseKey; steps: readonly string[] }> = [
   { key: 'listen', steps: ['transcribing', 'cleaning'] },
   { key: 'understand', steps: ['structuring', 'extracting', 'verifying', 'review'] },
-  { key: 'write', steps: ['writing', 'rendering'] },
+  { key: 'write', steps: ['writing', 'quiz', 'rendering'] },
 ];
 
 /** لكلّ مرحلةٍ أيقونةٌ بمعناها — تُعرف بنظرةٍ قبل أن يُقرأ اسمها. */
@@ -39,6 +40,7 @@ const ICONS: Record<string, IconName> = {
   verifying: 'shieldCheck',
   review: 'eye',
   writing: 'pen',
+  quiz: 'check',
   rendering: 'page',
 };
 
@@ -105,8 +107,10 @@ export function ProcessWizard({
   decidedReview?: boolean;
 }) {
   const byKey = new Map(steps.map((step) => [step.key, step]));
+  const phases = PHASES.map((phase) => ({ ...phase, steps: phase.steps.filter((key) => byKey.has(key)) }));
   const liveIndex = steps.findIndex((step) => step.state === 'active' || step.state === 'awaiting');
-  const failed = steps.find((step) => step.state === 'failed');
+  // تعذُّرُ الاختبار لا يوقف الملخّص — فلا يُقال «توقّف عنده».
+  const failed = steps.find((step) => step.state === 'failed' && step.key !== 'quiz');
 
   let summary: string;
 
@@ -140,7 +144,7 @@ export function ProcessWizard({
 
       {/* الشريط: جزءٌ لكلّ مرحلة، والمراحل الكبرى مفصولةٌ بفجوة. */}
       <div aria-hidden="true" className="flex gap-3 px-5 pt-4 pb-2">
-        {PHASES.map((phase) => (
+        {phases.map((phase) => (
           <div key={phase.key} className="flex gap-1" style={{ flexGrow: phase.steps.length, flexBasis: 0 }}>
             {phase.steps.map((key) => {
               const state = byKey.get(key)?.state ?? 'pending';
@@ -158,7 +162,7 @@ export function ProcessWizard({
       </div>
 
       <div className="flex flex-col gap-4 px-2 pt-2 pb-4 sm:px-3">
-        {PHASES.map((phase, position) => (
+        {phases.map((phase, position) => (
           <section key={phase.key} aria-labelledby={`phase-${phase.key}`}>
             <h3
               id={`phase-${phase.key}`}

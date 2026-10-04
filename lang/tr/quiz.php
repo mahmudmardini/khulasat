@@ -48,6 +48,7 @@ return [
     ],
 
     'panel' => [
+        'meta_separator' => ', ',
         'title' => 'Anlama testi',
         'intro' => 'Bu özetten paylaşılabilir bir bağlantıyla sorular. Herkes ad vermeden başlayabilir; sonuçlar raporda toplu olarak görünür.',
         'manage' => 'Anlama testi',

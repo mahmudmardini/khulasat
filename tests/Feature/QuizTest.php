@@ -17,6 +17,7 @@ use App\Models\Output;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\SummaryJob;
+use App\Support\Ui\JobProgress;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Model\FakeModelGateway;
@@ -405,4 +406,29 @@ it('لا تقرأ جهةٌ اختبارَ جهةٍ أخرى ولا تعدّله'
         ->assertNotFound();
 
     expect(Quiz::acrossTenants()->firstOrFail()->status)->toBe(Quiz::STATUS_OPEN);
+});
+
+/*
+ * ─── مراحلُ الإعداد ───────────────────────────────────────────────────
+ */
+
+it('يُظهر «بناء الاختبار» في مراحل الإعداد لمن طلبه، قبل إخراج الصفحة', function (): void {
+    $job = quizRenderingReady($this->job);
+    $states = fn (): array => array_column(JobProgress::steps($job->refresh()), 'state', 'key');
+
+    expect(array_column(JobProgress::steps($job), 'key'))
+        ->toBe(['transcribing', 'cleaning', 'structuring', 'extracting', 'verifying', 'review', 'writing', 'quiz', 'rendering']);
+
+    // يُبنى الآن: جاريةٌ واحدة لا اثنتان.
+    expect($states())->toMatchArray(['writing' => 'done', 'quiz' => 'active', 'rendering' => 'pending']);
+
+    quizFor($job);
+
+    expect($states())->toMatchArray(['quiz' => 'done', 'rendering' => 'active']);
+});
+
+it('لا يُظهر مرحلة الاختبار لمن لم يطلبه', function (): void {
+    $this->lecture->forceFill(['want_quiz' => false])->save();
+
+    expect(array_column(JobProgress::steps($this->job->refresh()), 'key'))->not->toContain('quiz');
 });

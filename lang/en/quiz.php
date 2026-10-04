@@ -48,6 +48,7 @@ return [
     ],
 
     'panel' => [
+        'meta_separator' => ', ',
         'title' => 'Comprehension quiz',
         'intro' => 'Questions from this summary at a shareable link. Anyone can start it without a name; results appear as totals in the report.',
         'manage' => 'Comprehension quiz',

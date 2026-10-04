@@ -324,7 +324,7 @@ function QuestionCard({
         </span>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[12.5px] text-text-muted">{meta.join('، ')}</p>
+          <p className="text-[12.5px] text-text-muted">{meta.join(t('quiz.panel.meta_separator'))}</p>
 
           {editing ? (
             <div className="mt-3 flex flex-col gap-3">

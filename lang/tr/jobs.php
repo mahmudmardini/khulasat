@@ -44,6 +44,7 @@ return [
         // düşürülmesi, beklemenin bizde değil kullanıcıda olduğunu gizlerdi.
         'review' => 'Delilleri gözden geçirmeniz',
         'writing' => 'Metnin yazılması',
+        'quiz' => 'Testin hazırlanması',
         'rendering' => 'Sayfanın üretilmesi',
     ],
 
@@ -156,6 +157,7 @@ return [
                 'verifying' => 'Her delili onaylı kaynağıyla eşleştiriyoruz; tahmin değil metin eşleştirmesi.',
                 'review' => 'Kaynağıyla eşleşmeyen, karara bağlamanız için sizde durur.',
                 'writing' => 'Özetin metnini okunur bir üslupla yazıyoruz.',
+                'quiz' => 'İstediğiniz anlama testini özetten ve delillerinden hazırlıyoruz.',
                 'rendering' => 'Sayfayı kimliğinizle ve yayın dillerinizle üretiyoruz.',
             ],
 

@@ -44,6 +44,7 @@ return [
         // dropping it would hide that the wait is with the user, not with us.
         'review' => 'Your review of the evidence',
         'writing' => 'Writing the body',
+        'quiz' => 'Building the quiz',
         'rendering' => 'Producing the page',
     ],
 
@@ -156,6 +157,7 @@ return [
                 'verifying' => 'We match each citation against its approved source — a textual match, with no guessing.',
                 'review' => 'Whatever did not match its source stops with you to settle.',
                 'writing' => 'We write the body of the summary in readable prose.',
+                'quiz' => 'We build the comprehension quiz you asked for from the summary and its evidence.',
                 'rendering' => 'We produce the page in your identity and publishing languages.',
             ],
 

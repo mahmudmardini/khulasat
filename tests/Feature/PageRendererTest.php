@@ -647,6 +647,29 @@ it('يكتب إطار الصفحة بلسانها لا بالعربية دائم
         ->and($english)->not->toContain('للتنبيه على خطأ');
 });
 
+/*
+ * ═══ T-206 — الإفصاحُ عن الذكاء الاصطناعي ═══
+ *
+ * بندُ الشفافية في وثيقة المرجعية: كلُّ صفحةٍ منشورة تقول إنّ أداةَ ذكاءٍ
+ * اصطناعي أعدّتها، **بلسانها، ولو كتبت الجهةُ تنويهها بنفسها**.
+ */
+it('يفصح عن الذكاء الاصطناعي في كلّ صفحة بلسانها', function (): void {
+    expect(renderPage($this->job))->toContain('أعدّت هذا الملخّصَ أداةُ ذكاءٍ اصطناعي')
+        ->and(renderTranslated($this->job, Locale::En))->toContain('This summary was prepared by an AI tool')
+        ->and(renderTranslated($this->job, Locale::Tr))->toContain('yapay zekâ aracıyla')
+        ->and(renderTranslated($this->job, Locale::Ru))->toContain('инструментом искусственного интеллекта');
+});
+
+it('يبقي الإفصاح حين تكتب الجهة تنويهها', function (): void {
+    $this->job->tenant->forceFill(['disclaimer_text' => 'تنويه الجهة'])->save();
+
+    $html = renderPage($this->job->fresh());
+
+    expect($html)->toContain('تنويه الجهة')
+        ->and($html)->not->toContain('وليس نصًّا حرفيًّا لها')
+        ->and($html)->toContain('أعدّت هذا الملخّصَ أداةُ ذكاءٍ اصطناعي');
+});
+
 it('يبقي الإطار عربياً في صفحة لغة المصدر', function (): void {
     $arabic = renderPage(withEvidence($this->job));
 

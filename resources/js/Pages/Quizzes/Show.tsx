@@ -97,10 +97,11 @@ export default function Show({ quiz, report, participants, filters }: Props) {
       <div className="flex flex-col gap-5">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           <Stat label={t('quiz.reports.kpi_opens')} value={tabular(report.opens)} />
+          {/* رقمٌ واحدٌ كبير، والبقيةُ في السطر تحته — «١٦ / ١٧» ينقلب في سطرٍ من اليمين. */}
           <Stat
             label={t('quiz.reports.kpi_finished')}
-            value={`${tabular(report.finished)} / ${tabular(report.started)}`}
-            hint={`${t('quiz.reports.kpi_completion')}: ${percent(report.completion)}`}
+            value={tabular(report.finished)}
+            hint={`${t('quiz.reports.kpi_started')}: ${tabular(report.started)}، ${t('quiz.reports.kpi_completion')}: ${percent(report.completion)}`}
           />
           <Stat label={t('quiz.reports.kpi_participants')} value={tabular(report.participants)} />
           <Stat

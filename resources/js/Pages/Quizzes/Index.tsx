@@ -100,7 +100,7 @@ export default function Index({ report }: Props) {
           {report.hardest.length > 0 ? (
             <Card title={t('quiz.reports.hardest')} footer={<p className="text-[12.5px] text-text-faint">{t('quiz.reports.hardest_note', { min: 5 })}</p>}>
               <BarList
-                items={report.hardest.map((row) => ({ label: row.title ?? '—', value: row.average ?? 0, hint: `${tabular(row.participants)} ${t('quiz.reports.col_participants')}` }))}
+                items={report.hardest.map((row) => ({ label: row.title ?? '—', value: row.average ?? 0, hint: `${t('quiz.reports.col_participants')}: ${tabular(row.participants)}` }))}
                 formatValue={(value) => `${value}%`}
               />
             </Card>

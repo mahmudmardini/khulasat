@@ -45,7 +45,7 @@ export function Columns({
       </div>
       <div className="mt-1.5 flex gap-[3px] text-[11px] text-text-faint" aria-hidden="true">
         {items.map((item) => (
-          <span key={item.key} className="nums-tabular min-w-0 flex-1 truncate text-center">{item.tick}</span>
+          <span key={item.key} className="nums-tabular min-w-0 flex-1 overflow-visible whitespace-nowrap text-center">{item.tick}</span>
         ))}
       </div>
 
@@ -74,7 +74,8 @@ export function DailyColumns({ days, caption }: { days: ReadonlyArray<{ date: st
       items={days.map((day, index) => ({
         key: day.date,
         value: day.count,
-        tick: index % 7 === 0 || index === days.length - 1 ? day.date.slice(5).replace('-', '/') : '',
+        // تسميةٌ كلَّ أسبوعٍ عدّاً من اليوم، بصيغة يوم/شهر — فلا تتراكب تسميتان.
+        tick: (days.length - 1 - index) % 7 === 0 ? `${Number(day.date.slice(8))}/${Number(day.date.slice(5, 7))}` : '',
       }))}
     />
   );

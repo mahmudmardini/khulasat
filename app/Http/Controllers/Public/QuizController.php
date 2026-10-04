@@ -216,8 +216,9 @@ class QuizController extends Controller
             'brand' => $brand,
             'palette' => $brand->palette,
             'title' => (string) ($job->structure_json['title_ar'] ?? $lecture?->title_ar ?? ''),
-            // اسمُ الملقي بلا لقبه — قرار @HasanSiwi، ٤ أكتوبر ٢٠٢٦.
-            'speaker' => trim((string) ($lecture?->speaker_name ?? '')) ?: null,
+            // **اسمُ الملقي كما في صفحة الملخّص** (`sheikh_full`) — لا يُضاف إليه
+            // لقبٌ من عندنا ولا يُنزع منه شيء: ما كتبته الجهةُ هو ما يُعرض.
+            'speaker' => trim(($lecture?->speaker_title ?? '').' '.($lecture?->speaker_name ?? '')) ?: null,
             'summaryUrl' => $job->published_at === null ? null : Output::acrossTenants()
                 ->where('summary_job_id', $job->id)
                 ->where('type', OutputType::Page->value)

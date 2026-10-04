@@ -187,13 +187,13 @@ it('يبدأ المشارك بلا اسمٍ ولا حقل، ولا يُحفظ ع
         ->and(Schema::getColumnListing('quiz_attempts'))->not->toContain('participant_name');
 });
 
-it('يُري اسمَ الملقي بلا لقبه', function (): void {
-    $this->lecture->forceFill(['speaker_title' => 'لقبٌ ما'])->save();
+it('يُري اسمَ الملقي كما كتبته الجهة، بلا لقبٍ يُضاف من عندنا', function (): void {
+    $this->lecture->forceFill(['speaker_title' => null])->save();
     $quiz = quizFor($this->job);
 
     $this->get(route('quiz.show', $quiz->token))
         ->assertSee('اسم الملقي')
-        ->assertDontSee('لقبٌ ما');
+        ->assertDontSee('الشيخ');
 });
 
 it('لا يحمل HTML الأسئلة ولا ردُّ الحفظ الجوابَ الصحيح في وضع «في الآخر»', function (): void {

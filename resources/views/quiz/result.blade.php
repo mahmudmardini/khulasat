@@ -21,7 +21,7 @@
 
     <div class="kq-medal" role="img" aria-label="{{ trans('quiz.public.score_aria', ['score' => $attempt->score, 'total' => $attempt->total], 'ar') }}">
       <svg viewBox="0 0 120 120" aria-hidden="true">
-        <path class="kq-medal-star" d="M60 6l15.8 15.8h22.4v22.4L114 60l-15.8 15.8v22.4H75.8L60 114l-15.8-15.8H21.8V75.8L6 60l15.8-15.8V21.8h22.4z"/>
+        <path class="kq-medal-star" transform="translate(60 60) scale(.78) translate(-60 -60)" d="M60 6l15.8 15.8h22.4v22.4L114 60l-15.8 15.8v22.4H75.8L60 114l-15.8-15.8H21.8V75.8L6 60l15.8-15.8V21.8h22.4z"/>
         <circle class="kq-medal-track" cx="60" cy="60" r="52"/>
         <circle class="kq-medal-arc" cx="60" cy="60" r="52"
                 stroke-dasharray="{{ round($ring, 2) }}"

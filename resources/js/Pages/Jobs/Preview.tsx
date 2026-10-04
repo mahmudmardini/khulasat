@@ -9,6 +9,7 @@ import { DeviceFrame, type Device } from '@/Components/DeviceFrame';
 import { EmptyState } from '@/Components/EmptyState';
 import { Icon, type IconName } from '@/Components/Icon';
 import { Segmented } from '@/Components/Segmented';
+import { SlideBody } from '@/Components/SlideBody';
 import { SlideCarousel } from '@/Components/SlideCarousel';
 import { cn } from '@/lib/cn';
 import { t } from '@/lib/i18n';
@@ -570,7 +571,11 @@ function CarouselPane({
                 <h3 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-text">{slide.heading}</h3>
               </div>
 
-              <p className="wrap-anywhere text-[14px] leading-relaxed text-text-muted">{slide.body}</p>
+              <SlideBody
+                kind={slide.kind}
+                body={slide.body}
+                className="wrap-anywhere text-[14px] leading-relaxed text-text-muted"
+              />
 
               <div className="mt-auto pt-1">
                 <CopyButton
@@ -600,7 +605,11 @@ function SlideFace({ slide }: { slide: Slide }) {
   return (
     <div className="flex min-h-[220px] w-full max-w-md flex-col justify-center gap-3 rounded-lg border border-border bg-surface p-6 text-center">
       <h3 className="text-[18px] font-semibold text-text">{slide.heading}</h3>
-      <p className="wrap-anywhere text-[15px] leading-relaxed text-text-muted">{slide.body}</p>
+      <SlideBody
+        kind={slide.kind}
+        body={slide.body}
+        className="wrap-anywhere text-[15px] leading-relaxed text-text-muted"
+      />
       {slide.source_line !== null ? (
         <p className="text-[12px] text-text-faint">{slide.source_line}</p>
       ) : null}

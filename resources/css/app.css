@@ -187,6 +187,14 @@
     line-height: 2.1;
   }
 
+  /*
+   * علامةُ الآية ورقمُها — T-172. بخطّ المصحف ولو حولها خطُّ الواجهة، فذاك
+   * ليس فيه «۝». والصنفُ نفسه الذي يُلبسها إيّاه `AyahText::html` في الصفحة.
+   */
+  .ayah-no {
+    font-family: var(--font-quran);
+  }
+
   .content-shell {
     max-width: var(--content-max);
     margin-inline: auto;

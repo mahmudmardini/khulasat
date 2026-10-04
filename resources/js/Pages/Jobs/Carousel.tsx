@@ -5,6 +5,7 @@ import { Button } from '@/Components/Button';
 import { Card } from '@/Components/Card';
 import { EmptyState } from '@/Components/EmptyState';
 import { Icon } from '@/Components/Icon';
+import { SlideBody } from '@/Components/SlideBody';
 import { cn } from '@/lib/cn';
 import { t } from '@/lib/i18n';
 import { toArabicIndic } from '@/lib/numerals';
@@ -210,9 +211,11 @@ function SlideCard({ slide }: { slide: Slide }) {
         ) : null}
       </div>
 
-      <p className={cn('wrap-anywhere text-[14px] leading-relaxed text-text-muted', slide.anchored && 'text-text')}>
-        {slide.body}
-      </p>
+      <SlideBody
+        kind={slide.kind}
+        body={slide.body}
+        className={cn('wrap-anywhere text-[14px] leading-relaxed text-text-muted', slide.anchored && 'text-text')}
+      />
 
       {slide.source_line !== null ? (
         <p className="text-[12px] text-text-faint">{slide.source_line}</p>

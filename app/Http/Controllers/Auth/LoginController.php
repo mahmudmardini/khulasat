@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\Auth\JudgeAccess;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,9 +27,45 @@ class LoginController extends Controller
 
     private const DECAY_SECONDS = 60;
 
-    public function show(): Response
+    public function show(Request $request): Response
     {
-        return Inertia::render('Auth/Login');
+        $key = $request->query('judge');
+
+        return Inertia::render('Auth/Login', [
+            // أزرارُ لجنة التحكيم — T-186. **ولا يُرسل شيءٌ منها لمن لا يحقّ له**،
+            // فلا يُعرف من صفحة الدخول العادية أنّ لها باباً آخر.
+            'judges' => JudgeAccess::allows($key) && ($roles = JudgeAccess::roles()) !== []
+                ? ['key' => is_string($key) ? $key : null, 'roles' => $roles]
+                : null,
+        ]);
+    }
+
+    /**
+     * دخولُ لجنة التحكيم بنقرة — T-186، قرار مالك المنتج.
+     *
+     * يُدخل أحد الحسابات الثلاثة في {@see JudgeAccess} بأعيانها، لا غيرها.
+     * **وما لا يحقّ له الدخولُ يُردّ 404** — كأن لا باب هنا.
+     */
+    public function judge(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'role' => ['required', 'string'],
+            'judge' => ['nullable', 'string'],
+        ]);
+
+        abort_unless(JudgeAccess::allows($data['judge'] ?? null), 404);
+
+        $user = JudgeAccess::user($data['role']);
+
+        abort_if($user === null, 404);
+
+        $panel = $user->isSuperAdmin();
+
+        Auth::guard($panel ? 'admin' : 'web')->login($user);
+
+        $request->session()->regenerate();
+
+        return redirect($panel ? '/admin' : route('lectures.index'));
     }
 
     public function store(Request $request): RedirectResponse

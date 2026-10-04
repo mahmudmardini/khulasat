@@ -111,6 +111,23 @@ class CarouselRenderer implements Renderer
     }
 
     /**
+     * شرائحُ متراصّةٌ عموداً في وثيقةٍ واحدة، تُلتقط بلقطةٍ واحدة — T-197.
+     *
+     * كلُّ شريحةٍ بمقاسها الثابت بلا هامشٍ ولا فاصل، فتُقصّ اللقطةُ صوراً بقسمة
+     * ارتفاعها، وتخرج كلُّ صورةٍ كما تخرج من التقاط الشريحة وحدها. **وبلا شاهدة
+     * عدّ**، كما في {@see self::slides()}.
+     */
+    public function strip(ContentObject $content, BrandKit $brand, int $offset, int $length): string
+    {
+        return $this->views->make('carousel.layout', [
+            ...$this->data($content, $brand, new SlideDeck(array_slice($this->deck->slides, $offset, $length))),
+            'beacon' => null,
+            'capture' => true,
+            'strip' => true,
+        ])->render();
+    }
+
+    /**
      * الكاروسيلُ في إطارٍ داخل اللوحة — T-196.
      *
      * **مصغَّراً ليُرى في إطاره على أيّ عرض**: القالبُ يصغّر نفسه تحت ١٠٨٠ وحده،

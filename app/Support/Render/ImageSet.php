@@ -24,7 +24,16 @@ final class ImageSet
 
     public const HEIGHT = 1350;
 
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.1.0';
+
+    /**
+     * شرائحُ اللقطة الواحدة — T-197. ثمانٍ بارتفاع ١٠٨٠٠ بكسل، دون حدّ
+     * المتصفّح في اللقطة الواحدة بهامشٍ واسع.
+     */
+    public const BATCH = 8;
+
+    /** بعدها تُعدّ «جاريةٌ» متعثّرةً — طابورٌ بلا عاملٍ يتركها جاريةً أبداً. */
+    public const STALL_MINUTES = 10;
 
     public static function disk(): Filesystem
     {

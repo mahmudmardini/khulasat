@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\Render\RenderImageSet;
 use App\Contracts\OverflowProbe;
 use App\Contracts\ShareCardCapturer;
 use App\Domain\Summary\JobState;
@@ -9,6 +10,7 @@ use App\Enums\Locale;
 use App\Enums\OutputType;
 use App\Enums\ReviewStatus;
 use App\Enums\SlideKind;
+use App\Jobs\GenerateImageSet;
 use App\Models\EvidenceItem;
 use App\Models\Lecture;
 use App\Models\Output;
@@ -25,6 +27,7 @@ use App\Support\Render\ImageSet;
 use App\Support\Render\Palette;
 use App\Support\Render\Slide;
 use App\Support\Render\SlideDeck;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -35,14 +38,30 @@ use Inertia\Testing\AssertableInertia as Assert;
  * ما يُرسل إليه وما يُحفظ منه، لا Chrome نفسه.
  */
 
-/** صورةُ PNG صحيحةٌ صغيرة — يكفي أن تُحفظ كما هي. */
-function tinyPng(): string
+/**
+ * صورةُ PNG صحيحة، **بنسبة المقاس المطلوب لا بمقاسه**: ١/٢٧٠ منه، فشريحةٌ
+ * ٤×٥ ولقطةُ ثماني شرائح ٤×٤٠. فتُقصّ كما تُقصّ لقطةُ المتصفّح (T-197)، بلا
+ * صورٍ بالميغابايتات في الاختبار.
+ */
+function tinyPng(int $width = 1080, int $height = 1350): string
 {
-    $image = imagecreatetruecolor(4, 5);
+    $image = imagecreatetruecolor(max(1, intdiv($width, 270)), max(1, intdiv($height, 270)));
     ob_start();
     imagepng($image);
 
     return (string) ob_get_clean();
+}
+
+/** كاروسيلٌ من عشر شرائح — دفعتان: ثمانٍ ثمّ اثنتان. */
+function tenSlides(SummaryJob $job): void
+{
+    $slides = array_map(
+        static fn (int $i): Slide => new Slide($i, SlideKind::Concept, "شريحة {$i}", 'نصٌّ حرّ.'),
+        range(1, 10),
+    );
+
+    Output::query()->where('summary_job_id', $job->id)->where('type', OutputType::Carousel->value)
+        ->update(['meta' => json_encode(['slides' => (new SlideDeck($slides))->toArray()], JSON_UNESCAPED_UNICODE)]);
 }
 
 /** لفظُ الآية مزيَّناً كما يحفظه المحقّق — وفيه «۝» يُسقطها نصّ المنشور. */
@@ -77,7 +96,7 @@ beforeEach(function (): void {
         {
             $this->calls[] = ['html' => $html, 'width' => $width, 'height' => $height];
 
-            return $this->failOn === count($this->calls) ? null : tinyPng();
+            return $this->failOn === count($this->calls) ? null : tinyPng($width, $height);
         }
     };
 
@@ -131,9 +150,10 @@ it('ينشئ الحزمة صوراً مرقّمةً بمقاس إنستغرام 
         $disk->assertExists(ImageSet::slidePath($this->job, $position));
     }
 
-    expect(collect($this->capturer->calls)->every(
-        fn (array $call): bool => $call['width'] === 1080 && $call['height'] === 1350,
-    ))->toBeTrue();
+    // **لقطةٌ واحدة للشرائح الخمس** (T-197): متراصّةً عموداً، ثمّ تُقصّ.
+    expect($this->capturer->calls)->toHaveCount(1)
+        ->and($this->capturer->calls[0]['width'])->toBe(1080)
+        ->and($this->capturer->calls[0]['height'])->toBe(1350 * 5);
 
     $zipPath = tempnam(sys_get_temp_dir(), 'zip');
     file_put_contents($zipPath, $disk->get(ImageSet::zipPath($this->job)));
@@ -151,7 +171,7 @@ it('ينشئ الحزمة صوراً مرقّمةً بمقاس إنستغرام 
 });
 
 // ★ المتصفّحُ الملتقِط يطلب شاهدة العدّ كما يطلبها القارئ، فتُعدّ كلُّ صورةٍ زيارة.
-it('يلتقط كلَّ شريحةٍ في وثيقتها، ولا يحمّلها شاهدةَ العدّ', function (): void {
+it('يلتقط الشرائحَ عموداً في وثيقةٍ واحدة، ولا يحمّلها شاهدةَ العدّ', function (): void {
     config()->set('khulasah.analytics.enabled', true);
     config()->set('khulasah.analytics.beacon_base', 'https://views.test');
 
@@ -161,13 +181,13 @@ it('يلتقط كلَّ شريحةٍ في وثيقتها، ولا يحمّلها
         ->render(ContentObject::fromJob($this->job), BrandKit::forTenant($this->tenant))->contents;
 
     expect($published)->toContain('https://views.test/v/'.$this->job->id)
-        ->and($this->capturer->calls)->toHaveCount(5);
+        ->and($this->capturer->calls)->toHaveCount(1);
 
-    foreach ($this->capturer->calls as $call) {
-        expect($call['html'])->not->toContain('views.test')
-            ->and(substr_count($call['html'], '<figure class="slide '))->toBe(1)
-            ->and($call['html'])->toContain(' capture">');
-    }
+    $html = $this->capturer->calls[0]['html'];
+
+    expect($html)->not->toContain('views.test')
+        ->and(substr_count($html, '<figure class="slide '))->toBe(5)
+        ->and($html)->toContain(' capture strip">');
 });
 
 // معيار قبول: لفظُ كلّ شاهدٍ في الصورة يساوي `matched_text` حرفاً، أيّاً كانت المواصفة.
@@ -189,15 +209,16 @@ it('يُبقي لفظ الشاهد حرفاً في كلّ تخطيطٍ وكلّ 
     ->all());
 
 // ★ **كلُّها أو لا شيء**: حزمةٌ ناقصةٌ تُنشر فيضيع ترتيب الكاروسيل.
-it('يُسقط الحزمة كلَّها إن تعذّر التقاط شريحة، ويقول أيّها', function (): void {
-    $this->capturer->failOn = 3;
+it('يُسقط الحزمة كلَّها إن تعذّر التقاط دفعة، ويقول من أيّ شريحة', function (): void {
+    tenSlides($this->job);
+    $this->capturer->failOn = 2;
 
     $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
 
     $row = imageSetRow($this->job);
 
     expect($row->meta['state'])->toBe('failed')
-        ->and($row->meta['error'])->toBe(trans('jobs.images.capture_failed', ['slide' => 3]));
+        ->and($row->meta['error'])->toBe(trans('jobs.images.capture_failed', ['slide' => 9]));
 
     Storage::disk('local')->assertMissing(ImageSet::zipPath($this->job));
 });
@@ -330,4 +351,94 @@ it('يصغّر معاينة صفحة الشرائح ولا يعدّها قراء
     foreach ($this->capturer->calls as $call) {
         expect($call['html'])->not->toContain(' fit">');
     }
+});
+
+// ── T-197: دفعاتٌ وتقدّمٌ معلوم، وجاريةٌ لا تعلق ─────────────────────────
+
+it('يلتقط عشر شرائح بدفعتين ويقصّها بمقاسها، ويكتب التقدّم بعد كلّ دفعة', function (): void {
+    tenSlides($this->job);
+
+    $progress = [];
+    $capturer = new class($progress) implements ShareCardCapturer
+    {
+        public array $heights = [];
+
+        public function __construct(private array &$progress) {}
+
+        public function capture(string $html, int $width, int $height): ?string
+        {
+            $this->heights[] = $height;
+            $this->progress[] = Output::query()->where('type', OutputType::ImageSet->value)->first()?->meta['progress'];
+
+            return tinyPng($width, $height);
+        }
+    };
+    app()->instance(ShareCardCapturer::class, $capturer);
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    $row = imageSetRow($this->job);
+    $disk = Storage::disk('local');
+
+    expect($capturer->heights)->toBe([1350 * 8, 1350 * 2])
+        ->and($progress)->toBe([['done' => 0, 'total' => 10], ['done' => 8, 'total' => 10]])
+        ->and($row->meta['count'])->toBe(10)
+        ->and($row->meta['progress'])->toBe(['done' => 10, 'total' => 10]);
+
+    foreach (range(1, 10) as $position) {
+        // كلُّ صورةٍ بمقاس شريحةٍ واحدة: ١/٢٧٠ من ١٠٨٠×١٣٥٠ في الاختبار.
+        expect(getimagesizefromstring($disk->get(ImageSet::slidePath($this->job, $position)))[1])->toBe(5);
+    }
+});
+
+it('يُسقط لقطةً لا ينقسم ارتفاعُها على شرائحها، فلا يقصّ من منتصف شريحة', function (): void {
+    app()->instance(ShareCardCapturer::class, new class implements ShareCardCapturer
+    {
+        public function capture(string $html, int $width, int $height): ?string
+        {
+            return tinyPng($width, $height + 270);
+        }
+    });
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    expect(imageSetRow($this->job)->meta['error'])->toBe(trans('jobs.images.capture_failed', ['slide' => 1]));
+});
+
+it('يُبقي الصور السابقة معروضةً أثناء الإنشاء، ويعرض جاريةً طال أمدُها متعثّرة', function (): void {
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    RenderImageSet::mark($this->job, 'rendering', null, ['progress' => ['done' => 0, 'total' => 5]]);
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('outputs.images.state', 'rendering')
+            ->where('outputs.images.progress', ['done' => 0, 'total' => 5])
+            ->where('outputs.images.produced', true)
+            ->has('outputs.images.urls', 5)
+        );
+
+    $this->travel(ImageSet::STALL_MINUTES + 1)->minutes();
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('outputs.images.state', 'failed')
+            ->where('outputs.images.error', trans('jobs.images.stalled'))
+            ->where('outputs.images.progress', null)
+            ->has('outputs.images.urls', 5)
+        );
+});
+
+it('يعرض التقدّم من أوّل لحظة، قبل أن يبلغ العاملُ المهمّة', function (): void {
+    Queue::fake();
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    Queue::assertPushed(GenerateImageSet::class);
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('outputs.images.state', 'rendering')
+            ->where('outputs.images.progress', ['done' => 0, 'total' => 5])
+        );
 });

@@ -21,6 +21,7 @@ use App\Support\Render\SlideDeck;
 use App\Support\Render\TenantCarouselDesigns;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -234,7 +235,19 @@ class PreviewController extends Controller
         $output = $this->output($job, OutputType::ImageSet);
         $meta = (array) ($output?->meta ?? []);
         $state = $meta['state'] ?? null;
-        $count = $state === 'ready' ? (int) ($meta['count'] ?? 0) : 0;
+
+        // «جاريةٌ» أطولَ من حدّها متعثّرة — T-197: طابورٌ بلا عاملٍ يتركها جاريةً
+        // أبداً. والتقدّمُ يجدّد الصفّ بعد كلّ دفعة، فالعاملةُ لا تبلغ الحدّ.
+        $at = isset($meta['at']) ? Carbon::parse((string) $meta['at']) : null;
+
+        if ($state === 'rendering' && ($at === null || $at->lt(now()->subMinutes(ImageSet::STALL_MINUTES)))) {
+            $state = 'failed';
+            $meta['error'] = trans('jobs.images.stalled');
+        }
+
+        // **آخرُ صورٍ صالحة تبقى معروضة** أثناء الإنشاء وبعد تعثّره — T-197:
+        // ملفّاتُها لا تُمسّ حتى تكتمل الجديدة. و`count` من آخر إنشاءٍ تمّ.
+        $count = (int) ($meta['count'] ?? 0);
         $version = $output?->rendered_at?->timestamp ?? 0;
 
         return [
@@ -242,6 +255,8 @@ class PreviewController extends Controller
             'public_url' => null,
             'state' => $state,
             'error' => $state === 'failed' ? ($meta['error'] ?? null) : null,
+            // ما التُقط من كم — يُحدَّث بعد كلّ دفعة، فيُعرض عدداً لا دوّاراً.
+            'progress' => $state === 'rendering' ? ($meta['progress'] ?? null) : null,
             'enabled' => ImageSet::enabled(),
             // قوالبُ الجهة المعتمدة يُختار منها عند الإنشاء، وأوّلُها افتراضيُّها — T-173.
             'designs' => array_map(

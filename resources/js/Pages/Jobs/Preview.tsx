@@ -64,6 +64,8 @@ interface Props {
       /** قوالبُ الجهة المعتمدة — T-173. وأوّلُها افتراضيُّها. */
       designs: Array<{ id: string; name: string | null }>;
       design: string | null;
+      /** ما التُقط من كم أثناء الإنشاء — T-197. */
+      progress: { done: number; total: number } | null;
     };
   };
   regenerations: { used: number; limit: number };
@@ -206,6 +208,7 @@ export default function Preview({
               <ImagesPane
                 job={job}
                 images={outputs.images}
+                slides={outputs.carousel.slides.length}
                 carouselProduced={outputs.carousel.produced}
                 rich={rich_outputs}
                 busy={busy}
@@ -672,10 +675,11 @@ function CarouselPane({
  * بوزن «أعد التوليد». والتنزيلُ رابطٌ لا زرّ، كسائر التنزيلات هنا.
  */
 function ImagesPane({
-  job, images, carouselProduced, rich, busy, onBuild, onOpenCarousel,
+  job, images, slides, carouselProduced, rich, busy, onBuild, onOpenCarousel,
 }: {
   job: Props['job'];
   images: Props['outputs']['images'];
+  slides: number;
   carouselProduced: boolean;
   rich: boolean;
   busy: boolean;
@@ -726,13 +730,9 @@ function ImagesPane({
     );
   }
 
-  if (images.state === 'rendering') {
-    return (
-      <Card>
-        <EmptyState title={t('jobs.images.rendering')} body={t('jobs.images.rendering_body')} />
-      </Card>
-    );
-  }
+  // **الإنشاءُ لا يُخفي ما قبله** — T-197: الصورُ الأخيرة باقيةٌ معتمةً، وفوقها
+  // ما التُقط من كم، ثمّ تحلّ الجديدةُ محلّها وحدها حين يكتمل.
+  const rendering = images.state === 'rendering';
 
   const create = (
     <div className="flex flex-wrap items-center gap-2">
@@ -755,12 +755,31 @@ function ImagesPane({
         </label>
       ) : null}
 
-      <Button loading={busy} onClick={() => onBuild(design)} variant={images.produced ? 'secondary' : 'primary'}>
+      <Button
+        loading={busy || rendering}
+        onClick={() => onBuild(design)}
+        variant={images.produced ? 'secondary' : 'primary'}
+      >
         <Icon name="images" size={16} />
         {t(images.produced ? 'jobs.images.recreate' : 'jobs.images.create')}
       </Button>
     </div>
   );
+
+  if (!images.produced && rendering) {
+    return (
+      <Card title={t('jobs.preview.tabs.images')} action={create}>
+        <ImagesProgress progress={images.progress} />
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-hidden="true">
+          {Array.from({ length: Math.max(slides, 1) }, (_, index) => (
+            <li key={index}>
+              <span className="skeleton block aspect-[4/5] w-full rounded-md" />
+            </li>
+          ))}
+        </ul>
+      </Card>
+    );
+  }
 
   if (!images.produced) {
     return (
@@ -790,13 +809,18 @@ function ImagesPane({
         </div>
       }
     >
+      {rendering ? <ImagesProgress progress={images.progress} /> : null}
+
       {images.state === 'failed' && images.error !== null ? (
         <p className="mb-4 rounded-lg border border-danger/35 bg-danger/8 px-4 py-3 text-[14px] text-danger">
           {images.error}
         </p>
       ) : null}
 
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <ul
+        aria-busy={rendering || undefined}
+        className={cn('grid grid-cols-2 gap-3 transition-opacity sm:grid-cols-3 lg:grid-cols-5', rendering && 'opacity-40')}
+      >
         {images.urls.map((url, position) => (
           <li key={url}>
             <img
@@ -815,6 +839,36 @@ function ImagesPane({
         <span className="font-medium text-text-muted">{t('jobs.images.free_hint')}</span>
       </div>
     </Card>
+  );
+}
+
+/**
+ * ما التُقط من كم — T-197.
+ *
+ * **عددٌ لا دوّارٌ مبهم** (§القواعد العامّة): الإنشاءُ عمليةٌ طويلة لها حالٌ
+ * معلومة، فتُعرض. والعددُ يُحدَّث بعد كلّ دفعةٍ من ثماني شرائح.
+ */
+function ImagesProgress({ progress }: { progress: { done: number; total: number } | null }) {
+  const done = progress?.done ?? 0;
+  const total = progress?.total ?? 0;
+  const ratio = total > 0 ? done / total : 0;
+
+  return (
+    <div role="status" aria-live="polite" className="mb-4 rounded-lg border border-info/25 bg-info/6 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[14px]">
+        <span className="font-medium text-text">{t('jobs.images.rendering')}</span>
+        {total > 0 ? (
+          <span className="nums-tabular text-text-muted">{toArabicIndic(t('jobs.images.progress', { done, total }))}</span>
+        ) : null}
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border">
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-500"
+          style={{ width: `${Math.max(6, Math.round(ratio * 100))}%` }}
+        />
+      </div>
+      <p className="mt-2 text-[13px] text-text-muted">{t('jobs.images.rendering_body')}</p>
+    </div>
   );
 }
 

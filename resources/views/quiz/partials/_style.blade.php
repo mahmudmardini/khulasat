@@ -11,7 +11,7 @@ body.kq{
   font:400 16px/1.75 "IBM Plex Sans Arabic",system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;
 }
-.kq a{color:var(--emerald)}
+.kq a:not(.kq-btn){color:var(--emerald)}
 .kq :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 
 /* ── الرأس: ليلُ اللوحة، والنجمةُ ذهبُها ─────────────────────── */

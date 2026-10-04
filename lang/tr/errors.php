@@ -59,6 +59,8 @@ return [
 
         'ytdlp_timeout' => 'Bu dersin okunması izin verilenden uzun sürdü, biz de durdurduk. Tekrar deneyin ya da ders dosyasını cihazınızdan yükleyin.',
 
+        'media_tool_unavailable' => 'Sesi şu an işleyemiyoruz; sorun sizin dosyanızda değil, bizim tarafımızda. Biraz sonra tekrar deneyin ya da ders metnini yapıştırın.',
+
         'playlist_given' => 'Bu bir oynatma listesi bağlantısı, tek bir ders bağlantısı değil. Kastettiğiniz dersi açıp kendi bağlantısını kopyalayın; her dersin kendi özeti olur.',
 
     ],

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * The ten failure modes of the transcription stage — المواصفة §5-أ-7.
+ * The failure modes of the transcription stage: the spec's ten (§5-أ-7), and a server fault.
  *
  * **الرمز لا يُعرض للمستخدم قطّ.** هو مفتاح السجلّ والقياس، ورسالتُه
  * العربية في `lang/ar/errors.php` — انظر {@see self::message()}.
@@ -39,6 +39,9 @@ enum TranscriptErrorCode: string
 
     case YtdlpTimeout = 'ytdlp_timeout';
 
+    /** ffmpeg أو ffprobe لا يُشغَّل على الخادم — عطلٌ عندنا لا في الملفّ. */
+    case MediaToolUnavailable = 'media_tool_unavailable';
+
     /**
      * المواصفة §5-أ-7: نصّ أقلّ من ٥٠٠ كلمة يُرفع لمدير المحتوى **قبل صرف
      * أيّ توكن على النماذج**. فالنصّ الناقص يُنتج ملخّصاً ناقصاً بكلفة تامّة.
@@ -64,7 +67,7 @@ enum TranscriptErrorCode: string
     public function fallsBackToManualPath(): bool
     {
         return match ($this) {
-            self::BotCheck, self::TranscriptionFailed, self::YtdlpTimeout => true,
+            self::BotCheck, self::TranscriptionFailed, self::YtdlpTimeout, self::MediaToolUnavailable => true,
             default => false,
         };
     }

@@ -185,6 +185,7 @@ return [
             'upload_chunk_invalid' => 'Dosyanın bir parçası eksik geldi; yeniden gönderilecek.',
             'upload_incomplete' => 'Dosyanın tüm parçaları henüz gelmedi.',
             'upload_failed' => 'Dosya yüklenemedi. Lütfen tekrar deneyin.',
+            'upload_unavailable' => 'Dosyayı şu an işleyemiyoruz; sorun sizin dosyanızda değil, bizim tarafımızda. Yüklenen kısım saklandı; biraz sonra tekrar deneyin.',
             'upload_expired' => 'Yüklenen dosya artık mevcut değil. Lütfen yeniden yükleyin.',
             'upload_progress' => ':total içinden :sent yüklendi',
             'upload_mb' => ':n MB',

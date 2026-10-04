@@ -263,6 +263,9 @@ class LectureController extends Controller
                  */
                 'want_carousel' => $tenant->allowsRichOutputs() && $request->boolean('want_carousel'),
 
+                // اختبارُ الفهم — T-195: لكلّ الشرائح، فلا حارسَ شريحةٍ عليه.
+                'want_quiz' => $request->boolean('want_quiz'),
+
                 /*
                  * **و`null` تعني «كما في إعدادات الجهة»** لا قيمةً منسوخة:
                  * من بدّل افتراضَ الجهة تبدّل معه كلُّ ملخّصٍ لم يختر لنفسه.

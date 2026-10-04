@@ -6,6 +6,7 @@ namespace App\Actions\Stages;
 
 use App\Actions\Publish\PublishSummary;
 use App\Actions\Publish\RelinkLocales;
+use App\Actions\Quiz\GenerateQuiz;
 use App\Actions\Render\RenderCarousel;
 use App\Actions\Render\RenderOutput;
 use App\Enums\Locale;
@@ -37,6 +38,7 @@ final class RenderAndPublish
         private readonly TranslateSummary $translate,
         private readonly BuildOutputMeta $meta,
         private readonly RelinkLocales $relink,
+        private readonly GenerateQuiz $quiz,
     ) {}
 
     /**
@@ -58,6 +60,10 @@ final class RenderAndPublish
         if (! $primary->isSource()) {
             $this->translate->handle($job, $primary);
         }
+
+        // **الاختبارُ قبل الصفحة** — T-195: زرُّه جزءٌ منها، فبناؤه بعد الرسم
+        // يعني صفحةً بلا زرٍّ حتى «حدّث المنشور».
+        $this->buildQuiz($job);
 
         // `RenderOutput` يحرس الشواهد المعلّقة ويقيّد المخرَج في `outputs`.
         $output = $this->render->handle($job, $this->page, $primary);
@@ -199,6 +205,32 @@ final class RenderAndPublish
         }
 
         return $urls;
+    }
+
+    /**
+     * اختبارُ الفهم إن طُلب — T-195.
+     *
+     * ★ **مرّةً واحدة**: اختبارٌ قائمٌ — جاهزاً أو متعذّراً — لا يُبنى ثانيةً
+     * هنا. فزرُّ «حدّث المنشور» يمرّ من هذا الطريق في كلّ ضغطة، ونداءٌ مدفوعٌ
+     * على فعلٍ تقول واجهتُه إنّه مجّاني خطأُ T-167 نفسُه. وإعادةُ البناء زرٌّ
+     * في صفحة الاختبار.
+     *
+     * ★★ **وإخفاقُه لا يُسقط الملخّص** — {@see GenerateQuiz} يحفظ السبب ويمضي.
+     */
+    private function buildQuiz(SummaryJob $job): void
+    {
+        if ($job->lecture?->want_quiz !== true || $job->quiz()->exists()) {
+            return;
+        }
+
+        try {
+            $this->quiz->handle($job);
+        } catch (Throwable $failure) {
+            Log::warning('quiz.render_failed', [
+                'summary_job_id' => $job->id,
+                'reason' => $failure->getMessage(),
+            ]);
+        }
     }
 
     /**

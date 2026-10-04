@@ -46,6 +46,7 @@ interface Props {
   views: Views;
   can_publish: boolean;
   locale_additions: LocaleAddition[];
+  quiz: { state: 'ready' | 'failed'; status: 'open' | 'closed'; attempts: number } | null;
 }
 
 /**
@@ -56,7 +57,7 @@ interface Props {
  * سحبه — لخطأ فيه، أو لطلب الملقي — لم تجد إلّا أن تراسلنا وتنتظر. **وحقٌّ
  * لا مدخل له ليس حقّاً.**
  */
-export default function Show({ job, outputs, views, can_publish, locale_additions }: Props) {
+export default function Show({ job, outputs, views, can_publish, locale_additions, quiz }: Props) {
   const { errors } = usePage<SharedProps & { errors: Record<string, string> }>().props;
   const [busy, setBusy] = useState(false);
   const [asking, setAsking] = useState<'unpublish' | 'delete' | null>(null);
@@ -174,6 +175,8 @@ export default function Show({ job, outputs, views, can_publish, locale_addition
                 </div>
               ) : null}
             </Card>
+
+            <QuizCard jobId={job.id} quiz={quiz} />
           </>
         ) : (
           <Card>
@@ -385,4 +388,30 @@ function day(iso: string | null): string {
   return Number.isNaN(at.getTime())
     ? '—'
     : at.toLocaleDateString('ar', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/**
+ * اختبارُ الفهم — T-195. حالُه وعددُ من أتمّه، ومدخلُ إدارته.
+ */
+function QuizCard({ jobId, quiz }: { jobId: number; quiz: Props['quiz'] }) {
+  const state = quiz === null
+    ? t('quiz.panel.empty')
+    : quiz.state === 'failed'
+      ? t('quiz.panel.failed_title')
+      : `${quiz.status === 'open' ? t('quiz.panel.status_open') : t('quiz.panel.status_closed')}، ${toArabicIndic(t('quiz.panel.attempts', { count: quiz.attempts }))}`;
+
+  return (
+    <Card title={t('quiz.panel.title')}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[14px] text-text-muted">{state}</p>
+        <Link
+          href={`/panel/jobs/${jobId}/quiz`}
+          className="inline-flex shrink-0 items-center gap-2 rounded px-4 py-2 text-[15px] font-medium text-primary transition-colors hover:bg-surface-alt"
+        >
+          <Icon name="check" size={16} />
+          {quiz === null ? t('quiz.panel.build') : t('quiz.panel.manage')}
+        </Link>
+      </div>
+    </Card>
+  );
 }

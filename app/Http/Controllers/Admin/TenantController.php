@@ -49,7 +49,7 @@ class TenantController extends Controller
      *
      * @var list<string>
      */
-    private const RESERVED_SLUGS = ['admin', 'panel', 'complaint', 'invite', 'v', 'up', 'storage', 'build', 'verify', 'api'];
+    private const RESERVED_SLUGS = ['admin', 'panel', 'complaint', 'invite', 'v', 'up', 'storage', 'build', 'verify', 'api', 'q'];
 
     /** الحدود الخمسة في `tenants` — المواصفة §11، وT-13 يقرأ منها. */
     private const LIMITS = [

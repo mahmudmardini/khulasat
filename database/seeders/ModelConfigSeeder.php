@@ -80,6 +80,23 @@ class ModelConfigSeeder extends Seeder
         }
     }
 
+    /**
+     * صفُّ مرحلةٍ واحدة — يقرؤه ترحيلٌ يُضيف صفّاً لمرحلةٍ جديدة دون أن
+     * يكتب فوق ما غيّره المشرف في غيرها (T-195).
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function row(string $stage): ?array
+    {
+        foreach (self::rows() as $row) {
+            if ($row['stage'] === $stage) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
     /** @return list<array<string, mixed>> */
     private static function rows(): array
     {
@@ -226,6 +243,29 @@ class ModelConfigSeeder extends Seeder
                 'on_exhausted' => 'degrade',
                 'input_price_per_m' => 2.0,
                 'output_price_per_m' => 12.0,
+            ],
+            [
+                /*
+                 * **اختبارُ الفهم** — المرحلة ٨، T-195. تُنادى مرّةً لكلّ اختبار
+                 * لا لكلّ مشارك: التصحيحُ حتميٌّ بلا نموذج.
+                 *
+                 * والجهدُ `low` لا `none`: الخيارُ الخاطئ المعقول يحتاج نظراً
+                 * في البنية، وهو ما يفرق اختباراً يُعلِّم عن اختبارٍ يُحزَر.
+                 * وأيُّ النماذج أجودُ وأرخص يحسمه قياسُ المهمّة (القرار ٦).
+                 */
+                'stage' => Stage::Quiz->value,
+                'provider' => 'anthropic',
+                'model_id' => 'claude-sonnet-5-5',
+                'max_tokens' => 8_000,
+                'thinking_level' => 'low',
+                'fallback_provider' => 'google',
+                'fallback_model_id' => 'gemini-3.8-flash',
+                'timeout_seconds' => 180,
+                'max_retries' => 1,
+                // مخرَجٌ ثانٍ: سقوطُه لا يمسّ الملخّص المنشور.
+                'on_exhausted' => 'degrade',
+                'input_price_per_m' => 2.0,
+                'output_price_per_m' => 10.0,
             ],
             [
                 /*

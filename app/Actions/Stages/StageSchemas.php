@@ -7,6 +7,7 @@ namespace App\Actions\Stages;
 use App\Enums\SlideKind;
 use App\Enums\Stage;
 use App\Support\I18n\BodyStrings;
+use App\Support\Quiz\QuizGuard;
 use App\Support\Render\CarouselDesign;
 
 /**
@@ -33,6 +34,7 @@ final class StageSchemas
             Stage::ExtractingEvidence => self::evidence(),
             Stage::OutputMetadata => self::outputMetadata(),
             Stage::Carousel => self::carousel(),
+            Stage::Quiz => self::quiz(),
             Stage::LectureDetails => self::lectureDetails(),
             Stage::Translating => self::translations(),
             Stage::CarouselDesign => self::carouselDesigns(),
@@ -389,6 +391,50 @@ final class StageSchemas
      *
      * @return array<string, mixed>
      */
+    /**
+     * المرحلة ٨ — اختبارُ الفهم، T-195.
+     *
+     * **والمخطّطُ يحرس الشكل وحده**: جوابٌ صحيحٌ واحد، وعددُ الخيارات، والمحورُ
+     * والشاهدُ المعروفان — كلُّ ذلك في {@see QuizGuard}، فهو
+     * يحذف السؤالَ المخالف وحده ولا يُسقط الاختبار كلَّه بسببه.
+     */
+    private static function quiz(): array
+    {
+        return [
+            'type' => 'object',
+            'required' => ['questions'],
+            'properties' => [
+                'questions' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['kind', 'prompt', 'options', 'explanation', 'axis_id'],
+                        'properties' => [
+                            'kind' => ['type' => 'string', 'enum' => ['single', 'true_false', 'evidence']],
+                            'level' => ['type' => 'string', 'nullable' => true],
+                            'prompt' => ['type' => 'string'],
+                            'options' => [
+                                'type' => 'array',
+                                'items' => [
+                                    'type' => 'object',
+                                    'required' => ['correct'],
+                                    'properties' => [
+                                        'text' => ['type' => 'string', 'nullable' => true],
+                                        'evidence_id' => ['type' => 'string', 'nullable' => true],
+                                        'correct' => ['type' => 'boolean'],
+                                    ],
+                                ],
+                            ],
+                            'explanation' => ['type' => 'string'],
+                            'axis_id' => ['type' => 'string'],
+                            'evidence_ids' => ['type' => 'array', 'nullable' => true, 'items' => ['type' => 'string']],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
+
     private static function carousel(): array
     {
         return [

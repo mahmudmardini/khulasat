@@ -36,6 +36,7 @@ class Lecture extends Model
             'gregorian_date' => 'date',
             'duration_seconds' => 'integer',
             'want_carousel' => 'boolean',
+            'want_quiz' => 'boolean',
             'show_logo' => 'boolean',
         ];
     }

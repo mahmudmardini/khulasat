@@ -36,6 +36,9 @@ use App\Services\Verification\ConfiguredVerifierRegistry;
 use App\Services\Verification\HadithVerifier;
 use App\Support\TenantContext;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -100,6 +103,21 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->redirectAuthenticatedGuests();
+        $this->quizLimits();
+    }
+
+    /**
+     * حدودُ الاختبار العامّ — T-195. **مفتاحُها IP والاختبار معاً**: حدٌّ
+     * بـIP وحده يُشرك الاختبارات كلَّها في عدّادٍ واحد، فيُردّ مشاركٌ عن
+     * اختبارٍ ثانٍ لأنّه أعاد الأوّل.
+     */
+    private function quizLimits(): void
+    {
+        RateLimiter::for('quiz-start', static fn (Request $request): Limit => Limit::perHour(10)
+            ->by('quiz-start|'.$request->ip().'|'.$request->route('token')));
+
+        RateLimiter::for('quiz-answer', static fn (Request $request): Limit => Limit::perMinute(120)
+            ->by('quiz-answer|'.$request->ip().'|'.$request->route('token')));
     }
 
     /**

@@ -157,6 +157,7 @@ return [
             'upload_source' => 'Ses veya video dosyası',
             'page' => 'Özet',
             'carousel' => 'Instagram slaytları',
+            'quiz' => 'Anlama testi',
             'left' => 'Bu ay :limit hakkınızdan :left kaldı.',
             'todo' => 'Başlamadan önce',
             'todo_source' => 'Ders kaynağı',
@@ -227,6 +228,8 @@ return [
             'page' => 'Sayfa',
             'page_always' => 'Her zaman üretilir',
             'carousel' => 'Instagram karuseli',
+            'quiz' => 'Anlama testi',
+            'quiz_hint' => 'Paylaşılabilir bir bağlantıda 5–10 soru. Katılımcılar adlarıyla girer, sonuçları panelinizde görürsünüz.',
             'images' => 'Görsel paketi',
             'locked' => 'Kurum paketi ve üzerinde.',
             /*

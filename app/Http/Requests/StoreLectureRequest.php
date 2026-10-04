@@ -57,6 +57,8 @@ class StoreLectureRequest extends FormRequest
             // المخرجات المطلوبة — SCREENS.md §3-ب. والصفحة دائماً، فلا خانة
             // لها. وحزمة الصور بلا حقل: عارضها مؤجَّل (T-20).
             'want_carousel' => ['sometimes', 'boolean'],
+            // اختبارُ الفهم — T-195. لكلّ الشرائح، ولا يُحتسب من الحصّة.
+            'want_quiz' => ['sometimes', 'boolean'],
 
             /*
              * إعداداتُ المخرَج لهذه المحاضرة — طلبُ مالك المنتج، ٩ أيلول.

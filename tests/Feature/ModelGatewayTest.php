@@ -453,7 +453,8 @@ it('refuses to call a provider whose key is not set', function (): void {
 it('keeps no api key in the model_config table', function (): void {
     configureStage(Stage::Cleaning);
 
-    $columns = array_keys(ModelConfig::query()->sole()->getAttributes());
+    // بالمرحلة لا بـ`sole()` وحده: ترحيلُ T-195 يُضيف صفَّ المرحلة ٨ إن غاب.
+    $columns = array_keys(ModelConfig::query()->where('stage', Stage::Cleaning->value)->sole()->getAttributes());
 
     // أسماءُ الاعتماد نفسها، لا كلّ ما فيه «token»: `max_tokens` عمودٌ
     // مشروع، وفحصٌ يرفضه يرفض الصحيح مع الخطأ فيُهمَل.

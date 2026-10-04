@@ -34,7 +34,8 @@ function verificationConstant(string $class, string $name): mixed
 it('keeps the normalizer output unchanged over the whole seeded hadith corpus', function (): void {
     $out = [];
 
-    foreach (HadithBook::all() as $book) {
+    // الكتبُ المحكومة — والطبقةُ الثانية (T-170) ببصمتها وحدها تحت هذا.
+    foreach (HadithBook::primary() as $book) {
         $rows = json_decode(
             (string) gzdecode((string) file_get_contents(database_path("data/hadith/{$book->value}.json.gz"))),
             true,
@@ -50,6 +51,28 @@ it('keeps the normalizer output unchanged over the whole seeded hadith corpus', 
     expect(count($out))->toBe(35_982)
         ->and(hash('sha256', implode("\n", $out)))
         ->toBe('a9f00738ce8d73948febeb212a3367bbb2046911b06b4f5ca2a0e640252da503', FINGERPRINT_ADVICE);
+});
+
+it('keeps the normalizer output unchanged over the second tier of the corpus', function (): void {
+    // T-170: مسند أحمد وسنن الدارمي من Open-Hadith-Data (`1515f6c`)، بلا أحكام.
+    $out = [];
+
+    foreach (HadithBook::secondary() as $book) {
+        $rows = json_decode(
+            (string) gzdecode((string) file_get_contents(database_path("data/hadith/{$book->value}.json.gz"))),
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+
+        foreach ($rows as $row) {
+            $out[] = Arabic::normalize($row['text']);
+        }
+    }
+
+    expect(count($out))->toBe(29_730)
+        ->and(hash('sha256', implode("\n", $out)))
+        ->toBe('75279b2dd8241728529618e731ab208e39a67f6b2e696683ff765077d1f62d11', FINGERPRINT_ADVICE);
 });
 
 it('keeps the normalizer treatment of every Arabic, presentation, space and control character', function (): void {

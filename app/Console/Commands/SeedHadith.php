@@ -59,10 +59,22 @@ class SeedHadith extends Command
             return self::FAILURE;
         }
 
-        $this->line('المصدر: '.$manifest['source']['repository']);
-        $this->line('الإصدار المثبَّت: '.$manifest['source']['commit']);
-        $this->line('الرخصة: '.$manifest['source']['license']);
-        $this->newLine();
+        // لكلّ طبقةٍ مصدرُها — والثانية من Open-Hadith-Data بلا أحكام (T-170).
+        $tiers = [
+            'source' => array_filter($books, static fn (HadithBook $book): bool => ! $book->isSecondary()),
+            'secondary_source' => array_filter($books, static fn (HadithBook $book): bool => $book->isSecondary()),
+        ];
+
+        foreach ($tiers as $key => $tierBooks) {
+            if ($tierBooks === [] || ! isset($manifest[$key])) {
+                continue;
+            }
+
+            $this->line('المصدر: '.$manifest[$key]['repository']);
+            $this->line('الإصدار المثبَّت: '.$manifest[$key]['commit']);
+            $this->line('الرخصة: '.$manifest[$key]['license']);
+            $this->newLine();
+        }
 
         // ★ تُفحص البصمات كلّها **قبل** أن يُكتب صفٌّ واحد. والفحص أثناء
         //   البذر يترك المدوّنة نصفَ مبذورة عند أوّل ملفّ فاسد.

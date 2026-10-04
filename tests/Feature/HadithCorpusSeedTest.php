@@ -78,7 +78,8 @@ it('rebuilds a book from the file when forced', function (): void {
 });
 
 it('refuses a book it does not carry instead of seeding nothing quietly', function (): void {
-    test()->artisan('khulasah:seed-hadith', ['--book' => ['darimi']])->assertFailed();
+    // ابنُ حبّان ليس في المدوّنة — والدارمي صار فيها منذ T-170.
+    test()->artisan('khulasah:seed-hadith', ['--book' => ['ibnhibban']])->assertFailed();
 
     expect(Hadith::query()->count())->toBe(0);
 });

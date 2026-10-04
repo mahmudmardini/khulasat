@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 use App\Services\Hadith\LocalCorpusProvider;
+use App\Services\Hadith\SecondaryCorpusProvider;
 use App\Services\Verification\HadithVerifier;
 use App\Services\Verification\QuranVerifier;
 
@@ -553,6 +554,8 @@ return [
          */
         'providers' => [
             LocalCorpusProvider::class,
+            // الطبقة الثانية بلا أحكام — بعد المحكومة لا قبلها (T-170).
+            SecondaryCorpusProvider::class,
         ],
 
         // **والعتبات ليست هنا** — انتقلت إلى `domains` (T-02ب). فهي سياسة

@@ -34,6 +34,7 @@ return [
     'nav' => [
         'index' => 'Özetler',
         'create' => 'Yeni özet',
+        'verify' => 'Doğrulama aracı',
         'brand' => 'Kurum kimliği',
         'billing' => 'Abonelik',
         'team' => 'Ekip',

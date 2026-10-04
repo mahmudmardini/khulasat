@@ -39,6 +39,7 @@ return [
         'anatomy' => 'What you get',
         'how' => 'How it works',
         'verify' => 'Accuracy',
+        'tool' => 'Verify tool',
         'audience' => 'Who it is for',
         'faq' => 'Questions',
         'login' => 'Sign in',
@@ -158,6 +159,12 @@ return [
         ],
         'note_title' => 'A line we stop at',
         'note_body' => 'We trace text back to its source; we do not rule on whether a hadith is authentic. The difference between a tool and a jurist is a line the platform crosses in no page and on no screen.',
+        'tool' => [
+            'title' => 'Try it on your own text',
+            'body' => 'Paste any article, sermon or forwarded message. We pull out every verse and hadith in it, match each one to its source, and give the reason for every verdict. No account needed.',
+            'cta' => 'Open the verify tool',
+            'arabic_only' => 'The tool works in Arabic, on Arabic text.',
+        ],
     ],
 
     'audience' => [

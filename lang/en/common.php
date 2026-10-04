@@ -35,6 +35,7 @@ return [
     'nav' => [
         'index' => 'Summaries',
         'create' => 'New summary',
+        'verify' => 'Verify tool',
         'brand' => 'Institution identity',
         'billing' => 'Subscription',
         'team' => 'Team',

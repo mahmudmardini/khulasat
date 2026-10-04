@@ -356,3 +356,17 @@ it('forgets the text and its report after seven days, and the link says so', fun
 
     $this->getJson("/api/v1/verify/{$check->id}")->assertStatus(410);
 });
+
+// ── الوصول إلى الأداة — T-200 ──────────────────────────────────────
+
+it('is linked from the landing page in every language, and says it works in Arabic elsewhere', function (string $path, bool $arabic): void {
+    $html = $this->get($path)->assertOk()->getContent();
+
+    expect(substr_count($html, 'href="'.route('verify.create').'"'))->toBe(3)
+        ->and(str_contains($html, (string) __('landing.verify.tool.arabic_only', [], ltrim($path, '/') ?: 'ar')))->toBe(! $arabic);
+})->with([
+    'ar' => ['/', true],
+    'en' => ['/en', false],
+    'tr' => ['/tr', false],
+    'ru' => ['/ru', false],
+]);

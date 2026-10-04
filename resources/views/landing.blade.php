@@ -415,6 +415,18 @@ html[dir="ltr"] .axis p.eff::before{content:"→"}
 .notebox b{display:block; font-size:12px; color:var(--brand); margin-bottom:var(--s2); font-weight:600}
 .notebox p{margin:0; font-size:14px; color:var(--ink); max-width:72ch}
 
+/* أداة «تحقّق» — T-200: دعوةٌ إلى تجربة الطبقة نفسها على نصّ الزائر. */
+.toolband{margin-top:var(--s8); display:flex; align-items:center; gap:var(--s6); flex-wrap:wrap;
+  background:var(--surface); border:1px solid var(--border-strong); border-radius:var(--r14);
+  padding:var(--s6) var(--s8); box-shadow:var(--shadow)}
+.toolband .tb-ico{flex:none; width:44px; height:44px; border-radius:var(--r10); display:grid; place-items:center;
+  background:var(--brand-tint); color:var(--brand)}
+.toolband .tb-txt{flex:1 1 320px; min-width:0}
+.toolband h3{margin:0 0 var(--s1); font-size:18px}
+.toolband p{margin:0; font-size:14.5px; color:var(--muted); max-width:64ch}
+.toolband .tb-note{display:block; margin-top:var(--s2); font-size:12.5px; color:var(--faint)}
+@media (max-width:767px){ .toolband{padding:var(--s6)} .toolband .btn{width:100%; justify-content:center} }
+
 /* ── bento ── */
 .bento{display:grid; grid-template-columns:repeat(5,1fr); gap:var(--s4); margin-top:var(--s8)}
 .bento>.card:nth-child(1),.bento>.card:nth-child(4){grid-column:span 3}
@@ -689,6 +701,7 @@ html[dir="ltr"] .ar{font-family:var(--amiri); direction:rtl; text-align:start; d
       <a href="#anatomy">{{ __('landing.nav.anatomy') }}</a>
       <a href="#how">{{ __('landing.nav.how') }}</a>
       <a href="#verify">{{ __('landing.nav.verify') }}</a>
+      <a href="{{ route('verify.create') }}">{{ __('landing.nav.tool') }}</a>
       <a href="#audience">{{ __('landing.nav.audience') }}</a>
       <a href="#faq">{{ __('landing.nav.faq') }}</a>
     </nav>
@@ -707,6 +720,7 @@ html[dir="ltr"] .ar{font-family:var(--amiri); direction:rtl; text-align:start; d
     <li><a href="#anatomy">{{ __('landing.nav.anatomy') }}</a></li>
     <li><a href="#how">{{ __('landing.nav.how') }}</a></li>
     <li><a href="#verify">{{ __('landing.nav.verify') }}</a></li>
+    <li><a href="{{ route('verify.create') }}">{{ __('landing.nav.tool') }}</a></li>
     <li><a href="#audience">{{ __('landing.nav.audience') }}</a></li>
     <li><a href="#faq">{{ __('landing.nav.faq') }}</a></li>
   </ul>
@@ -986,6 +1000,23 @@ html[dir="ltr"] .ar{font-family:var(--amiri); direction:rtl; text-align:start; d
     <div class="notebox rv">
       <b>{{ __('landing.verify.note_title') }}</b>
       <p>{{ __('landing.verify.note_body') }}</p>
+    </div>
+
+    {{--
+      أداة «تحقّق» — T-200. **الطبقةُ نفسها التي وُصفت فوق، على نصّ الزائر**:
+      فالقسمُ الذي يشرح المنهج يختم بتجربته لا بوعدٍ به. والأداةُ عربيةٌ وحدها،
+      فيُقال ذلك في الصفحات الثلاث الأخرى قبل أن يُضغط الزرّ.
+    --}}
+    <div class="toolband rv">
+      <span class="tb-ico" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/><path d="m8.5 11 1.8 1.8 3.4-3.6"/></svg></span>
+      <div class="tb-txt">
+        <h3>{{ __('landing.verify.tool.title') }}</h3>
+        <p>{{ __('landing.verify.tool.body') }}</p>
+        @unless ($locale->isSource())
+          <span class="tb-note">{{ __('landing.verify.tool.arabic_only') }}</span>
+        @endunless
+      </div>
+      <a class="btn btn-primary" href="{{ route('verify.create') }}">{{ __('landing.verify.tool.cta') }}</a>
     </div>
   </div>
 </section>

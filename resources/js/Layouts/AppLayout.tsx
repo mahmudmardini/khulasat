@@ -308,6 +308,8 @@ const SECTIONS: ReadonlyArray<{
     links: [
       { key: 'index', href: '/panel', icon: 'index' },
       { key: 'create', href: '/panel/lectures/create', icon: 'create' },
+      // أداة «تحقّق» — T-200. عامّةٌ خارج اللوحة، ورابطُها هنا ليصلها من يعمل فيها.
+      { key: 'verify', href: '/verify', icon: 'search' },
     ],
   },
   {

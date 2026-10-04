@@ -55,3 +55,4 @@ git diff baseline-2026-09-27..main
 | 3 | **الشاهد المكرَّر سطرٌ واحد في قائمة التخريج**، بموضعه (الكتاب والرقم، أو السورة والآيات) لا بلفظه. والمتن لا يُمسّ | `84f3e4e` | `app/Support/Render/RenderedEvidence.php` · `app/Services/Render/PageRenderer.php` |
 | 4 | **الاختبارات تمرّ على لينكس**: مسار صفحات Inertia بحرفه الكبير | `f5f1fd3` | `config/inertia.php` |
 | 5 | **الاختبارات لا تتأثّر بـ`APP_URL` المحلّي** | `173bd89` | `phpunit.xml` |
+| 6 | **صور كاروسيل جاهزة لإنستغرام، بتصميمٍ من مواصفةٍ مغلقة.** القالب هيكلٌ ثابت تقوده مواصفةُ تصميم (السطح، والخلفية، والإطار، والزخرفة، وخطّ العنوان، وتخطيطٌ لكلّ نوع شريحة)، والافتراضيُّ يطابق القالب السابق بالبكسل. وكلُّ شريحةٍ تُلتقط PNG بمقاس 1080×1350 في الطابور، وتُحزم ZIP مع نصّ المنشور، وتُعرض وتُنزَّل من المعاينة. المرحلة الأولى من T-173 | `db0556f` | `app/Support/Render/CarouselDesign.php` · `app/Actions/Render/RenderImageSet.php` · `resources/views/carousel/partials/_design.blade.php` |

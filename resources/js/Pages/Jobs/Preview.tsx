@@ -76,7 +76,8 @@ interface Props {
   locale_additions: LocaleAddition[];
 }
 
-type TabKey = 'page' | 'carousel' | 'images';
+// تبويبان — T-199: الصورُ في تبويب الشرائح تحت عارضها، لا تبويباً ثالثاً يكرّرها.
+type TabKey = 'page' | 'carousel';
 
 const DEVICE_ICONS: Record<Device, IconName> = { mobile: 'phone', tablet: 'tablet', desktop: 'desktop' };
 const DEVICE_KEY = 'khulasah.preview.device';
@@ -182,7 +183,6 @@ export default function Preview({
               produced={{
                 page: outputs.page.produced,
                 carousel: outputs.carousel.produced,
-                images: outputs.images.produced,
               }}
             />
 
@@ -202,18 +202,7 @@ export default function Preview({
                 rich={rich_outputs}
                 busy={busy}
                 onBuild={buildCarousel}
-              />
-            ) : null}
-            {tab === 'images' ? (
-              <ImagesPane
-                job={job}
-                images={outputs.images}
-                slides={outputs.carousel.slides.length}
-                carouselProduced={outputs.carousel.produced}
-                rich={rich_outputs}
-                busy={busy}
-                onBuild={buildImages}
-                onOpenCarousel={() => setTab('carousel')}
+                onBuildImages={buildImages}
               />
             ) : null}
 
@@ -302,7 +291,6 @@ function Tabs({
   const tabs: Array<{ key: TabKey; icon: IconName }> = [
     { key: 'page', icon: 'page' },
     { key: 'carousel', icon: 'carousel' },
-    { key: 'images', icon: 'images' },
   ];
 
   return (
@@ -554,7 +542,7 @@ function QuickButton({
 
 /** الشرائح متجاورةً، لكلٍّ نسخ النصّ، وزرّ نسخ الكلّ — §6. */
 function CarouselPane({
-  job, carousel, images, rich, busy, onBuild,
+  job, carousel, images, rich, busy, onBuild, onBuildImages,
 }: {
   job: Props['job'];
   carousel: Props['outputs']['carousel'];
@@ -562,6 +550,7 @@ function CarouselPane({
   rich: boolean;
   busy: boolean;
   onBuild: () => void;
+  onBuildImages: (design: string | null) => void;
 }) {
   if (!carousel.produced || carousel.slides.length === 0) {
     return (
@@ -619,7 +608,11 @@ function CarouselPane({
                 key={slide.index}
                 src={images.urls[position]}
                 alt={t('jobs.images.slide_alt', { slide: toArabicIndic(slide.index) })}
-                className="aspect-[4/5] w-full max-w-md rounded-lg border border-border"
+                // أثناء إنشاء صورٍ جديدة تبقى القديمةُ معتمةً حتى تحلّ محلّها — T-197.
+                className={cn(
+                  'aspect-[4/5] w-full max-w-md rounded-lg border border-border transition-opacity',
+                  images.state === 'rendering' && 'opacity-40',
+                )}
               />
             ) : (
               <SlideFace key={slide.index} slide={slide} />
@@ -627,6 +620,9 @@ function CarouselPane({
           )}
         />
       </Card>
+
+      {/* الصور تحت عارضها — T-199: القالبُ والإنشاءُ والتنزيلُ في موضعٍ واحد. */}
+      <ImagesPane job={job} images={images} rich={rich} busy={busy} onBuild={onBuildImages} />
 
       <Card
         title={t('jobs.preview.slide_texts')}
@@ -669,126 +665,31 @@ function CarouselPane({
 }
 
 /**
- * حزمة الصور — T-173، وتستوعب T-20.
+ * حزمة الصور — T-173، وتستوعب T-20. **وتحت عارض الشرائح منذ T-199**.
  *
- * تُنشأ من الشرائح المحفوظة بلا نموذج ولا كلفة، فزرُّها بوزن «ابنِ الشرائح» لا
- * بوزن «أعد التوليد». والتنزيلُ رابطٌ لا زرّ، كسائر التنزيلات هنا.
+ * بلا شبكة صورٍ هنا: العارضُ فوقها يعرض الصورَ الملتقَطة متى وُجدت، فشبكةٌ
+ * ثانية تكرّرها. وهنا ما يخصّ الحزمة: القالبُ، والإنشاءُ وإعادتُه، والتنزيلُ،
+ * والتقدّمُ، والكلفةُ مكتوبة. والتنزيلُ رابطٌ لا زرّ، كسائر التنزيلات هنا.
  */
 function ImagesPane({
-  job, images, slides, carouselProduced, rich, busy, onBuild, onOpenCarousel,
+  job, images, rich, busy, onBuild,
 }: {
   job: Props['job'];
   images: Props['outputs']['images'];
-  slides: number;
-  carouselProduced: boolean;
   rich: boolean;
   busy: boolean;
   onBuild: (design: string | null) => void;
-  onOpenCarousel: () => void;
 }) {
   // القالب: ما صُنعت به الحزمة الحاليّة، وإلّا افتراضيُّ الجهة.
   const [design, setDesign] = useState<string | null>(images.design ?? images.designs[0]?.id ?? null);
-
-  if (!rich) {
-    return (
-      <Card>
-        <EmptyState
-          title={t('jobs.carousel.locked')}
-          body={t('jobs.carousel.locked_body')}
-          action={
-            <Button variant="secondary" onClick={() => router.visit('/panel/settings/billing')}>
-              {t('jobs.carousel.locked_cta')}
-            </Button>
-          }
-        />
-      </Card>
-    );
-  }
-
-  if (!images.enabled) {
-    return (
-      <Card>
-        <EmptyState title={t('jobs.images.failed_title')} body={t('jobs.images.disabled')} />
-      </Card>
-    );
-  }
-
-  if (!carouselProduced) {
-    return (
-      <Card>
-        <EmptyState
-          title={t('jobs.images.needs_carousel')}
-          body={t('jobs.images.needs_carousel_body')}
-          action={
-            <Button variant="secondary" onClick={onOpenCarousel}>
-              <Icon name="carousel" size={16} />
-              {t('jobs.preview.tabs.carousel')}
-            </Button>
-          }
-        />
-      </Card>
-    );
-  }
-
-  // **الإنشاءُ لا يُخفي ما قبله** — T-197: الصورُ الأخيرة باقيةٌ معتمةً، وفوقها
-  // ما التُقط من كم، ثمّ تحلّ الجديدةُ محلّها وحدها حين يكتمل.
   const rendering = images.state === 'rendering';
 
-  const create = (
-    <div className="flex flex-wrap items-center gap-2">
-      {/* لا اختيار إلّا لجهةٍ اعتمدت قالباً — ومن لم تعتمد فقالبُها الأصل. */}
-      {images.designs.length > 0 ? (
-        <label className="flex items-center gap-2 text-[14px] text-text-muted">
-          <span>{t('common.carousel_designs.choose')}</span>
-          <select
-            value={design ?? ''}
-            onChange={(event) => setDesign(event.target.value)}
-            className="field w-auto py-1.5"
-          >
-            {images.designs.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name ?? t('common.carousel_designs.unnamed')}
-              </option>
-            ))}
-            <option value="default">{t('common.carousel_designs.default_original')}</option>
-          </select>
-        </label>
-      ) : null}
-
-      <Button
-        loading={busy || rendering}
-        onClick={() => onBuild(design)}
-        variant={images.produced ? 'secondary' : 'primary'}
-      >
-        <Icon name="images" size={16} />
-        {t(images.produced ? 'jobs.images.recreate' : 'jobs.images.create')}
-      </Button>
-    </div>
-  );
-
-  if (!images.produced && rendering) {
+  if (!rich || !images.enabled) {
     return (
-      <Card title={t('jobs.preview.tabs.images')} action={create}>
-        <ImagesProgress progress={images.progress} />
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" aria-hidden="true">
-          {Array.from({ length: Math.max(slides, 1) }, (_, index) => (
-            <li key={index}>
-              <span className="skeleton block aspect-[4/5] w-full rounded-md" />
-            </li>
-          ))}
-        </ul>
-      </Card>
-    );
-  }
-
-  if (!images.produced) {
-    return (
-      <Card>
-        <EmptyState
-          title={images.state === 'failed' ? t('jobs.images.failed_title') : t('jobs.images.empty')}
-          body={images.state === 'failed' && images.error !== null ? images.error : t('jobs.images.empty_body')}
-          action={create}
-        />
+      <Card title={t('jobs.preview.tabs.images')}>
+        <p className="text-[14px] text-text-muted">
+          {t(!rich ? 'jobs.carousel.locked_body' : 'jobs.images.disabled')}
+        </p>
       </Card>
     );
   }
@@ -798,14 +699,44 @@ function ImagesPane({
       title={t('jobs.preview.tabs.images')}
       action={
         <div className="flex flex-wrap items-center gap-2">
-          {create}
-          <a
-            href={`/panel/jobs/${job.id}/download/image_set`}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-[15px] font-medium whitespace-nowrap text-white transition-colors duration-150 hover:bg-primary-hover"
+          {/* لا اختيار إلّا لجهةٍ اعتمدت قالباً — ومن لم تعتمد فقالبُها الأصل. */}
+          {images.designs.length > 0 ? (
+            <label className="flex items-center gap-2 text-[14px] text-text-muted">
+              <span>{t('common.carousel_designs.choose')}</span>
+              <select
+                value={design ?? ''}
+                onChange={(event) => setDesign(event.target.value)}
+                disabled={rendering}
+                className="field w-auto py-1.5"
+              >
+                {images.designs.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name ?? t('common.carousel_designs.unnamed')}
+                  </option>
+                ))}
+                <option value="default">{t('common.carousel_designs.default_original')}</option>
+              </select>
+            </label>
+          ) : null}
+
+          <Button
+            loading={busy || rendering}
+            onClick={() => onBuild(design)}
+            variant={images.produced ? 'secondary' : 'primary'}
           >
-            <Icon name="upload" size={16} className="rotate-180" />
-            {t('jobs.images.download')}
-          </a>
+            <Icon name="images" size={16} />
+            {t(images.produced ? 'jobs.images.recreate' : 'jobs.images.create')}
+          </Button>
+
+          {images.produced ? (
+            <a
+              href={`/panel/jobs/${job.id}/download/image_set`}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded bg-primary px-4 py-2 text-[15px] font-medium whitespace-nowrap text-white transition-colors duration-150 hover:bg-primary-hover"
+            >
+              <Icon name="upload" size={16} className="rotate-180" />
+              {t('jobs.images.download')}
+            </a>
+          ) : null}
         </div>
       }
     >
@@ -817,24 +748,8 @@ function ImagesPane({
         </p>
       ) : null}
 
-      <ul
-        aria-busy={rendering || undefined}
-        className={cn('grid grid-cols-2 gap-3 transition-opacity sm:grid-cols-3 lg:grid-cols-5', rendering && 'opacity-40')}
-      >
-        {images.urls.map((url, position) => (
-          <li key={url}>
-            <img
-              src={url}
-              loading="lazy"
-              alt={t('jobs.images.slide_alt', { slide: toArabicIndic(position + 1) })}
-              className="aspect-[4/5] w-full rounded-md border border-border"
-            />
-          </li>
-        ))}
-      </ul>
-
-      <div className="mt-4 flex flex-col gap-1 text-[13px] text-text-faint">
-        <span>{t('jobs.images.ready_hint')}</span>
+      <div className="flex flex-col gap-1 text-[13px] text-text-faint">
+        <span>{t(images.produced ? 'jobs.images.ready_hint' : 'jobs.images.empty_body')}</span>
         {/* الكلفةُ مكتوبةٌ تحت الزرّ لا مفترَضة — T-196. */}
         <span className="font-medium text-text-muted">{t('jobs.images.free_hint')}</span>
       </div>

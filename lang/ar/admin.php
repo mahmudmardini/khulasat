@@ -344,6 +344,8 @@ return [
                 'plan' => 'طُبّقت باقة',
                 'status' => 'عُدّلت حالة اشتراك',
                 'verification' => 'بُدّل وضع الشواهد',
+                'carousel_prompt' => 'عُدّلت تعليمات قوالب الكاروسيل',
+                'carousel_designs' => 'وُلّدت قوالب كاروسيل',
             ],
             'model_config' => [
                 'updated' => 'عُدّل إعداد نموذج',

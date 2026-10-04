@@ -7,6 +7,7 @@ namespace App\Actions\Stages;
 use App\Enums\SlideKind;
 use App\Enums\Stage;
 use App\Support\I18n\BodyStrings;
+use App\Support\Render\CarouselDesign;
 
 /**
  * The output shape each stage must match — المواصفة §6.
@@ -34,6 +35,7 @@ final class StageSchemas
             Stage::Carousel => self::carousel(),
             Stage::LectureDetails => self::lectureDetails(),
             Stage::Translating => self::translations(),
+            Stage::CarouselDesign => self::carouselDesigns(),
         };
     }
 
@@ -313,6 +315,47 @@ final class StageSchemas
                 'weekday' => $nullableString,
                 'time_note' => $nullableString,
                 'series' => $nullableString,
+            ],
+        ];
+    }
+
+    /**
+     * قوالبُ كاروسيل الجهة — T-173.
+     *
+     * **يُبنى من الكتالوج لا يُنسخ عنه**: قيمةٌ تُضاف إلى `CarouselDesign`
+     * تصل النموذجَ بإضافتها. والمعرّفُ لا يُطلب منه: يضعه الخادم، فلا تتصادم
+     * قوالبُ توليدين.
+     *
+     * @return array<string, mixed>
+     */
+    private static function carouselDesigns(): array
+    {
+        $enum = static fn (array $options): array => ['type' => 'string', 'enum' => $options];
+
+        $layouts = array_map($enum, CarouselDesign::LAYOUTS);
+
+        return [
+            'type' => 'object',
+            'required' => ['designs'],
+            'properties' => [
+                'designs' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'required' => ['name', 'rationale', ...array_keys(CarouselDesign::CATALOG), 'layouts'],
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                            // لماذا يناسب هذا القالبُ هذه الجهة — يُعرض على المشرف، ولا يُرسم.
+                            'rationale' => ['type' => 'string'],
+                            ...array_map($enum, CarouselDesign::CATALOG),
+                            'layouts' => [
+                                'type' => 'object',
+                                'required' => array_keys(CarouselDesign::LAYOUTS),
+                                'properties' => $layouts,
+                            ],
+                        ],
+                    ],
+                ],
             ],
         ];
     }

@@ -182,6 +182,27 @@ class ModelConfigSeeder extends Seeder
             ],
             [
                 /*
+                 * **قوالبُ كاروسيل الجهة** — T-173، وخارج الستّ. تجري مرّةً
+                 * لكلّ جهةٍ لا لكلّ ملخّص، فيُحتمل فيها الأعلى: Opus 5.5
+                 * (‏$4/$20) أدقّ قراءةً للشعار والتخطيط، وجهدُه `low` يكفي
+                 * اختياراً من كتالوجٍ مغلق. والبديلُ عند مزوّدٍ آخر — الفحصُ
+                 * المسبق يحجب بديلاً من المزوّد نفسه، فانقطاعُه يصيبهما معاً.
+                 */
+                'stage' => Stage::CarouselDesign->value,
+                'provider' => 'anthropic',
+                'model_id' => 'claude-opus-5-5',
+                'max_tokens' => 6_000,
+                'thinking_level' => 'low',
+                'fallback_provider' => 'openai',
+                'fallback_model_id' => 'gpt-5.6-sol',
+                'timeout_seconds' => 180,
+                'max_retries' => 1,
+                'on_exhausted' => 'fallback',
+                'input_price_per_m' => 4.0,
+                'output_price_per_m' => 20.0,
+            ],
+            [
+                /*
                  * **الترجمة** — T-38، وخارج الستّ كذلك.
                  *
                  * وعلى الفئة المتوسطة لا الأرخص: النقلُ بين اللغات ليس

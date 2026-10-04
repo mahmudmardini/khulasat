@@ -63,8 +63,12 @@ final class RenderImageSet
         return $output;
     }
 
-    /** @throws RuntimeException سببُه يُعرض على المستخدم كما هو. */
-    public function handle(SummaryJob $job): Output
+    /**
+     * @param  string|null  $design  معرّفُ قالبٍ معتمد، أو `default` للأصل. وغيابُه افتراضيُّ الجهة.
+     *
+     * @throws RuntimeException سببُه يُعرض على المستخدم كما هو.
+     */
+    public function handle(SummaryJob $job, ?string $design = null): Output
     {
         // الصورُ تُنشر على إنستغرام بيد الجهة، فحكمُها حكمُ المنشور (§2-٤).
         $pending = $job->pendingEvidenceCount();
@@ -82,10 +86,10 @@ final class RenderImageSet
             throw new RuntimeException(trans('jobs.images.no_carousel'));
         }
 
-        $design = CarouselDesign::forTenant($tenant);
+        $chosen = CarouselDesign::forTenant($tenant, $design);
         $pageUrl = $job->outputs()->where('type', OutputType::Page->value)->first()?->public_url;
 
-        $documents = (new CarouselRenderer($this->views, $deck, $pageUrl, $design))
+        $documents = (new CarouselRenderer($this->views, $deck, $pageUrl, $chosen))
             ->slides(ContentObject::fromJob($job), BrandKit::forTenant($tenant, $job->lecture));
 
         $images = [];
@@ -115,7 +119,7 @@ final class RenderImageSet
 
         $output = self::mark($job, 'ready', null, [
             'count' => count($images),
-            'design' => $design->id,
+            'design' => $chosen->id,
             'bytes' => strlen($zip),
         ]);
 

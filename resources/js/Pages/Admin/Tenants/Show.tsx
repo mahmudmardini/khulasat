@@ -2,6 +2,7 @@ import { router, useForm, usePage } from '@inertiajs/react';
 import { AdminLayout } from '@/Layouts/AdminLayout';
 import { Button } from '@/Components/Button';
 import { Card } from '@/Components/Card';
+import { CarouselDesigns, type CarouselDesignsData } from '@/Components/CarouselDesigns';
 import { ConfirmDialog } from '@/Components/ConfirmDialog';
 import { EmptyState } from '@/Components/EmptyState';
 import { FieldGroup } from '@/Components/FieldGroup';
@@ -55,6 +56,9 @@ interface Props {
   plans: PlanOption[];
   owners: Array<{ id: number; name: string; email: string }>;
   audit: AuditRow[];
+  /** قوالبُ الكاروسيل وتعليماتُ توليدها — T-173. */
+  carousel_designs: CarouselDesignsData;
+  carousel_prompt: { custom: string | null; default: string };
 }
 
 const LIMIT_FIELDS: Array<keyof Limits> = [
@@ -72,7 +76,7 @@ const LIMIT_FIELDS: Array<keyof Limits> = [
  * المرحلة، فالجهة تحوّل إلى الحساب البنكي ثمّ تُرفع حدودها من هذه الشاشة —
  * وسببُ التغيير هو الرابط الوحيد بين المال المستلَم والحصّة المرفوعة.
  */
-export default function TenantShow({ tenant, usage, plans, owners, audit }: Props) {
+export default function TenantShow({ tenant, usage, plans, owners, audit, carousel_designs, carousel_prompt }: Props) {
   const flash = usePage<{ props: { temporary_password?: string } }>().props as unknown as {
     temporary_password?: string;
   };
@@ -90,6 +94,13 @@ export default function TenantShow({ tenant, usage, plans, owners, audit }: Prop
             <LimitsForm tenant={tenant} />
             <VerificationForm tenant={tenant} />
             <StatusForm tenant={tenant} />
+            <CarouselPromptForm tenant={tenant} prompt={carousel_prompt} />
+            <CarouselDesigns
+              designs={carousel_designs}
+              base={`/admin/tenants/${tenant.id}/carousel-designs`}
+              prop="carousel_designs"
+              manage={false}
+            />
 
             <Card title={t('admin.audit.title')} flush>
               {audit.length === 0 ? (
@@ -438,6 +449,68 @@ function StatusForm({ tenant }: { tenant: Props['tenant'] }) {
 }
 
 /** «صلاحية خطيرة تُراقَب لا تُمنع» — فالتحذير قبلها، والتقييد بعدها. */
+/**
+ * تعليماتُ توليد قوالب الكاروسيل لهذه الجهة — T-173، بطلب @HasanSiwi.
+ *
+ * فارغةً تعني الافتراضية. و«ابدأ من الافتراضية» تنسخها إلى المحرّر ليُعدَّل
+ * منها لا من صفحةٍ بيضاء. والحفظُ يُقيَّد في السجلّ، والتوليدُ زرٌّ تحته.
+ */
+function CarouselPromptForm({ tenant, prompt }: { tenant: Props['tenant']; prompt: Props['carousel_prompt'] }) {
+  const form = useForm({ prompt: prompt.custom ?? '' });
+  const [showDefault, setShowDefault] = useState(false);
+
+  return (
+    <Card
+      title={t('common.carousel_designs.prompt_title')}
+      action={
+        <span className="rounded border border-border px-1.5 py-0.5 text-[11px] text-text-faint">
+          {t(prompt.custom ? 'common.carousel_designs.prompt_custom' : 'common.carousel_designs.prompt_using_default')}
+        </span>
+      }
+    >
+      <p className="text-[13px] text-text-muted">{t('common.carousel_designs.prompt_hint')}</p>
+
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          form.put(`/admin/tenants/${tenant.id}/carousel-designs/prompt`, { preserveScroll: true });
+        }}
+        className="mt-4 flex flex-col gap-4"
+      >
+        <FieldGroup label={t('common.carousel_designs.prompt_title')} error={form.errors.prompt}>
+          <textarea
+            name="carousel_prompt"
+            dir="rtl"
+            rows={14}
+            value={form.data.prompt}
+            onChange={(event) => form.setData('prompt', event.target.value)}
+            placeholder={t('common.carousel_designs.prompt_using_default')}
+            className="field min-h-[16rem] text-[13.5px] leading-relaxed"
+          />
+        </FieldGroup>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit" loading={form.processing} disabled={!form.isDirty}>
+            {t('common.actions.save')}
+          </Button>
+          <Button variant="secondary" onClick={() => form.setData('prompt', prompt.default)}>
+            {t('common.carousel_designs.prompt_copy_default')}
+          </Button>
+          <Button variant="ghost" onClick={() => setShowDefault((shown) => !shown)}>
+            {t('common.carousel_designs.prompt_default')}
+          </Button>
+        </div>
+      </form>
+
+      {showDefault ? (
+        <pre className="mt-4 max-h-96 overflow-auto rounded-lg border border-border bg-surface-alt p-4 text-[12.5px] leading-relaxed whitespace-pre-wrap text-text-muted">
+          {prompt.default}
+        </pre>
+      ) : null}
+    </Card>
+  );
+}
+
 function Impersonate({ tenant, disabled }: { tenant: Props['tenant']; disabled: boolean }) {
   const [confirming, setConfirming] = useState(false);
 

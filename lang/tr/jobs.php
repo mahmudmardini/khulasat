@@ -344,6 +344,8 @@ return [
         'not_ready' => 'Metin henüz tamamlanmadı',
         'not_ready_body' => 'Önizleme yazılmış metinden çizilir, o da henüz yazılmadı.',
 
+        'more_title' => 'İndir, yayınla, yeniden üret',
+        'open_carousel_page' => 'Slaytlar sayfası',
         'images_soon' => 'Görsel paketi henüz oluşturulmadı',
         'images_soon_body' => 'Oluşturulduğunda aynı slaytlardan, maliyetsiz ve yeniden üretimsiz çizilecek.',
 
@@ -435,6 +437,7 @@ return [
         'empty_body' => 'Her slayt Instagram boyutunda (1080×1350) bir görsel olarak yakalanır ve gönderi metniyle paketlenir. Ücretsizdir ve kotanızdan düşülmez.',
         'rendering' => 'Görseller oluşturuluyor…',
         'rendering_body' => 'Slaytlar tek tek yakalanır; bu bir dakika sürebilir. Sayfa kendiliğinden güncellenir.',
+        'free_hint' => 'Görselleri herhangi bir şablonla oluşturmak ve yeniden oluşturmak ücretsizdir ve kotanızdan düşülmez.',
         'ready_hint' => 'Sırasıyla numaralanmış 1080×1350 görseller ve caption.txt içinde gönderi metni.',
         'failed_title' => 'Görseller oluşturulamadı',
         'needs_carousel' => 'Önce slaytları oluşturun',

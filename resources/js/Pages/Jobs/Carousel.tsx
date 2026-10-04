@@ -171,7 +171,14 @@ function Deck({
         </Button>
       </div>
 
-      <p className="text-[13px] text-text-faint">{t('jobs.carousel.rebuild_hint')}</p>
+      {/*
+        **كلفةُ كلّ زرٍّ مكتوبة** — T-196. «أعد الإنشاء» مجّانيّ، و«اطلب صياغة
+        جديدة» وحده نداءٌ للنموذج، ونصُّه كان في الترجمة ولا يُعرض.
+      */}
+      <div className="flex flex-col gap-1 text-[13px] text-text-faint">
+        <span>{t('jobs.carousel.rebuild_hint')}</span>
+        <span>{t('jobs.carousel.recondense_hint')}</span>
+      </div>
 
       <Card title={t('jobs.carousel.texts')}>
         <ul className="grid gap-4 sm:grid-cols-2">

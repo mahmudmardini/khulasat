@@ -184,8 +184,7 @@ final class TenantCarouselDesigns
     public static function previewHtml(Tenant $tenant, CarouselDesign $design): string
     {
         return (new CarouselRenderer(app(ViewFactory::class), SampleCarousel::deck(), null, $design))
-            ->render(BrandController::sampleContent(), BrandKit::forTenant($tenant))
-            ->contents;
+            ->preview(BrandController::sampleContent(), BrandKit::forTenant($tenant));
     }
 
     /** @return array<string, mixed> */

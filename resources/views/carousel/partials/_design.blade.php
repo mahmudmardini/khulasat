@@ -11,6 +11,9 @@
 /* ── الالتقاط: شريحةٌ واحدة في وثيقتها، بلا هامش ولا فاصل ── */
 .deck.capture{padding:0;gap:0}
 
+/* ── معاينةُ اللوحة: مصغَّرةٌ على أيّ عرض (T-196). والالتقاطُ بلا هذا الصنف، فبمقاسه. ── */
+.deck.fit{zoom:.34}
+
 /* ── سطحُ شرائح المتن ── */
 .surface-paper-2 .slide:not(.cover):not(.closing){background-color:var(--paper-2)}
 

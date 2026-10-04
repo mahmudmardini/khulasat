@@ -588,9 +588,22 @@ function CarouselPane({
       <Card
         title={t('jobs.preview.slides')}
         action={
-          <span className="nums-tabular text-[13px] text-text-muted">
-            {toArabicIndic(t('jobs.carousel.count', { count: carousel.slides.length }))}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="nums-tabular text-[13px] text-text-muted">
+              {toArabicIndic(t('jobs.carousel.count', { count: carousel.slides.length }))}
+            </span>
+            {/*
+              **رابطُ صفحة الشرائح هنا لا تحت البطاقات** — T-196. كان سطراً
+              منفرداً فوق بطاقة الأفعال، فيُقرأ عنواناً لها.
+            */}
+            <Link
+              href={`/panel/jobs/${job.id}/carousel`}
+              className="inline-flex items-center gap-1.5 rounded px-2 py-1 text-[13.5px] font-medium text-primary transition-colors hover:bg-surface-alt"
+            >
+              {t('jobs.preview.open_carousel_page')}
+              <Icon name="external" size={14} />
+            </Link>
+          </div>
         }
       >
         <SlideCarousel
@@ -648,11 +661,6 @@ function CarouselPane({
         </ul>
       </Card>
 
-      <p className="text-[13px] text-text-faint">
-        <Link href={`/panel/jobs/${job.id}/carousel`} className="text-primary underline-offset-4 hover:underline">
-          {t('jobs.carousel.title')}
-        </Link>
-      </p>
     </>
   );
 }
@@ -801,7 +809,11 @@ function ImagesPane({
         ))}
       </ul>
 
-      <p className="mt-4 text-[13px] text-text-faint">{t('jobs.images.ready_hint')}</p>
+      <div className="mt-4 flex flex-col gap-1 text-[13px] text-text-faint">
+        <span>{t('jobs.images.ready_hint')}</span>
+        {/* الكلفةُ مكتوبةٌ تحت الزرّ لا مفترَضة — T-196. */}
+        <span className="font-medium text-text-muted">{t('jobs.images.free_hint')}</span>
+      </div>
     </Card>
   );
 }
@@ -844,6 +856,8 @@ function Actions({
 }) {
   return (
     <Card
+      // بعنوانها — T-196: بلا عنوانٍ كان ما فوقها يُقرأ عنواناً لها.
+      title={t('jobs.preview.more_title')}
       footer={
         <div className="flex flex-col gap-1 text-[13px] text-text-faint">
           <span>{t('jobs.preview.publish_hint')}</span>

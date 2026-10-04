@@ -122,6 +122,7 @@ return [
     'product' => [
         'name' => 'Khulasat',
         'rights' => '© :year',
+        'privacy' => 'Политика конфиденциальности',
         'slogan' => 'Резюме со ссылкой на источник',
     ],
 

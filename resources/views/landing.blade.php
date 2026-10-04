@@ -1283,6 +1283,7 @@ html[dir="ltr"] .ar{font-family:var(--amiri); direction:rtl; text-align:start; d
           <li><a href="#invite">{{ __('landing.nav.contact') }}</a></li>
           <li><a href="{{ route('login') }}">{{ __('landing.footer.login_tenants') }}</a></li>
           <li><a href="{{ route('complaint.create') }}">{{ __('landing.footer.complaint') }}</a></li>
+          <li><a href="{{ route('privacy') }}">{{ __('landing.footer.privacy') }}</a></li>
           <li><a href="#anatomy">{{ __('landing.footer.anatomy_link') }}</a></li>
         </ul>
       </div>

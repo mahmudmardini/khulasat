@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 use App\Actions\Stages\StageSchemas;
 use App\Contracts\LectureDetailsSource;
+use App\Contracts\ModelGateway;
 use App\Contracts\TranscriptProvider;
 use App\Enums\Stage;
+use App\Models\ModelCall;
+use App\Models\SummaryJob;
+use App\Models\Tenant;
 use App\Services\Lecture\ManualDetailsSource;
 use App\Services\Lecture\PosterDetailsSource;
 use App\Services\Model\Drivers\AnthropicDriver;
 use App\Services\Model\Drivers\OpenAiDriver;
 use App\Services\Model\FakeModelGateway;
+use App\Services\Quota\SpendCap;
 use App\Support\Lecture\LectureDetails;
 use App\Support\Model\ImageAttachment;
+use App\Support\Model\ModelResponse;
 use App\Support\Model\StagePrompt;
+use App\Support\TenantContext;
 use App\Support\Verification\DomainPolicy;
 use Illuminate\Support\Facades\Http;
 
@@ -162,4 +169,67 @@ it('يقرأ تعليماته من المسار المشترك لا من مسا�
  */
 it('لا يبقي معامل حرارة يُسقط النداء', function (): void {
     expect(method_exists(Stage::class, 'temperature'))->toBeFalse();
+});
+
+/*
+ * ─── الكلفة والسقف — T-194 ──────────────────────────────────────────
+ *
+ * نداءٌ للجهة لا لملخّص: يُقيَّد لها، ويحسبه السقف، ويُفحص السقفُ قبله.
+ */
+
+/** بوّابةٌ تردّ عنواناً بكلفةٍ معلومة، وتعدّ ما نُودي. */
+function costedPosterGateway(): object
+{
+    return new class implements ModelGateway
+    {
+        public int $calls = 0;
+
+        public function call(Stage $stage, array $messages, ?array $schema = null, ?SummaryJob $job = null): ModelResponse
+        {
+            $this->calls++;
+
+            return new ModelResponse(
+                stage: $stage,
+                provider: 'anthropic',
+                modelId: 'claude-sonnet-5',
+                content: '{"title_ar":"عنوان الدرس"}',
+                costUsd: 0.012,
+                decoded: ['title_ar' => 'عنوان الدرس'],
+            );
+        }
+    };
+}
+
+it('يقيّد كلفة الاستخراج للجهة بلا ملخّص، ويحسبها سقفُ الإنفاق', function (): void {
+    $tenant = Tenant::factory()->create();
+    app(TenantContext::class)->set($tenant->id);
+    app()->instance(ModelGateway::class, $gateway = costedPosterGateway());
+
+    $details = app(PosterDetailsSource::class)->extract(pngBytes());
+
+    $call = ModelCall::acrossTenants()->where('tenant_id', $tenant->id)->sole();
+
+    expect($details->titleAr)->toBe('عنوان الدرس')
+        ->and($gateway->calls)->toBe(1)
+        ->and($call->summary_job_id)->toBeNull()
+        ->and($call->stage)->toBe(Stage::LectureDetails)
+        ->and(app(SpendCap::class)->spentToday())->toBe(0.012);
+});
+
+it('لا ينادي والسقفُ موقوف، ويعيد حقولاً فارغة تُملأ يدوياً', function (): void {
+    app(TenantContext::class)->set(Tenant::factory()->create()->id);
+    app()->instance(ModelGateway::class, $gateway = costedPosterGateway());
+    app(SpendCap::class)->halt('اختبار');
+
+    expect(app(PosterDetailsSource::class)->extractOrEmpty(pngBytes())->isEmpty())->toBeTrue()
+        ->and($gateway->calls)->toBe(0);
+});
+
+it('لا ينادي بلا جهةٍ في السياق، فلا يُصرف ما لا يُنسب إلى أحد', function (): void {
+    app(TenantContext::class)->set(null);
+    app()->instance(ModelGateway::class, $gateway = costedPosterGateway());
+
+    expect(app(PosterDetailsSource::class)->extractOrEmpty(pngBytes())->isEmpty())->toBeTrue()
+        ->and($gateway->calls)->toBe(0)
+        ->and(ModelCall::acrossTenants()->count())->toBe(0);
 });

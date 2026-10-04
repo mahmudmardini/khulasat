@@ -308,6 +308,8 @@ const SECTIONS: ReadonlyArray<{
     links: [
       { key: 'index', href: '/panel', icon: 'index' },
       { key: 'create', href: '/panel/lectures/create', icon: 'create' },
+      // تقاريرُ الاختبارات — T-201.
+      { key: 'quizzes', href: '/panel/quizzes', icon: 'check' },
       // أداة «تحقّق» — T-200. عامّةٌ خارج اللوحة، ورابطُها هنا ليصلها من يعمل فيها.
       { key: 'verify', href: '/verify', icon: 'search' },
     ],

@@ -10,7 +10,7 @@ import { Icon } from '@/Components/Icon';
 import { ViewsByLocale, type LocaleViews } from '@/Components/ViewsByLocale';
 import { cn } from '@/lib/cn';
 import { t } from '@/lib/i18n';
-import { toArabicIndic } from '@/lib/numerals';
+import { prose, toArabicIndic } from '@/lib/numerals';
 import type { SharedProps } from '@/types/inertia';
 
 interface OutputRow {
@@ -46,7 +46,13 @@ interface Props {
   views: Views;
   can_publish: boolean;
   locale_additions: LocaleAddition[];
-  quiz: { state: 'ready' | 'failed'; status: 'open' | 'closed'; attempts: number } | null;
+  quiz: {
+    id: number;
+    state: 'ready' | 'failed';
+    status: 'open' | 'closed';
+    attempts: number;
+    average: number | null;
+  } | null;
 }
 
 /**
@@ -391,26 +397,39 @@ function day(iso: string | null): string {
 }
 
 /**
- * اختبارُ الفهم — T-195. حالُه وعددُ من أتمّه، ومدخلُ إدارته.
+ * اختبارُ الفهم — T-195، وتقريرُه في T-201: حالُه ومشاركوه ومتوسّطُ درجتهم،
+ * ومدخلا إدارته وتقريره.
  */
 function QuizCard({ jobId, quiz }: { jobId: number; quiz: Props['quiz'] }) {
+  const linkClass = 'inline-flex shrink-0 items-center gap-2 rounded px-4 py-2 text-[15px] font-medium text-primary transition-colors hover:bg-surface-alt';
+
   const state = quiz === null
     ? t('quiz.panel.empty')
     : quiz.state === 'failed'
       ? t('quiz.panel.failed_title')
-      : `${quiz.status === 'open' ? t('quiz.panel.status_open') : t('quiz.panel.status_closed')}، ${toArabicIndic(t('quiz.panel.attempts', { count: quiz.attempts }))}`;
+      : [
+        quiz.status === 'open' ? t('quiz.panel.status_open') : t('quiz.panel.status_closed'),
+        quiz.attempts > 0
+          ? prose(t('quiz.reports.summary_card', { count: quiz.attempts, average: quiz.average ?? 0 }))
+          : t('quiz.reports.none'),
+      ].join('، ');
 
   return (
     <Card title={t('quiz.panel.title')}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[14px] text-text-muted">{state}</p>
-        <Link
-          href={`/panel/jobs/${jobId}/quiz`}
-          className="inline-flex shrink-0 items-center gap-2 rounded px-4 py-2 text-[15px] font-medium text-primary transition-colors hover:bg-surface-alt"
-        >
-          <Icon name="check" size={16} />
-          {quiz === null ? t('quiz.panel.build') : t('quiz.panel.manage')}
-        </Link>
+        <div className="flex flex-wrap gap-1">
+          {quiz !== null && quiz.state === 'ready' ? (
+            <Link href={`/panel/quizzes/${quiz.id}`} className={linkClass}>
+              <Icon name="list" size={16} />
+              {t('quiz.reports.report')}
+            </Link>
+          ) : null}
+          <Link href={`/panel/jobs/${jobId}/quiz`} className={linkClass}>
+            <Icon name="check" size={16} />
+            {quiz === null ? t('quiz.panel.build') : t('quiz.panel.manage')}
+          </Link>
+        </div>
       </div>
     </Card>
   );

@@ -35,6 +35,7 @@ return [
         'index' => 'Özetler',
         'create' => 'Yeni özet',
         'verify' => 'Doğrulama aracı',
+        'quizzes' => 'Testler',
         'brand' => 'Kurum kimliği',
         'billing' => 'Abonelik',
         'team' => 'Ekip',

@@ -13,6 +13,7 @@ use App\Support\I18n\PageStrings;
 use App\Support\Publish\Beacon;
 use App\Support\Publish\PublishedLocales;
 use App\Support\Publish\ShareCard;
+use App\Support\Quiz\QuizLink;
 use App\Support\Render\BrandKit;
 use App\Support\Render\ContentObject;
 use App\Support\Render\Ornaments;
@@ -37,7 +38,7 @@ class PageRenderer implements Renderer
      * تُرفع عند كل تغيير يُبدّل شكل المخرَج، وتُحفظ في `outputs`.
      * فصفحةٌ رُسمت بنسخةٍ قديمة تُعرف بلا مقارنةِ ملفّات.
      */
-    private const VERSION = '1.3.0'; // T-99: المواضع آخراً، و«خُلاصات» بضمّتها، والقديم بلا شعار.
+    private const VERSION = '1.4.0'; // T-195: زرُّ «اختبر فهمك» حين يكون للملخّص اختبارٌ مفتوح.
 
     public function __construct(
         private readonly ViewFactory $views,
@@ -156,6 +157,12 @@ class PageRenderer implements Renderer
              * المعاينة والملفّ المنزَّل: كلتاهما تُفرَّغ `summaryJobId` فيها.
              */
             'localeLinks' => PublishedLocales::for($content->summaryJobId, $content->locale),
+
+            /*
+             * زرُّ «اختبر فهمك» — T-195. **وبنيةٌ لا CSS**: رابطٌ بصنف `.act`
+             * القائم، فلا يمسّ ورقة القالب حرفاً. ويغيب كالشاهدة في المعاينة.
+             */
+            'quizUrl' => QuizLink::for($content->summaryJobId, $content->locale),
 
             // رابط المحاضرة نفسها لا قناة الجهة العامّة — زرّ «مشاهدة المحاضرة
             // كاملة» يفتح ما استُخرج منه الملخّص تحديداً.

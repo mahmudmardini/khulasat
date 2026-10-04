@@ -125,6 +125,8 @@ final class PageStrings
         'lesson_kicker' => ['ar' => 'درسٌ ملخَّص', 'en' => 'Lesson summary', 'tr' => 'Ders özeti', 'ru' => 'Конспект урока'],
         'lesson_ayah' => ['ar' => 'آية الدرس', 'en' => 'The lesson’s verse', 'tr' => 'Dersin ayeti', 'ru' => 'Аят урока'],
         'share_summary' => ['ar' => 'مشاركة الملخّص', 'en' => 'Share the summary', 'tr' => 'Özeti paylaş', 'ru' => 'Поделиться резюме'],
+        // زرُّ الاختبار — T-195. ويُرسم في العربية وحدها، والبقيةُ لتمام الجدول.
+        'take_quiz' => ['ar' => 'اختبر فهمك', 'en' => 'Test your understanding', 'tr' => 'Anladığını sına', 'ru' => 'Проверьте себя'],
         'save_pdf' => ['ar' => 'حفظ بصيغة PDF', 'en' => 'Save as PDF', 'tr' => 'PDF olarak kaydet', 'ru' => 'Сохранить в PDF'],
         // نصُّ المشاركة — `:sheikh` و`:venue` اسمان يُملآن ولا يُترجمان.
         'share_text' => [

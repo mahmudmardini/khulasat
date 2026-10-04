@@ -159,6 +159,7 @@ return [
             'upload_source' => 'Audio or video file',
             'page' => 'The summary',
             'carousel' => 'Instagram slides',
+            'quiz' => 'Comprehension quiz',
             'left' => 'You have :left of :limit left this month.',
             'todo' => 'Before you start',
             'todo_source' => 'Lecture source',
@@ -229,6 +230,8 @@ return [
             'page' => 'The page',
             'page_always' => 'Always produced',
             'carousel' => 'Instagram carousel',
+            'quiz' => 'Comprehension quiz',
+            'quiz_hint' => '5 to 10 questions at a shareable link. Anyone can take it without a name, and you see the overall results in your panel.',
             'images' => 'Image pack',
             'locked' => 'On the Institution plan and above.',
             /*

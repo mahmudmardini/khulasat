@@ -36,6 +36,9 @@ use App\Services\Verification\ConfiguredVerifierRegistry;
 use App\Services\Verification\HadithVerifier;
 use App\Support\TenantContext;
 use Illuminate\Auth\Middleware\RedirectIfAuthenticated;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -100,6 +103,29 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->redirectAuthenticatedGuests();
+        $this->quizLimits();
+    }
+
+    /**
+     * حدودُ الاختبار العامّ — T-195. **مفتاحُها IP والاختبار معاً**: حدٌّ
+     * بـIP وحده يُشرك الاختبارات كلَّها في عدّادٍ واحد.
+     *
+     * ★ **وستّون بدءاً في الساعة لا عشرة**: المشاركون بلا أسماء، وحلقةٌ في
+     * مسجدٍ على شبكةٍ واحدة يخرج أهلُها كلُّهم بعنوانٍ واحد.
+     *
+     * ★★ **والعنوانُ لا يُحفظ** (قرار @HasanSiwi): يدخل مفتاحَ العدّاد المؤقّت
+     * مُجزَّأً (hash)، ولا يبلغ جدولاً.
+     */
+    private function quizLimits(): void
+    {
+        $key = static fn (string $name, Request $request): string => $name.'|'
+            .hash('sha256', $request->ip().'|'.$request->route('token'));
+
+        RateLimiter::for('quiz-start', static fn (Request $request): Limit => Limit::perHour(60)
+            ->by($key('quiz-start', $request)));
+
+        RateLimiter::for('quiz-answer', static fn (Request $request): Limit => Limit::perMinute(240)
+            ->by($key('quiz-answer', $request)));
     }
 
     /**

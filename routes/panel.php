@@ -25,6 +25,7 @@ use App\Http\Controllers\CarouselController;
 use App\Http\Controllers\EvidenceReviewController;
 use App\Http\Controllers\ImageSetController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\JobQuizController;
 use App\Http\Controllers\LectureController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PreflightController;
@@ -135,6 +136,23 @@ Route::middleware('auth')->group(function (): void {
      * «غير موجود» — ولذلك صار البناءُ على `carousel/build` لا على عنوانها.
      */
     Route::post('/jobs/{job}/carousel/build', [CarouselController::class, 'store'])->name('jobs.carousel.store');
+
+    /*
+     * اختبارُ الفهم — T-195. **و«ابنِ» لا يُحرَس بالحصّة**: يجري على محتوًى
+     * محقَّقٍ موجود (SCREENS.md §6). لكنّه نداءُ نموذج، فـ`GenerateQuiz` يفحص
+     * سقفَ الإنفاق قبله، والحدُّ يمنع تكرارَه ضغطاً.
+     */
+    Route::get('/jobs/{job}/quiz', [JobQuizController::class, 'show'])->name('jobs.quiz');
+    Route::post('/jobs/{job}/quiz', [JobQuizController::class, 'store'])
+        ->middleware('throttle:10,60')
+        ->name('jobs.quiz.store');
+    Route::put('/jobs/{job}/quiz', [JobQuizController::class, 'update'])->name('jobs.quiz.update');
+    Route::put('/jobs/{job}/quiz/questions/{question}', [JobQuizController::class, 'updateQuestion'])
+        ->whereNumber('question')
+        ->name('jobs.quiz.questions.update');
+    Route::delete('/jobs/{job}/quiz/questions/{question}', [JobQuizController::class, 'destroyQuestion'])
+        ->whereNumber('question')
+        ->name('jobs.quiz.questions.destroy');
 
     /*
      * حزمةُ صور الكاروسيل — T-173. تُنشأ في الطابور، وتُرى صورُها من قرصٍ

@@ -34,6 +34,7 @@ function stageHeadings(): array
         [Stage::Writing, 'المرحلة 5'],
         [Stage::OutputMetadata, 'المرحلة 6'],
         [Stage::Carousel, 'المرحلة 7'],
+        [Stage::Quiz, 'المرحلة 8'],
     ];
 }
 

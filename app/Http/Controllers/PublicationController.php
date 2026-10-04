@@ -62,7 +62,26 @@ class PublicationController extends Controller
 
             // «أضف لغة» — T-166. ولا يُعرض لما لا يُنشر: ترجمةُ متنٍ معلّقٍ مالٌ على ما قد يتبدّل.
             'locale_additions' => $this->publishable($job) ? LocaleAdditions::for($job) : [],
+
+            // اختبارُ الفهم — T-195: حالُه ومحاولاتُه، ومدخلُ إدارته.
+            'quiz' => $this->quiz($job),
         ]);
+    }
+
+    /** @return array<string, mixed>|null */
+    private function quiz(SummaryJob $job): ?array
+    {
+        $quiz = $job->quiz()->first();
+
+        if ($quiz === null) {
+            return null;
+        }
+
+        return [
+            'state' => $quiz->state,
+            'status' => $quiz->status,
+            'attempts' => $quiz->attempts()->whereNotNull('finished_at')->count(),
+        ];
     }
 
     /**

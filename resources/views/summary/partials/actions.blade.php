@@ -2,6 +2,18 @@
      ★ **ونصوصُها بلسان الصفحة** — T-87. كانت عربيةً في كلّ لغة، فقارئٌ لا
      يعرف العربية لا يعرف أيَّ الزرّين يحفظ الملفّ. --}}
 <div class="actions">
+  {{--
+    زرُّ الاختبار — T-195. رابطٌ بصنف الأزرار القائم، والقالبُ لا يُمسّ.
+    **وسمةُ `style` على هذا العنصر وحده**: أزرارُ القالب `<button>` لا خطّ
+    تحتها، والرابطُ يأخذ خطَّ المتصفّح الافتراضي. فيُنزع على العنصر الجديد
+    ولا يُعدَّل حرفٌ من ورقة القالب (§2، القاعدة الأولى).
+  --}}
+  @if (! empty($quizUrl))
+  <a class="act primary" href="{{ $quizUrl }}" style="text-decoration:none">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M9 11.5l2.2 2.2L15.5 9"/><rect x="4" y="3.5" width="16" height="17" rx="2"/></svg>
+    {{ $strings['take_quiz'] }}
+  </a>
+  @endif
   <button class="act primary" id="shareBtn">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="18" cy="5.5" r="2.8"/><circle cx="6" cy="12" r="2.8"/><circle cx="18" cy="18.5" r="2.8"/><path d="M8.5 10.7l7-3.4M8.5 13.3l7 3.4"/></svg>
     {{ $strings['share_summary'] }}

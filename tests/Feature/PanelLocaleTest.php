@@ -92,7 +92,7 @@ it('يحمل كلُّ ملفّ لغةٍ مفاتيحَ العربية نفسَه
         expect(array_diff($arabic, $translated))->toBe([], "{$locale}/{$file}: مفاتيح ناقصة")
             ->and(array_diff($translated, $arabic))->toBe([], "{$locale}/{$file}: مفاتيح زائدة");
     }
-})->with(['common', 'jobs', 'lectures', 'review', 'billing', 'auth', 'team', 'templates', 'locales', 'errors', 'landing']);
+})->with(['common', 'jobs', 'lectures', 'review', 'billing', 'auth', 'team', 'templates', 'locales', 'errors', 'landing', 'quiz']);
 
 /*
  * ★★ **الخاصّيتان المشتركتان تتبعان اللغة فعلاً** — عطلٌ لم يُكشف إلّا

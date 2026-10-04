@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Public\ComplaintController;
 use App\Http\Controllers\Public\InviteRequestController;
 use App\Http\Controllers\Public\PageViewController;
+use App\Http\Controllers\Public\QuizController;
 use App\Http\Controllers\Public\ShareCardController;
 use App\Http\Controllers\Public\ShowPublishedSummaryController;
 use App\Http\Controllers\VerifyController;
@@ -155,6 +156,25 @@ Route::get('/share/{job}/{locale}.png', ShareCardController::class)
 Route::post('/invite', [InviteRequestController::class, 'store'])
     ->middleware(['throttle:10,60', SetLandingLocale::class])
     ->name('invite.store');
+
+/*
+ * اختبارُ الفهم برابطٍ يُشارَك — T-195. **عامٌّ بلا دخولٍ ولا اسم**.
+ *
+ * و`q` في `RESERVED_SLUGS`، فلا تأخذه جهةٌ فيبتلعه المسارُ الجامع آخرَ
+ * الملفّ. والبدءُ وحفظُ الأجوبة محدودان (`quiz-start` و`quiz-answer`) —
+ * فالرابطُ عامّ، وبلا حدٍّ يُغرق آليٌّ تقاريرَ الجهة بمحاولاتٍ وهمية.
+ */
+Route::prefix('/q/{token}')
+    ->where(['token' => '[a-z0-9]{12}', 'attempt' => '[A-Za-z0-9]{40}'])
+    ->name('quiz.')
+    ->group(function (): void {
+        Route::get('/', [QuizController::class, 'show'])->name('show');
+        Route::post('/', [QuizController::class, 'start'])->middleware('throttle:quiz-start')->name('start');
+        Route::get('/a/{attempt}', [QuizController::class, 'attempt'])->name('attempt');
+        Route::post('/a/{attempt}/answer', [QuizController::class, 'answer'])->middleware('throttle:quiz-answer')->name('answer');
+        Route::post('/a/{attempt}/finish', [QuizController::class, 'finish'])->middleware('throttle:quiz-answer')->name('finish');
+        Route::get('/a/{attempt}/result', [QuizController::class, 'result'])->name('result');
+    });
 
 /*
  * لوحةُ الجهة تحت `/panel` — T-113. والملفُّ في `routes/panel.php`.

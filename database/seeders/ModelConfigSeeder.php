@@ -80,6 +80,23 @@ class ModelConfigSeeder extends Seeder
         }
     }
 
+    /**
+     * صفُّ مرحلةٍ واحدة — يقرؤه ترحيلٌ يُضيف صفّاً لمرحلةٍ جديدة دون أن
+     * يكتب فوق ما غيّره المشرف في غيرها (T-195).
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function row(string $stage): ?array
+    {
+        foreach (self::rows() as $row) {
+            if ($row['stage'] === $stage) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
     /** @return list<array<string, mixed>> */
     private static function rows(): array
     {
@@ -226,6 +243,38 @@ class ModelConfigSeeder extends Seeder
                 'on_exhausted' => 'degrade',
                 'input_price_per_m' => 2.0,
                 'output_price_per_m' => 12.0,
+            ],
+            [
+                /*
+                 * **اختبارُ الفهم** — المرحلة ٨، T-195. تُنادى مرّةً لكلّ اختبار
+                 * لا لكلّ مشارك: التصحيحُ حتميٌّ بلا نموذج.
+                 *
+                 * ★ **`gemini-3.7-flash` بقرار @HasanSiwi بعد القياس**، ٤ أكتوبر
+                 * ٢٠٢٦ (`khulasah:quiz-bench`، ثلاثة دروس × تشغيلين): لم يُخفق
+                 * مرّة، ولم يُسقط الحارسُ من أسئلته شيئاً، ونحو ستّة أسئلة
+                 * للاختبار بـ‏$0.007 في سبع ثوانٍ. وSonnet 5.5 أكثرُ أسئلةً
+                 * (نحو تسعة) بخمسة أضعاف الكلفة وثلاثة أضعاف الزمن، فهو البديل.
+                 *
+                 * ⚠ **والسعرُ يتضاعف من ١ يناير ٢٠٢٧** إلى ‏$1.50/$7.50 — من صفحة
+                 * Google الرسمية. **فيُحدَّث هذا الصفّ يومئذٍ** من شاشة النماذج،
+                 * وإلّا حُسبت الكلفةُ نصفَها وأُغفل السقف.
+                 *
+                 * والجهدُ `low` لا `none`: الخيارُ الخاطئ المعقول يحتاج نظراً
+                 * في البنية، وهو ما يفرق اختباراً يُعلِّم عن اختبارٍ يُحزَر.
+                 */
+                'stage' => Stage::Quiz->value,
+                'provider' => 'google',
+                'model_id' => 'gemini-3.7-flash',
+                'max_tokens' => 8_000,
+                'thinking_level' => 'low',
+                'fallback_provider' => 'anthropic',
+                'fallback_model_id' => 'claude-sonnet-5-5',
+                'timeout_seconds' => 180,
+                'max_retries' => 1,
+                // مخرَجٌ ثانٍ: سقوطُه لا يمسّ الملخّص المنشور.
+                'on_exhausted' => 'degrade',
+                'input_price_per_m' => 0.75,
+                'output_price_per_m' => 3.75,
             ],
             [
                 /*

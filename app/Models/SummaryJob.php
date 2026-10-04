@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * One run of the generation pipeline over one lecture — المواصفة §4 و§5.
@@ -86,6 +87,12 @@ class SummaryJob extends Model
     public function outputs(): HasMany
     {
         return $this->hasMany(Output::class);
+    }
+
+    /** اختبارُ الفهم — T-195. واحدٌ لكلّ ملخّص. */
+    public function quiz(): HasOne
+    {
+        return $this->hasOne(Quiz::class);
     }
 
     /**

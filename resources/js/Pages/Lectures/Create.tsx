@@ -143,6 +143,7 @@ export default function Create({
     time_note: '',
     venue_mode: venue_modes[0] ?? 'institution',
     want_carousel: false,
+    want_quiz: false,
     // الافتراضُ ما اختارته الجهة، فمن لم يفتح «المظهر» خرج ملخّصُه كما كان.
     template: defaults.template,
     locales: defaults.locales,
@@ -709,6 +710,17 @@ export default function Create({
                 />
               </div>
 
+              {/* اختبارُ الفهم — T-195. لكلّ الشرائح، ومُطفأٌ افتراضياً. */}
+              <div className="mt-2.5">
+                <OutputOption
+                  icon="check"
+                  label={t('lectures.create.outputs.quiz')}
+                  note={t('lectures.create.outputs.quiz_hint')}
+                  checked={form.data.want_quiz}
+                  onChange={(next) => form.setData('want_quiz', next)}
+                />
+              </div>
+
               {/*
                 ★ **لغاتُ النشر هنا لا في «المظهر»** — T-95، ونقضٌ لموضعها في
                 T-50 بقرار مالك المنتج: اللغةُ قرارُ محتوًى وجمهور، لا شكل.
@@ -960,6 +972,7 @@ export default function Create({
                   value: [
                     t('lectures.create.summary.page'),
                     form.data.want_carousel ? t('lectures.create.summary.carousel') : null,
+                    form.data.want_quiz ? t('lectures.create.summary.quiz') : null,
                   ].filter((part): part is string => part !== null).join('، '),
                 },
                 {

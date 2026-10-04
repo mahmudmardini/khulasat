@@ -292,6 +292,7 @@ return [
             'page' => 'Sayfa',
             'carousel' => 'Slaytlar',
             'images' => 'Görsel paketi',
+            'quiz' => 'Test',
         ],
 
         'device' => [

@@ -294,6 +294,7 @@ return [
             'page' => 'The page',
             'carousel' => 'The slides',
             'images' => 'Image pack',
+            'quiz' => 'The quiz',
         ],
 
         'device' => [

@@ -9,8 +9,10 @@ use App\Models\ModelCall;
 use App\Models\SummaryJob;
 use App\Models\Tenant;
 use App\Models\UsageRecord;
+use App\Models\VerifyCheck;
 use App\Services\Quota\SpendCap;
 use App\Support\Model\ModelResponse;
+use App\Support\TenantContext;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -41,11 +43,47 @@ use Illuminate\Support\Facades\Log;
  */
 class ModelCallRecorder
 {
+    /** طلبُ أداة التحقّق الذي تُقيَّد عليه نداءاتٌ بلا مهمّة — T-181. */
+    private ?VerifyCheck $check = null;
+
+    /**
+     * Book every job-less call made inside the callback on a verify check — T-181.
+     *
+     * ★ **نداءُ الأداة لا مهمّةَ له**، والبوّابة تقيّد الكلفة على المهمّة. فلو
+     * مُرّر `null` كما هو لسُجّل في السجلّ وحده، **ولما رآه سقفُ الإنفاق**:
+     * أداةٌ عامّة تصرف بلا أن يُحسب صرفها. فيُعلَن الطلبُ هنا، وتُقيَّد عليه
+     * كلُّ كلفة — الناجحةُ والمخفقةُ معاً، كما في البوّابة.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public function bookingTo(VerifyCheck $check, callable $callback): mixed
+    {
+        $this->check = $check;
+
+        try {
+            return $callback();
+        } finally {
+            // العاملُ طويلُ العمر: طلبٌ لا يرث حسابَ ما قبله.
+            $this->check = null;
+        }
+    }
+
     public function record(ModelResponse $response, ?SummaryJob $job = null): void
     {
-        Log::info('model.call', $response->toLog() + ['summary_job_id' => $job?->id]);
+        Log::info('model.call', $response->toLog() + ['summary_job_id' => $job?->id, 'verify_check_id' => $this->check?->id]);
 
-        if ($job === null || $response->costUsd <= 0.0) {
+        if ($response->costUsd <= 0.0) {
+            return;
+        }
+
+        if ($job === null) {
+            if ($this->check !== null) {
+                $this->bookOnCheck($response, $this->check);
+            }
+
             return;
         }
 
@@ -118,6 +156,35 @@ class ModelCallRecorder
                 'attempt' => $response->attempts,
                 'occurred_at' => now(),
             ]);
+        });
+    }
+
+    /**
+     * نداءُ أداة التحقّق: صفٌّ في `model_calls` بلا جهة ولا مهمّة، ومجموعُه
+     * على الطلب. **ولا صفّ في `usage_ledger`**: ذاك دفترُ الجهات وحصصها
+     * وفوترتها، ولا جهة هنا. وسقفُ الإنفاق يجمع هذه الصفوف إليه — {@see SpendCap}.
+     */
+    private function bookOnCheck(ModelResponse $response, VerifyCheck $check): void
+    {
+        DB::transaction(function () use ($response, $check): void {
+            // **بلا جهةٍ صراحةً**: والحاجزُ يملأ الجهة من السياق إن وُجد،
+            // وطلبُ الأداة لا جهة له ولو أرسله صاحبُ حسابٍ في لوحته.
+            app(TenantContext::class)->withoutScope(fn (): ModelCall => ModelCall::query()->forceCreate([
+                'tenant_id' => null,
+                'summary_job_id' => null,
+                'verify_check_id' => $check->id,
+                'stage' => $response->stage,
+                'provider' => $response->provider,
+                'model_id' => $response->modelId,
+                'input_tokens' => $response->inputTokens,
+                'output_tokens' => $response->outputTokens,
+                'cost_usd' => $response->costUsd,
+                'duration_ms' => $response->durationMs,
+                'attempt' => $response->attempts,
+                'occurred_at' => now(),
+            ]));
+
+            $check->forceFill(['cost_usd' => round((float) $check->cost_usd + $response->costUsd, 4)])->save();
         });
     }
 

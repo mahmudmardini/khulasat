@@ -174,6 +174,10 @@ class AppServiceProvider extends ServiceProvider
         ));
 
         $this->app->singleton(FakeModelGateway::class);
+
+        // **واحدٌ للبوّابة ولمن يستدعيها** — T-181: أداةُ التحقّق تُعلن عليه
+        // طلبَها، والبوّابةُ تقيّد عليه الكلفة. فنسختان منه تُضيّعان الإعلان.
+        $this->app->singleton(ModelCallRecorder::class);
     }
 
     /**

@@ -65,3 +65,11 @@ Schedule::command('khulasah:check-cost-alerts')
 Schedule::command('khulasah:prune-uploads')
     ->hourly()
     ->withoutOverlapping();
+
+/*
+ * نصوصُ أداة «تحقّق» وتقاريرُها — T-181. **لا تبقى أكثر من سبعة أيام**،
+ * فتُكنس كلّ ساعة: ما بلغ مدّته يُحذف في الساعة التي بلغها لا في آخر اليوم.
+ */
+Schedule::command('khulasah:prune-verify-checks')
+    ->hourly()
+    ->withoutOverlapping();

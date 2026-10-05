@@ -393,6 +393,27 @@ function Sidebar({
               </ul>
             </div>
           ))}
+
+          {/*
+            دليلُ الاستخدام — T-215. **في تبويبٍ آخر**: يُقرأ والعملُ مفتوح،
+            و`/guide` يفتح على دليل دورِ من فتحه وبلغته.
+          */}
+          <ul className="flex flex-col gap-0.5 border-t border-border pt-3">
+            <li>
+              <a
+                href="/guide"
+                target="_blank"
+                rel="noopener"
+                className="relative flex items-center gap-3 rounded-md px-3 py-2 text-[15px] text-text-muted transition-colors hover:bg-surface-alt hover:text-text md:justify-center lg:justify-start"
+              >
+                <Icon name="page" className="shrink-0" />
+                <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate md:sr-only lg:not-sr-only">
+                  {t('common.nav.guide')}
+                  <Icon name="external" size={13} className="shrink-0 text-text-faint" />
+                </span>
+              </a>
+            </li>
+          </ul>
         </div>
       </nav>
     </>

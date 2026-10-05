@@ -206,6 +206,9 @@ const SECTIONS: ReadonlyArray<{
 /** خارج SECTIONS عمداً: يفتح تبويباً آخر، فلا حالة «نشِط» له في هذه اللوحة. */
 const HORIZON_HREF = '/horizon';
 
+/** لوحةُ المشرف عربيةٌ وحدها (T-133)، فدليلُها بالعربية كذلك. */
+const GUIDE_HREF = '/guide/ar/admin';
+
 function Sidebar({
   open,
   onClose,
@@ -259,6 +262,24 @@ function Sidebar({
                       <Icon name="clock" className="shrink-0" />
                       <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate md:sr-only lg:not-sr-only">
                         {t('admin.nav.horizon')}
+                        <Icon name="external" size={13} className="shrink-0 text-text-faint" />
+                      </span>
+                    </a>
+                  </li>
+                ) : null}
+
+                {/* دليلُ المشرف — T-215. في تبويبٍ آخر كالطوابير: يُقرأ والعملُ مفتوح. */}
+                {section.key === 'section_platform' ? (
+                  <li>
+                    <a
+                      href={GUIDE_HREF}
+                      target="_blank"
+                      rel="noopener"
+                      className="relative flex items-center gap-3 rounded-md px-3 py-2 text-[15px] text-text-muted transition-colors md:justify-center hover:bg-surface-alt hover:text-text lg:justify-start"
+                    >
+                      <Icon name="page" className="shrink-0" />
+                      <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate md:sr-only lg:not-sr-only">
+                        {t('admin.nav.guide')}
                         <Icon name="external" size={13} className="shrink-0 text-text-faint" />
                       </span>
                     </a>

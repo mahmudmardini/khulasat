@@ -40,6 +40,7 @@ return [
         'brand' => 'Institution identity',
         'billing' => 'Subscription',
         'team' => 'Team',
+        'guide' => 'User guide',
         'expand' => 'Expand the menu',
         'collapse' => 'Collapse the menu',
         'open_menu' => 'Open the menu',
@@ -133,6 +134,7 @@ return [
         'name' => 'Khulasat',
         'rights' => '© :year',
         'privacy' => 'Privacy policy',
+        'guide' => 'User guide',
         'slogan' => 'Summaries, traced to their sources',
     ],
 

@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\TakedownController;
 use App\Http\Controllers\Admin\TenantCarouselDesignController;
 use App\Http\Controllers\Admin\TenantController;
 use App\Http\Controllers\Public\ComplaintController;
+use App\Http\Controllers\Public\GuideController;
 use App\Http\Controllers\Public\InviteRequestController;
 use App\Http\Controllers\Public\PageViewController;
 use App\Http\Controllers\Public\PrivacyController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\Public\ShowPublishedSummaryController;
 use App\Http\Controllers\VerifyController;
 use App\Http\Middleware\SetAppLocale;
 use App\Http\Middleware\SetLandingLocale;
+use App\Support\Guide\GuideBook;
 use App\Support\Landing\LandingView;
 use Illuminate\Support\Facades\Route;
 
@@ -110,6 +112,23 @@ Route::get('/verify', [VerifyController::class, 'create'])->name('verify.create'
 Route::post('/verify', [VerifyController::class, 'store'])->name('verify.store');
 Route::get('/verify/{check}', [VerifyController::class, 'show'])->whereUuid('check')->name('verify.show');
 Route::get('/verify/{check}/status', [VerifyController::class, 'status'])->whereUuid('check')->name('verify.status');
+
+/*
+ * دليلُ الاستخدام — **بلا تسجيل دخول** (T-215): يُعطى لمن لم يرَ النظام،
+ * ورابطُ قسمٍ منه يُرسل إلى من لا حساب له. واللغةُ في الرابط ليفتح عند
+ * مستلمه بلغة من نسخه.
+ *
+ * و`guide` في `RESERVED_SLUGS`: `/guide/ar/owner` على صورة المسار الجامع
+ * آخرَ الملفّ، فلا تأخذه جهةٌ فيلتبس.
+ */
+Route::get('/guide', [GuideController::class, 'home'])->name('guide');
+Route::get('/guide/{locale}', [GuideController::class, 'index'])
+    ->whereIn('locale', ['ar', 'en', 'tr', 'ru'])
+    ->name('guide.index');
+Route::get('/guide/{locale}/{role}', [GuideController::class, 'show'])
+    ->whereIn('locale', ['ar', 'en', 'tr', 'ru'])
+    ->whereIn('role', GuideBook::ROLES)
+    ->name('guide.show');
 
 /*
  * شاهدة عدّ الفتحات — **بلا تسجيل دخول** (T-31)، كمسار الاعتراض.
@@ -274,7 +293,7 @@ Route::post('/admin/impersonate/stop', [ImpersonationController::class, 'stop'])
  * Laravel يُطابق أوّل مسارٍ يوافق لا الأدقّ.
  *
  * والألفاظُ المحجوزة أعلاه (`admin`, `panel`, `complaint`, `invite`,
- * `v`, `up`, `storage`, `build`, `verify`, `api`, `privacy`) ممنوعةٌ على `tenants.slug` في
+ * `v`, `up`, `storage`, `build`, `verify`, `api`, `privacy`, `guide`) ممنوعةٌ على `tenants.slug` في
  * `TenantController::store` للسبب نفسه بالاتجاه المعاكس.
  */
 Route::get('/{tenantSlug}/{summarySlug}/{rest?}', ShowPublishedSummaryController::class)

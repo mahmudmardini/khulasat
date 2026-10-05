@@ -76,6 +76,11 @@ export function ProductFooter({ className }: { className?: string }) {
       <a href="/privacy" className="hover:text-text-muted hover:underline">
         {t('common.product.privacy')}
       </a>
+      {/* دليلُ الاستخدام — T-215. في ذيل كلّ صفحة، فيصله من لم يدخل بعد. */}
+      <span aria-hidden="true">·</span>
+      <a href="/guide" className="hover:text-text-muted hover:underline">
+        {t('common.product.guide')}
+      </a>
     </footer>
   );
 }

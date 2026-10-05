@@ -177,7 +177,7 @@ class HandleInertiaRequests extends Middleware
      */
     private function translations(): array
     {
-        $files = ['common', 'jobs', 'lectures', 'review', 'billing', 'auth', 'team', 'templates', 'locales', 'quiz'];
+        $files = ['common', 'jobs', 'lectures', 'review', 'billing', 'auth', 'team', 'templates', 'locales', 'quiz', 'guide'];
 
         $translations = array_combine(
             $files,

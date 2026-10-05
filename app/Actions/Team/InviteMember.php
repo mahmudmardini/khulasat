@@ -24,7 +24,7 @@ use RuntimeException;
 final class InviteMember
 {
     /** أسبوعٌ — رابطُ دعوةٍ يُفتح بعد شهر رابطٌ منسيّ. */
-    private const VALID_DAYS = 7;
+    public const VALID_DAYS = 7;
 
     /**
      * @return array{invitation: TeamInvitation, token: string} والرمز الخامّ **مرّةً واحدة**.

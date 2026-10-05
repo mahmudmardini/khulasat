@@ -23,6 +23,7 @@ return [
         'models' => 'النماذج',
         'costs' => 'الكلفة',
         'horizon' => 'الطوابير',
+        'guide' => 'دليل المشرف',
         'section_operate' => 'التشغيل',
         'section_platform' => 'المنصّة',
         'exit' => 'الخروج',

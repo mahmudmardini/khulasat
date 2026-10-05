@@ -385,3 +385,306 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * ─── T-215 · دليل الاستخدام ─────────────────────────────────────────
+ *
+ * متنٌ يرسمه الخادم من Markdown (`GuideBook`)، فلا أصنافَ Tailwind عليه:
+ * يُلبَس هنا مرّةً بالرموز نفسِها. وعمودُ القراءة ضيّقٌ عمداً (~٧٢ حرفاً)،
+ * فالسطرُ العربيّ الطويل يُضيع العينَ بين آخره وأوّل التالي.
+ */
+@layer components {
+  .guide-prose {
+    max-width: 760px;
+    font-size: 16px;
+    line-height: 1.95;
+    color: var(--text);
+  }
+
+  .guide-chapter {
+    padding-block-end: var(--s12);
+    margin-block-end: var(--s12);
+    border-block-end: 1px solid var(--border);
+  }
+
+  .guide-chapter:last-child {
+    border-block-end: 0;
+  }
+
+  .guide-chapter::before {
+    content: attr(data-number);
+    display: block;
+    margin-block-end: var(--s1);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+  }
+
+  .guide-heading {
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    gap: var(--s2);
+    scroll-margin-top: 88px;
+    color: var(--text);
+  }
+
+  .guide-prose h2.guide-heading {
+    margin-block-end: var(--s4);
+    font-size: 27px;
+    line-height: 1.35;
+  }
+
+  .guide-prose h3.guide-heading {
+    margin-block: var(--s8) var(--s3);
+    font-size: 20px;
+  }
+
+  .guide-prose h4 {
+    margin-block: var(--s6) var(--s2);
+    font-size: 16.5px;
+    font-weight: 600;
+  }
+
+  /* القسمُ الذي فُتح برابطه يومض مرّةً ليُرى أين وقع القارئ. */
+  .guide-heading.is-target .guide-heading__text {
+    animation: khl-target 1.8s ease-out;
+    border-radius: 4px;
+  }
+
+  .guide-copy {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    inline-size: 28px;
+    block-size: 28px;
+    border-radius: var(--radius);
+    color: var(--text-faint);
+    opacity: 0;
+    transition: opacity 120ms, color 120ms, background-color 120ms;
+    align-self: center;
+  }
+
+  .guide-heading:hover .guide-copy,
+  .guide-copy:focus-visible {
+    opacity: 1;
+  }
+
+  .guide-copy:hover {
+    color: var(--primary);
+    background-color: var(--primary-tint);
+  }
+
+  /* اللمسُ بلا مرور فأرة، فالزرُّ ظاهرٌ دائماً هناك. */
+  @media (hover: none) {
+    .guide-copy {
+      opacity: 0.7;
+    }
+  }
+
+  .guide-prose p {
+    margin-block: var(--s3);
+  }
+
+  .guide-prose ul,
+  .guide-prose ol {
+    margin-block: var(--s3);
+    padding-inline-start: 1.4em;
+  }
+
+  .guide-prose ul {
+    list-style: disc;
+  }
+
+  .guide-prose ol {
+    list-style: decimal;
+  }
+
+  .guide-prose:lang(ar) ol {
+    list-style: arabic-indic;
+  }
+
+  .guide-prose li {
+    margin-block: 6px;
+    padding-inline-start: 2px;
+  }
+
+  .guide-prose li::marker {
+    color: var(--text-faint);
+  }
+
+  .guide-prose strong {
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .guide-prose a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, var(--primary) 35%, transparent);
+    text-underline-offset: 3px;
+  }
+
+  .guide-prose a:hover {
+    text-decoration-color: var(--primary);
+  }
+
+  /* أسماءُ الأزرار والحقول كما تُرى على الشاشة. */
+  .guide-prose code {
+    padding: 1px 6px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background-color: var(--surface-alt);
+    font-family: inherit;
+    font-size: 0.92em;
+    white-space: nowrap;
+  }
+
+  .guide-prose hr {
+    margin-block: var(--s8);
+    border-color: var(--border);
+  }
+
+  .guide-table {
+    margin-block: var(--s4);
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface);
+  }
+
+  .guide-table table {
+    inline-size: 100%;
+    border-collapse: collapse;
+    font-size: 14.5px;
+    line-height: 1.7;
+  }
+
+  .guide-table th,
+  .guide-table td {
+    padding: 9px 14px;
+    text-align: start;
+    vertical-align: top;
+    border-block-end: 1px solid var(--border);
+  }
+
+  .guide-table th {
+    background-color: var(--surface-alt);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .guide-table tr:last-child td {
+    border-block-end: 0;
+  }
+
+  .guide-shot {
+    margin-block: var(--s6);
+  }
+
+  .guide-shot__frame {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background-color: var(--surface-alt);
+    box-shadow: var(--shadow);
+    cursor: zoom-in;
+  }
+
+  .guide-shot img {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  .guide-shot figcaption {
+    margin-block-start: var(--s2);
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .guide-callout {
+    margin-block: var(--s4);
+    padding: var(--s3) var(--s4);
+    border: 1px solid var(--border);
+    border-inline-start: 3px solid var(--info);
+    border-radius: var(--radius);
+    background-color: var(--surface);
+    font-size: 15px;
+    line-height: 1.85;
+  }
+
+  .guide-callout p {
+    margin-block: var(--s1);
+  }
+
+  .guide-callout__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--info);
+  }
+
+  .guide-callout[data-kind='tip'] {
+    border-inline-start-color: var(--success);
+  }
+
+  .guide-callout[data-kind='tip'] .guide-callout__label {
+    color: var(--success);
+  }
+
+  .guide-callout[data-kind='warning'] {
+    border-inline-start-color: var(--warning);
+  }
+
+  .guide-callout[data-kind='warning'] .guide-callout__label {
+    color: var(--warning);
+  }
+
+  /* حدودُ النظام بلون الحبر لا بلون الخطر: معلومةٌ تُعرف، لا عطلٌ يُحذَّر منه. */
+  .guide-callout[data-kind='limit'] {
+    border-inline-start-color: var(--primary);
+    background-color: var(--primary-tint);
+    border-color: color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+
+  .guide-callout[data-kind='limit'] .guide-callout__label {
+    color: var(--primary);
+  }
+}
+
+@keyframes khl-target {
+  from { background-color: color-mix(in srgb, var(--accent) 28%, transparent); }
+  to { background-color: transparent; }
+}
+
+/*
+ * الطباعةُ للمتن وحده: لا شريطَ ولا محتوياتِ ولا أزرارَ نسخ، والصورُ لا
+ * تنقسم بين صفحتين.
+ */
+@media print {
+  .guide-topbar,
+  .guide-sidebar,
+  .guide-copy {
+    display: none !important;
+  }
+
+  .guide-prose {
+    max-width: none;
+    font-size: 12pt;
+  }
+
+  .guide-shot,
+  .guide-callout,
+  .guide-table {
+    break-inside: avoid;
+  }
+
+  .guide-shot__frame {
+    box-shadow: none;
+  }
+}

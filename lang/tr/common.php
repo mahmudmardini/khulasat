@@ -39,6 +39,7 @@ return [
         'brand' => 'Kurum kimliği',
         'billing' => 'Abonelik',
         'team' => 'Ekip',
+        'guide' => 'Kullanım kılavuzu',
         'expand' => 'Menüyü genişlet',
         'collapse' => 'Menüyü daralt',
         'open_menu' => 'Menüyü aç',
@@ -123,6 +124,7 @@ return [
         'name' => 'Khulasat',
         'rights' => '© :year',
         'privacy' => 'Gizlilik politikası',
+        'guide' => 'Kullanım kılavuzu',
         'slogan' => 'Kaynağına dayandırılmış özetler',
     ],
 

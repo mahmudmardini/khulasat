@@ -280,7 +280,7 @@ return [
     ],
 
     'footer' => [
-        'slogan' => 'A summary to read, a citation verified.',
+        'slogan' => 'From the essence of the idea, we craft a visual map that leaves a lasting mark.',
         'page' => 'This page',
         'links' => 'Links',
         'login_tenants' => 'Institution sign-in',

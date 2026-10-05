@@ -279,7 +279,7 @@ return [
     ],
 
     'footer' => [
-        'slogan' => 'Okunan bir özet, doğrulanan bir delil.',
+        'slogan' => 'Fikrin özünden, iz bırakan görsel bir harita yapıyoruz.',
         'page' => 'Sayfa',
         'links' => 'Bağlantılar',
         'login_tenants' => 'Kurum girişi',

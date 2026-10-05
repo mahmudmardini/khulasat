@@ -113,6 +113,11 @@ return [
         'minutes_few' => ':count minutes',
         'minutes_many' => ':count minutes',
         'minutes_other' => ':count minutes',
+        'hours_one' => 'One hour',
+        'hours_two' => 'Two hours',
+        'hours_few' => ':count hours',
+        'hours_many' => ':count hours',
+        'hours_other' => ':count hours',
     ],
 
     /*
@@ -168,6 +173,8 @@ return [
                 'words' => 'Lecture text',
                 'evidence' => 'Evidence',
                 'locales' => 'Output languages',
+                'source' => 'Lecture length',
+                'source_length' => ':hours and :minutes',
                 'not_started' => 'Not started yet',
                 'words_pending' => 'Known once the text is extracted',
                 'evidence_pending' => 'Known once the evidence is extracted',

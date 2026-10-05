@@ -125,6 +125,11 @@ return [
         'minutes_few' => ':count دقائق',
         'minutes_many' => ':count دقيقة',
         'minutes_other' => ':count دقيقة',
+        'hours_one' => 'ساعة',
+        'hours_two' => 'ساعتان',
+        'hours_few' => ':count ساعات',
+        'hours_many' => ':count ساعة',
+        'hours_other' => ':count ساعة',
     ],
 
     /*
@@ -188,6 +193,8 @@ return [
                 'words' => 'نصّ الدرس',
                 'evidence' => 'الشواهد',
                 'locales' => 'لغات النشر',
+                'source' => 'مدّة المحاضرة',
+                'source_length' => ':hours و:minutes',
                 'not_started' => 'لم يبدأ بعد',
                 'words_pending' => 'يُعرف بعد استخراج النصّ',
                 'evidence_pending' => 'يُعرف بعد استخراج الشواهد',

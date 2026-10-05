@@ -113,6 +113,11 @@ return [
         'minutes_few' => ':count dakika',
         'minutes_many' => ':count dakika',
         'minutes_other' => ':count dakika',
+        'hours_one' => 'Bir saat',
+        'hours_two' => 'İki saat',
+        'hours_few' => ':count saat',
+        'hours_many' => ':count saat',
+        'hours_other' => ':count saat',
     ],
 
     /*
@@ -168,6 +173,8 @@ return [
                 'words' => 'Ders metni',
                 'evidence' => 'Deliller',
                 'locales' => 'Çıktı dilleri',
+                'source' => 'Dersin süresi',
+                'source_length' => ':hours :minutes',
                 'not_started' => 'Henüz başlamadı',
                 'words_pending' => 'Metin çıkarıldıktan sonra bilinir',
                 'evidence_pending' => 'Deliller çıkarıldıktan sonra bilinir',

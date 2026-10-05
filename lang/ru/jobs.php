@@ -113,6 +113,11 @@ return [
         'minutes_few' => ':count минуты',
         'minutes_many' => ':count минут',
         'minutes_other' => ':count минут',
+        'hours_one' => 'Один час',
+        'hours_two' => 'Два часа',
+        'hours_few' => ':count часа',
+        'hours_many' => ':count часов',
+        'hours_other' => ':count часов',
     ],
 
     /*
@@ -168,6 +173,8 @@ return [
                 'words' => 'Текст лекции',
                 'evidence' => 'Доводы',
                 'locales' => 'Языки вывода',
+                'source' => 'Длительность лекции',
+                'source_length' => ':hours :minutes',
                 'not_started' => 'Ещё не начато',
                 'words_pending' => 'Станет известно после извлечения текста',
                 'evidence_pending' => 'Станет известно после извлечения доводов',

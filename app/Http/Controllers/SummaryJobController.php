@@ -125,6 +125,8 @@ class SummaryJobController extends Controller
                  */
                 'started_at' => $job->started_at?->toIso8601String(),
                 'finished_at' => $job->finished_at?->toIso8601String(),
+                // طولُ المحاضرة، ليُقرأ بجانب زمن الإعداد. وللنصّ الملصوق `null`.
+                'source_seconds' => $job->lecture->duration_seconds,
                 // **رسالة عربية لا كود خطأ** — §القواعد العامّة.
                 'error' => $this->error($job),
                 /*

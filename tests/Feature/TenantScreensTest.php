@@ -278,6 +278,21 @@ it('shows named steps and no invented percentage', function (): void {
         );
 });
 
+it('sends the lecture length beside the preparation time, and none for pasted text', function (): void {
+    // طولُ المحاضرة يُقرأ بجانب «استغرق»، فيُرى الفرقُ بين ساعة الدرس ودقائق إعداده.
+    $job = jobFor($this->tenant, JobState::Published, ['duration_seconds' => 3725]);
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$job->id}")
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('job.source_seconds', 3725)
+            ->where('lang.jobs.live.wizard.tally.source', 'مدّة المحاضرة'));
+
+    $pasted = jobFor($this->tenant, JobState::Published, ['duration_seconds' => null]);
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$pasted->id}")
+        ->assertInertia(fn (Assert $page): Assert => $page->where('job.source_seconds', null));
+});
+
 it('says a job is waiting on the reader, not working', function (): void {
     // «بانتظارك» غير «جارية»: الجارية تعمل من نفسها، وهذه لا تتحرّك حتى
     // يفعل المستخدم شيئاً.

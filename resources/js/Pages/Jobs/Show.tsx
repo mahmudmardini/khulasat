@@ -11,7 +11,7 @@ import { NotifyToggle } from '@/Components/NotifyToggle';
 import { ProcessWizard, type WizardStep } from '@/Components/ProcessWizard';
 import { StatusBadge, type JobStatus } from '@/Components/StatusBadge';
 import { cn } from '@/lib/cn';
-import { durationLabel } from '@/lib/duration';
+import { durationLabel, lengthLabel } from '@/lib/duration';
 import { t } from '@/lib/i18n';
 import { useCompletionAlert } from '@/lib/notify';
 import { plural } from '@/lib/plural';
@@ -35,6 +35,8 @@ interface Job {
   pending_evidence: number;
   started_at: string | null;
   finished_at: string | null;
+  /** طولُ المحاضرة بالثواني — من يوتيوب أو من الملفّ المرفوع، ولا طول للنصّ الملصوق. */
+  source_seconds: number | null;
   /** وقتُ المراجعة: مجموعُ ما انقضى منه، وبدءُ ما هو مفتوحٌ الآن — T-171. */
   review: { seconds: number; open_since: string | null };
   error: string | null;
@@ -208,6 +210,16 @@ function Tally({ job, elapsed }: { job: Job; elapsed: number | null }) {
   const { live } = job;
 
   const rows: Array<{ icon: IconName; label: string; value: string; detail?: string; known: boolean }> = [
+    // طولُ المحاضرة فوق زمن الإعداد، فيُقارَن السطران متجاورَين. ولا سطرَ
+    // للنصّ الملصوق: لا طول له يُقال.
+    ...(job.source_seconds !== null && job.source_seconds > 0
+      ? [{
+        icon: 'play' as IconName,
+        label: t('jobs.live.wizard.tally.source'),
+        value: lengthLabel(job.source_seconds),
+        known: true,
+      }]
+      : []),
     {
       icon: 'clock',
       label: t('jobs.live.wizard.tally.time'),

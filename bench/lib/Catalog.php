@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Bench;
 
 /**
- * The candidates, their ids, and their prices — verified 2026-09-08.
+ * The candidates, their ids, and their prices — verified 2026-10-04.
  *
  * **الأسعار من صفحات المزوّدين الرسمية**، لا من مجمِّعات ولا من الذاكرة:
  *   · platform.claude.com/docs/en/about-claude/pricing
@@ -20,7 +20,7 @@ namespace Bench;
  */
 final class Catalog
 {
-    public const PRICES_VERIFIED_ON = '2026-09-08';
+    public const PRICES_VERIFIED_ON = '2026-10-04';
 
     /**
      * @return array<string, array{provider: string, model: string, in: float, out: float, effort: string}>
@@ -28,16 +28,16 @@ final class Catalog
     public static function all(): array
     {
         return [
-            'opus-5' => [
+            'opus-5.5' => [
                 'provider' => 'anthropic',
-                'model' => 'claude-opus-5',
-                'in' => 5.0,
-                'out' => 25.0,
+                'model' => 'claude-opus-5-5',
+                'in' => 4.0,
+                'out' => 20.0,
                 'effort' => 'high',
             ],
-            'sonnet-5' => [
+            'sonnet-5.5' => [
                 'provider' => 'anthropic',
-                'model' => 'claude-sonnet-5',
+                'model' => 'claude-sonnet-5-5',
                 'in' => 2.0,
                 'out' => 10.0,
                 'effort' => 'high',
@@ -64,11 +64,11 @@ final class Catalog
              * والفرقُ كلُّه في توكنز التفكير، **وهي تُحاسَب مخرَجاً** — فلا
              * يظهر أثرُه في السعر بل في الفاتورة.
              */
-            'opus-5-medium' => [
+            'opus-5.5-medium' => [
                 'provider' => 'anthropic',
-                'model' => 'claude-opus-5',
-                'in' => 5.0,
-                'out' => 25.0,
+                'model' => 'claude-opus-5-5',
+                'in' => 4.0,
+                'out' => 20.0,
                 'effort' => 'medium',
             ],
 
@@ -93,7 +93,7 @@ final class Catalog
     /** @return list<string> الأربعة التي تدخل القياس ما لم يُطلب غيرها. */
     public static function shortlist(): array
     {
-        return ['opus-5', 'sonnet-5', 'gpt-5.6-terra', 'gemini-3.1-pro'];
+        return ['opus-5.5', 'sonnet-5.5', 'gpt-5.6-terra', 'gemini-3.1-pro'];
     }
 
     /** @return array{provider: string, model: string, in: float, out: float, effort: string} */

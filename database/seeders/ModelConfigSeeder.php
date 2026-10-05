@@ -13,7 +13,7 @@ use Illuminate\Database\Seeder;
  *
  * **التشكيلة المتوازنة، بلا Haiku** — قرار مالك المنتج في T-00، 8 أيلول 2026.
  * وسببُ إخراج Haiku اثنان: تاريخ إيقافه (ليس قبل 2026-10-15) هو الأقرب في
- * الجدول كلّه، ولا يقبل معامل `effort` أصلاً. فحلّ محلّه `claude-sonnet-5`.
+ * الجدول كلّه، ولا يقبل معامل `effort` أصلاً. فحلّ محلّه `claude-sonnet-5-5`.
  *
  * **والأسعار من صفحات المزوّدين الرسمية، 8 أيلول 2026.** وكانت قبلها أسعار
  * جيلٍ متقاعد (Opus بـ15$/75$)، فكانت الكلفة تُسجَّل مضخَّمةً 2.6× ويُقفل
@@ -42,14 +42,14 @@ use Illuminate\Database\Seeder;
  * وقياسُ محاضرةٍ من ٤٢٩٥ كلمة (‏$0.0692) هو ما بُنيت
  * عليه، معكوساً على أسعار المزوّدين:
  *
- *   - **الكتابة على `claude-opus-5`**: هي المنتج. وكانت على `gpt-5.6-terra`
+ *   - **الكتابة على `claude-opus-5-5`**: هي المنتج. وكانت على `gpt-5.6-terra`
  *     فأخرجت ~٢٨٨٠ توكناً، والمرجع (`reference-summary.html`) كتبه Opus.
  *     وهي ~٧٣٪ من كلفة الملخّص، **وذلك صحيحٌ ومقصود**.
- *   - **الشواهد على `claude-sonnet-5` ولا تُقتصَد**: `gpt-5-nano` أنفق
+ *   - **الشواهد على `claude-sonnet-5-5` ولا تُقتصَد**: `gpt-5-nano` أنفق
  *     ~٣٤٠ توكناً على مرحلةٍ تُخرج اثني عشر شاهداً، فخرجت بأربعة. **وهي
  *     أرخصُ مرحلةٍ وأعلاها أثراً في المصداقية الشرعية.** فإن قصُر الالتقاط
- *     تُرفع إلى `claude-opus-5`: الفارق ‏$0.06.
- *   - **البنية على `claude-sonnet-5` لا Opus**: بعد T-52 صارت المرحلةُ ٥
+ *     تُرفع إلى `claude-opus-5-5`: الفارق ‏$0.06.
+ *   - **البنية على `claude-sonnet-5-5` لا Opus**: بعد T-52 صارت المرحلةُ ٥
  *     تقرأ التفريغ بنفسها، **فلم تعد رهينةَ غِنى البنية**. ووظيفتُها بعدها
  *     **تقييدُ الكاتب بتقسيم المتكلّم** لا إغناؤه — انضباطُ تعليماتٍ لا
  *     قدرةٌ حدّية. ووضعُ Opus هنا يزيد ٤٢٪ بلا حرفٍ أفضل في المتن.
@@ -58,9 +58,13 @@ use Illuminate\Database\Seeder;
  *
  * والتقدير ‏$0.39 للملخّص بطول المهمّة ٢٨، و~‏$0.76 عند خمسة عشر ألف كلمة.
  *
+ * ★ **ونماذج أنثروبيك على جيل 5.5 منذ ٤ أكتوبر ٢٠٢٦**: Opus 5.5 (‏$4/$20)
+ * وSonnet 5.5 (‏$2/$10). والطلبُ لا يتغيّر: الجهدُ وحده يُرسَل، بلا إعدادٍ
+ * للتفكير ولا إجبارٍ على أداة، وكلاهما يردّه جيلُ 5.5 بـ400.
+ *
  * ⚠ **وهذه تحتاج رصيد `anthropic`** — وكان منفَداً يوم كُتبت، وعليه بُنيت
  * التشكيلة المختلطة التي سبقتها. **والبديلُ إن ضاق الرصيد** `gpt-5.6-sol`
- * (‏$4/$20) في الكتابة: أرخصُ بـ١٥٪ ويُبقي الخطَّ كلَّه على OpenAI. وأيُّهما
+ * (‏$4/$20) في الكتابة: بسعر Opus 5.5 نفسه، ويُبقي الخطَّ كلَّه على OpenAI. وأيُّهما
  * أجودُ نثراً **لا يحسمه إلّا قياس T-59** على محاضرة المهمّة ٢٨ ومرجعِها.
  *
  * وروافعُ فُحصت ورُفضت: **تخزين السياق** لا يعمل هنا (الذاكرة لا تُشترك بين
@@ -109,7 +113,7 @@ class ModelConfigSeeder extends Seeder
                 // التنظيف يُخرج التفريغ كاملاً تقريباً، فسقفُه أوسع من غيره.
                 'thinking_level' => 'none',
                 'fallback_provider' => 'anthropic',
-                'fallback_model_id' => 'claude-sonnet-5',
+                'fallback_model_id' => 'claude-sonnet-5-5',
                 'timeout_seconds' => 180,
                 'max_retries' => 1,
                 // ميكانيكية: تنظيفٌ أدنى جودةً خيرٌ من مهمّة واقفة.
@@ -120,7 +124,7 @@ class ModelConfigSeeder extends Seeder
             [
                 'stage' => Stage::ExtractingStructure->value,
                 'provider' => 'anthropic',
-                'model_id' => 'claude-sonnet-5',
+                'model_id' => 'claude-sonnet-5-5',
                 // ٨٠٠٠ كانت تكفي عند anthropic، لا عند نموذج استدلال حقيقي:
                 // توكنز التفكير تُخصم من السقف نفسه، فيُقطع JSON قبل تمامه —
                 // اكتُشف على استدعاء حقيقي، 8 أيلول 2026.
@@ -138,7 +142,7 @@ class ModelConfigSeeder extends Seeder
             [
                 'stage' => Stage::ExtractingEvidence->value,
                 'provider' => 'anthropic',
-                'model_id' => 'claude-sonnet-5',
+                'model_id' => 'claude-sonnet-5-5',
                 'max_tokens' => 8_000,
                 // نقلٌ حرفيّ لا اجتهاد، فأدنى جهدٍ أصدق وأرخص.
                 'thinking_level' => 'none',
@@ -154,7 +158,7 @@ class ModelConfigSeeder extends Seeder
             [
                 'stage' => Stage::Writing->value,
                 'provider' => 'anthropic',
-                'model_id' => 'claude-opus-5',
+                'model_id' => 'claude-opus-5-5',
                 // نفس علّة استخراج البنية: جهدٌ عالٍ يستهلك توكنز تفكيرٍ من
                 // السقف نفسه — 8 أيلول 2026.
                 'max_tokens' => 32_000,
@@ -166,8 +170,8 @@ class ModelConfigSeeder extends Seeder
                 'timeout_seconds' => 600,
                 'max_retries' => 1,
                 'on_exhausted' => 'fail',
-                'input_price_per_m' => 5.0,
-                'output_price_per_m' => 25.0,
+                'input_price_per_m' => 4.0,
+                'output_price_per_m' => 20.0,
             ],
             [
                 'stage' => Stage::OutputMetadata->value,
@@ -176,7 +180,7 @@ class ModelConfigSeeder extends Seeder
                 'max_tokens' => 4_000,
                 'thinking_level' => 'none',
                 'fallback_provider' => 'anthropic',
-                'fallback_model_id' => 'claude-sonnet-5',
+                'fallback_model_id' => 'claude-sonnet-5-5',
                 'timeout_seconds' => 120,
                 'max_retries' => 1,
                 'on_exhausted' => 'degrade',
@@ -186,7 +190,7 @@ class ModelConfigSeeder extends Seeder
             [
                 'stage' => Stage::Carousel->value,
                 'provider' => 'anthropic',
-                'model_id' => 'claude-sonnet-5',
+                'model_id' => 'claude-sonnet-5-5',
                 'max_tokens' => 4_000,
                 'thinking_level' => 'none',
                 'fallback_provider' => 'openai',
@@ -290,7 +294,7 @@ class ModelConfigSeeder extends Seeder
                 // قراءةُ ملصقٍ لا اجتهاد فيها: البيانات تُقرأ لا تُنشأ.
                 'thinking_level' => 'none',
                 'fallback_provider' => 'anthropic',
-                'fallback_model_id' => 'claude-sonnet-5',
+                'fallback_model_id' => 'claude-sonnet-5-5',
                 'timeout_seconds' => 120,
                 'max_retries' => 1,
                 // توفيرُ وقتٍ لا حراسةُ بوّابة، فالسقوط لا يوقف المستخدم.

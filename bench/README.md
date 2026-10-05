@@ -42,7 +42,7 @@ php bench/run.php --plan     # يعرض ما سيجري، ولا ينفق شيئ
 php bench/run.php --live     # النداءات الحقيقية
 ```
 
-خيارات: `--models=opus-5,sonnet-5,gpt-5.6-terra,gemini-3.1-pro` ·
+خيارات: `--models=opus-5.5,sonnet-5.5,gpt-5.6-terra,gemini-3.1-pro` ·
 `--lectures=مسار` · `--out=مسار`.
 
 **ولا يعمل بلا `--live`.** النداءات تُدفع من الحساب، والتشغيل الكامل

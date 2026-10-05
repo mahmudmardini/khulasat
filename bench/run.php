@@ -7,7 +7,7 @@ declare(strict_types=1);
  *
  *   php bench/run.php --plan                 يعرض ما سيجري ولا يُنفق ريالاً
  *   php bench/run.php --live                 يشغّل القياس فعلاً (يصرف مالاً)
- *   php bench/run.php --live --models=opus-5,sonnet-5
+ *   php bench/run.php --live --models=opus-5.5,sonnet-5.5
  *
  * **لا يعمل بلا `--live` صريحة.** المفاتيح من البيئة، والنداءات حقيقية،
  * والحساب يُدفع. فليس هذا سكربتاً يُشغَّل بالسهو.

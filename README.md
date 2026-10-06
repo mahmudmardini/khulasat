@@ -261,22 +261,23 @@ sudo -u postgres psql -c "CREATE DATABASE khulasah OWNER khulasah;"
 
 ### ٣. المفاتيح
 
-انسخ `.env.example` إلى `.env` واملأ ما يلي. **المفاتيح في `.env` وحده**، لا في قاعدة البيانات ولا في الكود.
+انسخ `.env.example` إلى `.env` (`cp .env.example .env`)، ثمّ املأ ما يلي. وما سواه من القيم جاهزٌ للتشغيل المحلّي كما هو. **المفاتيح في `.env` وحده**، لا في قاعدة البيانات ولا في الكود.
 
 | المتغيّر | من أين | يلزم لـ |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | console.anthropic.com | استخراج البنية والشواهد، وكتابة المتن، والكاروسيل، وأداة «تحقّق» |
 | `OPENAI_API_KEY` | platform.openai.com | التنظيف، وبيانات الإخراج، والترجمة |
 | `GOOGLE_AI_API_KEY` | aistudio.google.com | تفريغ الصوت (مع `WHISPER_PROVIDER=gemini`)، واختبار الفهم، وبديل الترجمة |
-| `QURAN_CLIENT_ID` و`QURAN_CLIENT_SECRET` | حساب مطوّر مجّاني لدى [Quran Foundation](https://quran.foundation) | بذر المصحف وترجماته |
+| `QURAN_CLIENT_ID` و`QURAN_CLIENT_SECRET` | حساب مطوّر مجّاني لدى [Quran Foundation](https://quran.foundation) | تحميل المصحف وترجماته إلى قاعدة البيانات (seed) |
 | `MODEL_GATEWAY=real` | — | **بدونه تبقى البوّابة الوهمية** ولا يُنادى أيّ نموذج |
 | `WHISPER_PROVIDER=gemini` | — | تفريغ الصوت بمفتاح Google نفسه |
+| `YTDLP_BIN` | ناتج الأمر `which yt-dlp` | روابط يوتيوب. القيمة الجاهزة `/usr/local/bin/yt-dlp` لا تصحّ على كلّ جهاز: على Mac بمعالج Apple تكون عادةً `/opt/homebrew/bin/yt-dlp`، ومع pipx على لينكس في `~/.local/bin/` (اكتب المسار كاملاً) |
 
 **ضع المفاتيح الثلاثة**: المراحل موزّعة على المزوّدين الثلاثة، ولكلّ مرحلة نموذجٌ بديل من مزوّدٍ آخر. وسقف الإنفاق في `SPEND_CAP_DAILY_USD` و`SPEND_CAP_MONTHLY_USD`، ويوقف الطابور كلّه عند بلوغه.
 
 > **لماذا الوهمية افتراضاً؟** لا يُنادى نموذجٌ حقيقي في التطوير ولا في الاختبارات، فلا يُصرف مالٌ بخطأ. والبوّابة الوهمية تقرأ ردوداً مسجّلة من `tests/Fixtures/model-responses/`، **ولا ردود مسجّلة في المستودع** لأنّه بلا بيانات. فالتجربة الحقيقية تحتاج `MODEL_GATEWAY=real`.
 
-### ٤. التثبيت والبذر
+### ٤. التثبيت وتحميل البيانات (seed)
 
 ```bash
 git clone https://github.com/mahmudmardini/khulasat.git && cd khulasat
@@ -293,7 +294,7 @@ php artisan khulasah:seed-judges     # جهة التجربة وحسابات ال
 php artisan khulasah:preflight       # يقول ما ينقص قبل أيّ إنفاق
 ```
 
-**`khulasah:seed-hadith`** يقرأ الملفّات المضغوطة في `database/data/hadith/`، ويتحقّق من بصمة كلّ ملفّ في `manifest.json` قبل أن يكتب صفّاً. و`--book=bukhari` يبذر كتاباً بعينه.
+**`khulasah:seed-hadith`** يقرأ الملفّات المضغوطة في `database/data/hadith/`، ويتحقّق من بصمة كلّ ملفّ في `manifest.json` قبل أن يكتب صفّاً. و`--book=bukhari` يحمّل كتاباً بعينه.
 
 **`khulasah:seed-judges`** يطبع كلمات مرور الحسابات الثلاثة مرّةً واحدة، لمن أراد الدخول بالنموذج. ويُعاد بلا ضرر، و`--reset` يضع كلماتٍ جديدة.
 
@@ -329,7 +330,7 @@ php artisan schedule:work            # المهامّ الدورية: سقف ا�
 |---|---|
 | `could not open extension control file pg_trgm` | ثبّت `postgresql-contrib`، أو امنح المستخدم صلاحية إنشاء الامتداد |
 | الملخّص واقف على «في الطابور» | Horizon أو `queue:work` غير مشغّل |
-| «لم يُعثر» لكلّ آية | المصحف غير مبذور: `khulasah:seed-quran` بمفاتيح Quran Foundation |
+| «لم يُعثر» لكلّ آية | المصحف غير محمَّل في قاعدة البيانات (seed): شغّل `khulasah:seed-quran` بمفاتيح Quran Foundation |
 | رسالة «الملفّ تالف» عند رفع صوت | FFmpeg غير مثبّت أو غير موجود على `FFMPEG_BIN`. و`khulasah:preflight` يكشفه |
 | لا أزرار للجنة في صفحة الدخول | `JUDGE_LOGIN=true` غير مضبوط، أو لم يُشغَّل `khulasah:seed-judges`، أو الخادم غير محلّي بلا `?judge=` |
 
@@ -341,7 +342,7 @@ php artisan schedule:work            # المهامّ الدورية: سقف ا�
 npm ci && npm run build
 php artisan test                            # 1927 اختباراً
 php artisan test --filter=EvidenceFixtures  # الشواهد المدسوسة وحدها
-php artisan khulasah:verify-fixtures        # العيّنة نفسها على المدوّنة الكاملة المبذورة
+php artisan khulasah:verify-fixtures        # العيّنة نفسها على كتب الحديث الكاملة المحمَّلة
 ./vendor/bin/pint --test                    # تنسيق PHP
 npx tsc --noEmit                            # فحص الأنواع
 ```

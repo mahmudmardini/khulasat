@@ -153,6 +153,42 @@ it('resumes the pipeline once every item is settled', function (): void {
     Queue::assertPushed(RunSummaryPipeline::class);
 });
 
+/*
+ * كانت صفحة المتابعة تعود والمهمّة في `needs_review` — المشغّل لم يلتقطها
+ * بعد — فلا تستطلع، ولا يظهر ما بعد المراجعة إلّا بتحديث الصفحة.
+ */
+it('leaves the review state before the follow page renders', function (): void {
+    Queue::fake();
+
+    decide('source')->assertRedirect();
+
+    $this->actingAs($this->user)
+        ->post("/panel/jobs/{$this->job->id}/resume")
+        ->assertRedirect(route('jobs.show', $this->job));
+
+    expect($this->job->refresh()->state)->toBe(JobState::Writing);
+
+    $this->actingAs($this->user)
+        ->get(route('jobs.show', $this->job))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('job.needs_review', false)
+            ->where('job.settled', false));
+});
+
+it('sends the pipeline once however many times resume is pressed', function (): void {
+    Queue::fake();
+
+    decide('source')->assertRedirect();
+
+    foreach ([1, 2] as $press) {
+        $this->actingAs($this->user)
+            ->post("/panel/jobs/{$this->job->id}/resume")
+            ->assertRedirect(route('jobs.show', $this->job));
+    }
+
+    Queue::assertPushedTimes(RunSummaryPipeline::class, 1);
+});
+
 it('carries the settled wording all the way into the published body', function (): void {
     decide('as_quoted')->assertRedirect();
 

@@ -14,6 +14,7 @@ use App\Models\SummaryJob;
 use App\Support\Arabic;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -58,11 +59,20 @@ class EvidenceReviewController extends Controller
     /**
      * يستأنف الخطّ بعد حسم الشواهد كلّها.
      *
-     * **ولا يستأنف بيده**: يُرسل المشغّل، وهو من يقرأ الحالة ويقرّر — T-11ب.
-     * و{@see TransitionJob} يفحص الشواهد مرّةً أخرى قبل
-     * أن يفتح الباب، فالحدّ الرابع محروسٌ في موضعين لا في الواجهة.
+     * **يفتح الباب بيده ثمّ يُرسل المشغّل** — وما بعد الباب للمشغّل وحده،
+     * يقرأ الحالة ويقرّر — T-11ب. و{@see TransitionJob} يفحص الشواهد مرّةً
+     * أخرى قبل أن يفتح الباب، فالحدّ الرابع محروسٌ في موضعين لا في الواجهة.
+     *
+     * ★ **ولماذا لا يترك الانتقالَ للمشغّل؟** كان يتركه، فتعود صفحة المتابعة
+     * والمهمّة ما تزال في `needs_review` — المشغّل لم يلتقطها بعد — فتُرسَم
+     * «بانتظار مراجعتك» ولا تستطلع، ولا يظهر ما بعد المراجعة إلّا بتحديث
+     * الصفحة. والانتقالُ هنا يجعلها تعود على «الكتابة» وتتابع وحدها، ويُنهي
+     * وقتَ المراجعة ساعةَ الضغط لا ساعةَ يلتقطها المشغّل.
+     *
+     * والقفلُ لضغطتين متتاليتين: الثانية تجد الباب مفتوحاً فلا تُرسل مشغّلاً
+     * ثانياً يكتب الملخّص مرّتين.
      */
-    public function resume(Request $request, SummaryJob $job): RedirectResponse
+    public function resume(Request $request, SummaryJob $job, TransitionJob $transition): RedirectResponse
     {
         $user = $request->user();
 
@@ -72,7 +82,21 @@ class EvidenceReviewController extends Controller
             return back()->withErrors(['resume' => trans('review.gate.blocked')]);
         }
 
-        RunSummaryPipeline::dispatch((int) $job->id);
+        $opened = DB::transaction(function () use ($job, $transition): bool {
+            $locked = $job->newQueryWithoutScopes()->whereKey($job->getKey())->lockForUpdate()->first();
+
+            if (! $locked instanceof SummaryJob || $locked->state !== JobState::NeedsReview) {
+                return false;
+            }
+
+            $transition->handle($locked, JobState::Writing);
+
+            return true;
+        });
+
+        if ($opened) {
+            RunSummaryPipeline::dispatch((int) $job->id);
+        }
 
         return to_route('jobs.show', $job);
     }

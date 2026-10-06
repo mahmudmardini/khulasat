@@ -309,9 +309,9 @@ GOOGLE_AI_API_KEY=...
 YTDLP_BIN=/opt/homebrew/bin/yt-dlp
 ```
 
-- **`DB_USERNAME` و`DB_PASSWORD`:** مستخدم PostgreSQL على جهازك. وعلى macOS بـHomebrew هو اسم مستخدم جهازك، بلا كلمة مرور. والقاعدة نفسها تُنشأ وحدها في الخطوة التالية.
+- **مستخدم قاعدة البيانات** (`DB_USERNAME` و`DB_PASSWORD`): هو مستخدم PostgreSQL على جهازك. وعلى macOS بـHomebrew هو اسم مستخدم جهازك، بلا كلمة مرور. والقاعدة نفسها تُنشأ وحدها في الخطوة التالية.
 - **المفاتيح الثلاثة** من console.anthropic.com وplatform.openai.com وaistudio.google.com. وهي لازمةٌ لإنشاء ملخّصٍ جديد ولأداة «تحقّق». أمّا تصفّح الملخّص التجريبي فلا يحتاجها.
-- **`YTDLP_BIN`** هو ناتج الأمر `which yt-dlp` على جهازك.
+- **مسار yt-dlp** (`YTDLP_BIN`): هو ناتج الأمر `which yt-dlp` على جهازك.
 
 ### ٣. التثبيت
 

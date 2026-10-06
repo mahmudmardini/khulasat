@@ -155,16 +155,21 @@ it('reports every evidence with its verdict, its fixed reason and its source', f
         ->and($findings[4]['reason']['text'])->toContain('ليس حكماً بوضعه')
         ->and($findings[4])->not->toHaveKey('source.text');
 
-    // آيةٌ بُدّلت فيها كلمة: لا تمرّ، ولا يُعرض لفظُ أقرب آيةٍ بديلاً.
-    expect($findings[5]['verdict'])->toBe('none')
-        ->and($findings[5]['reason']['code'])->toBe('ayah_none')
-        ->and($findings[5]['source'])->toBeNull();
+    // ★ T-182: آيةٌ بُدّلت فيها كلمة: لا تطابق، **وتُعرض أقربُ آيةٍ بموضعها للمقارنة**
+    // كما تطلب وثيقة المرجعية («إظهار السورة والآية»). ولا تُنشر بها شيء.
+    expect($findings[5]['verdict'])->toBe('partial')
+        ->and($findings[5]['reason']['code'])->toBe('ayah_near')
+        ->and($findings[5]['reason']['text'])->toContain('لا يطابق لفظَ المصحف')
+        ->and($findings[5]['source']['surah'])->toBe(16)
+        ->and($findings[5]['source']['ayah'])->toBe(97)
+        ->and($findings[5]['source']['url'])->toBe('https://quran.com/16/97')
+        ->and(Arabic::normalize($findings[5]['source']['text']))->toContain(Arabic::normalize('وهو مؤمن'));
 
     // قولُ عالمٍ لا محقّق لنوعه: «لا مصدر لنوعه» لا «لم نجده».
     expect($findings[6]['verdict'])->toBe('unverifiable')
         ->and($findings[6]['reason']['code'])->toBe('no_source');
 
-    expect($check->report['counts'])->toEqual(['exact' => 2, 'partial' => 1, 'none' => 2, 'unverifiable' => 1]);
+    expect($check->report['counts'])->toEqual(['exact' => 2, 'partial' => 2, 'none' => 1, 'unverifiable' => 1]);
 });
 
 it('says the text holds no evidence instead of failing', function (): void {
@@ -404,4 +409,18 @@ it('says when an ayah matched with tolerance, and names the dropped words', func
     expect($finding['verdict'])->toBe('exact')
         ->and($finding['reason']['code'])->toBe('ayah_tolerant')
         ->and($finding['notes'][0]['text'])->toBe('سقط من النصّ: «نعمت الله عليكم».');
+});
+
+/*
+ * ★ T-182 — **ولا يُقال عن كلامٍ ليس قرآناً إنّه قريبٌ من آية.** ما لا يبلغ
+ * حدَّ التشابه يبقى «لم نجده»، بلا موضعٍ مقترح.
+ */
+it('keeps not found for words that are no ayah at all', function (): void {
+    verifyGateway([evidence('ayah', 'إن الصبر مفتاح الفرج والعلم نور يضيء الطريق')]);
+
+    $finding = submitVerify()->report['findings'][0];
+
+    expect($finding['verdict'])->toBe('none')
+        ->and($finding['reason']['code'])->toBe('ayah_none')
+        ->and($finding['source'])->toBeNull();
 });

@@ -7,6 +7,7 @@ namespace App\Support\Verify;
 use App\Enums\HadithGrade;
 use App\Enums\Locale;
 use App\Enums\MatchStatus;
+use App\Models\QuranAyah;
 use App\Support\Arabic;
 use App\Support\Hadith\MatnExtractor;
 use App\Support\Hadith\MatnOpening;
@@ -31,20 +32,31 @@ final class Finding
 
     /**
      * @param  array<string, mixed>  $extracted  شاهدٌ كما أخرجته مرحلة الاستخراج
+     * @param  array{ayah: QuranAyah, similarity: float}|null  $nearest  أقربُ آيةٍ إلى آيةٍ لم تطابق ({@see NearestAyah})
      * @return array<string, mixed>
      */
-    public static function build(int $index, array $extracted, ?VerificationResult $result): array
+    public static function build(int $index, array $extracted, ?VerificationResult $result, ?array $nearest = null): array
     {
         $kind = (string) ($extracted['kind'] ?? '');
         $quoted = trim((string) ($extracted['raw_text'] ?? ''));
         $meta = $result?->sourceMeta ?? [];
 
+        // ★ **آيةٌ لم تطابق ولها آيةٌ قريبة: «قريبٌ من لفظ المصدر»** — T-182.
+        //   لا «لم نجده»: النصُّ آيةٌ زاغ لفظُها، وموضعُها معروف. والحكمُ في
+        //   طبقة التحقّق لم يتغيّر، والآيةُ تُعرض للمقارنة وحدها.
+        $near = $kind === 'ayah' && $result?->status === MatchStatus::None ? $nearest : null;
+
         $verdict = match (true) {
             $result === null => self::UNVERIFIABLE,
+            $near !== null => MatchStatus::Partial->value,
             default => $result->status->value,
         };
 
-        $source = $result !== null && $result->matched() ? self::source($kind, $result) : null;
+        $source = match (true) {
+            $near !== null => self::nearSource($near),
+            $result !== null && $result->matched() => self::source($kind, $result),
+            default => null,
+        };
 
         return [
             'index' => $index,
@@ -122,6 +134,35 @@ final class Finding
     }
 
     /**
+     * أقربُ آيةٍ للمقارنة — **بالرسم الإملائي** لتُقارَن بالنصّ كلمةً كلمة، فالرسمُ
+     * العثمانيّ يكتب كلماتٍ كثيرة بغير حروف النصّ، فتُظلَّل كلُّها فرقاً.
+     *
+     * @param  array{ayah: QuranAyah, similarity: float}  $near
+     * @return array<string, mixed>
+     */
+    private static function nearSource(array $near): array
+    {
+        $ayah = $near['ayah'];
+
+        $rendered = new RenderedEvidence(
+            kind: 'ayah',
+            text: (string) $ayah->text_imlaei,
+            sourceRef: $ayah->reference(),
+            surah: (int) $ayah->surah,
+            ayah: (int) $ayah->ayah,
+        );
+
+        return [
+            'text' => (string) $ayah->text_imlaei,
+            'reference' => $ayah->reference(),
+            'url' => $rendered->url(Locale::Ar),
+            'surah' => (int) $ayah->surah,
+            'ayah' => (int) $ayah->ayah,
+            'similarity' => (int) round($near['similarity'] * 100),
+        ];
+    }
+
+    /**
      * المتن: المستخرِجُ يقصّ ما بعد الحديث وما يُعرف من سنده، ثمّ يُؤخذ منه
      * مطلعُ الحديث كما تأخذه قائمةُ التخريج (T-116). وكلاهما يُرجع النصّ كما
      * دخل متى لم يتبيّن، فلا يُقصّ من لفظ المصدر ما لا يُعرف أنّه سند.
@@ -166,6 +207,7 @@ final class Finding
     {
         $code = match (true) {
             $result === null => 'no_source',
+            $kind === 'ayah' && $result->status === MatchStatus::None && $source !== null => 'ayah_near',
             $kind === 'ayah' && $result->status === MatchStatus::None => 'ayah_none',
             // T-169: طابق بالتسامح — يُقال ذلك، ولا يُطوى في «مطابق» وحده.
             $kind === 'ayah' && isset($result->sourceMeta['tolerance']) => 'ayah_tolerant',

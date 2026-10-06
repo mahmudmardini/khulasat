@@ -19,6 +19,7 @@ use App\Support\Model\StagePrompt;
 use App\Support\Verification\DomainPolicy;
 use App\Support\Verification\EvidenceInput;
 use App\Support\Verify\Finding;
+use App\Support\Verify\NearestAyah;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -127,7 +128,12 @@ final class RunVerifyCheck
             claimedTakhrij: self::nullable($raw['claimed_takhrij'] ?? null),
         ));
 
-        return Finding::build($index, $raw, $result);
+        // ★ آيةٌ لم تطابق: أقربُ آيةٍ إليها للمقارنة وحدها — T-182، ولا يتغيّر بها الحكم.
+        $nearest = $kind === 'ayah' && $result?->status === MatchStatus::None
+            ? NearestAyah::find((string) ($raw['raw_text'] ?? ''))
+            : null;
+
+        return Finding::build($index, $raw, $result, $nearest);
     }
 
     /**

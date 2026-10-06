@@ -50,10 +50,13 @@ interface Props {
     published: boolean;
     unpublished: boolean;
     public_url: string | null;
+    /** اللغاتُ التالية والشرائحُ ما زالت تُبنى بعد النشر — T-228. */
+    finishing: boolean;
   };
   outputs: {
     page: { produced: boolean; public_url: string | null };
-    carousel: { produced: boolean; slides: Slide[]; plain_text: string };
+    /** `pending`: طُلبت عند الإنشاء ويبنيها الخطُّ الآن — T-228. */
+    carousel: { produced: boolean; pending: boolean; slides: Slide[]; plain_text: string };
     /** حزمة الصور — T-173. `state` حالُها في الطابور، و`urls` صورُها بترتيبها. */
     images: {
       produced: boolean;
@@ -135,11 +138,17 @@ export default function Preview({
   const left = Math.max(0, regenerations.limit - regenerations.used);
 
   // حزمة الصور تُنشأ في الطابور — T-173. فتتحدّث الشاشة وحدها ما دامت جارية.
-  const rendering = outputs.images.state === 'rendering';
-  const poll = usePoll(3_000, { only: ['outputs'] }, { autoStart: false, keepAlive: false });
+  // ★ **وكذلك ما بعد النشر** — T-228: اللغاتُ التالية والشرائح يبنيها الخطُّ
+  // بعد أن تصير المهمّةُ منشورة، فتظهر حين تكتمل بلا تحديثٍ باليد.
+  const waiting = outputs.images.state === 'rendering' || job.finishing;
+  const poll = usePoll(
+    3_000,
+    { only: ['outputs', 'job', 'locales', 'locale_additions'] },
+    { autoStart: false, keepAlive: false },
+  );
 
   useEffect(() => {
-    if (rendering) {
+    if (waiting) {
       poll.start();
     } else {
       poll.stop();
@@ -147,7 +156,7 @@ export default function Preview({
 
     return () => poll.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rendering]);
+  }, [waiting]);
 
   function publish(): void {
     setBusy(true);
@@ -226,6 +235,7 @@ export default function Preview({
                 carousel: outputs.carousel.produced,
                 quiz: quiz.quiz?.state === 'ready',
               }}
+              pending={{ carousel: outputs.carousel.pending }}
             />
 
             {tab === 'page' ? (
@@ -253,6 +263,7 @@ export default function Preview({
             <Actions
               job={job}
               carouselProduced={outputs.carousel.produced}
+              carouselPending={outputs.carousel.pending}
               rich={rich_outputs}
               canPublish={can_publish}
               busy={busy}
@@ -355,11 +366,13 @@ function LiveChip({ job }: { job: Props['job'] }) {
  * إخفاؤه يُخفي أنّ المنتج يُخرج شيئاً آخر أصلاً.
  */
 function Tabs({
-  active, onChange, produced,
+  active, onChange, produced, pending,
 }: {
   active: TabKey;
   onChange: (key: TabKey) => void;
   produced: Record<TabKey, boolean>;
+  /** يُبنى الآن — «جارٍ» لا «لم يُنشأ» — T-228. */
+  pending: Partial<Record<TabKey, boolean>>;
 }) {
   const tabs: Array<{ key: TabKey; icon: IconName }> = [
     { key: 'page', icon: 'page' },
@@ -389,7 +402,7 @@ function Tabs({
           {/* الرمادي يعني غير مُنتَج — §2، والاصطلاح نفسه هنا. */}
           {produced[item.key] ? null : (
             <span className="rounded border border-border px-1.5 py-0.5 text-[11px] text-text-faint">
-              {t('jobs.published.output_missing')}
+              {t(pending[item.key] === true ? 'jobs.preview.carousel_pending_short' : 'jobs.published.output_missing')}
             </span>
           )}
         </button>
@@ -449,7 +462,7 @@ function PagePane({
                 label: item.label,
                 note: item.translated
                   ? undefined
-                  : t(item.translating ? 'jobs.add_locale.translating_short' : 'jobs.preview.locale.untranslated'),
+                  : t(item.translating ? 'jobs.add_locale.translating_short' : 'jobs.preview.locale.failed'),
               }))}
             />
           ) : null}
@@ -480,11 +493,23 @@ function PagePane({
         </div>
       ) : null}
 
+      {/*
+        ★ **حالان لا ثالثَ لهما** — T-228: تُترجَم الآن فتظهر وحدها، أو سقطت
+        فتُعاد من «أضف لغة». وكان الساقطُ يُقال له «حتى تكتمل ترجمتها»، فينتظر
+        من لا شيءَ يجري له، والسطرُ فوقه يقول «تعذّرت».
+      */}
       {current !== undefined && !current.translated ? (
-        <p role="status" className="flex items-center gap-2 border-b border-warning/25 bg-warning/8 px-4 py-2.5 text-[13px] text-text">
-          <Icon name="alert" size={16} className="shrink-0 text-warning" />
-          {t(current.translating ? 'jobs.add_locale.translating_note' : 'jobs.preview.locale.untranslated_note')}
-        </p>
+        current.translating ? (
+          <p role="status" className="flex items-center gap-2 border-b border-border bg-surface-alt px-4 py-2.5 text-[13px] text-text">
+            <Icon name="clock" size={16} className="shrink-0 animate-pulse text-primary" />
+            {t('jobs.add_locale.translating_note')}
+          </p>
+        ) : (
+          <p role="status" className="flex items-center gap-2 border-b border-danger/25 bg-danger/8 px-4 py-2.5 text-[13px] text-text">
+            <Icon name="alert" size={16} className="shrink-0 text-danger" />
+            {t('jobs.preview.locale.failed_note')}
+          </p>
+        )
       ) : null}
 
       {/* **يُعاد تحميلُ الإطار حين تكتمل الترجمة**: الرابطُ لم يتبدّل، فبلا مفتاحٍ يبقى العربيُّ معروضاً. */}
@@ -627,6 +652,20 @@ function CarouselPane({
   onBuildImages: (design: string | null) => void;
   onRecondense: () => void;
 }) {
+  // ★ يبنيها الخطُّ الآن — T-228. **بلا زرّ «أنشئ»**: ضغطُه في هذه الدقيقة
+  // نداءٌ مدفوعٌ ثانٍ لما يُبنى أصلاً.
+  if (carousel.pending) {
+    return (
+      <Card>
+        <div role="status" className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+          <Icon name="clock" size={22} className="animate-pulse text-primary" />
+          <h3 className="text-[17px] font-semibold text-text">{t('jobs.preview.carousel_pending')}</h3>
+          <p className="max-w-md text-[15px] leading-relaxed text-text-muted">{t('jobs.preview.carousel_pending_body')}</p>
+        </div>
+      </Card>
+    );
+  }
+
   if (!carousel.produced || carousel.slides.length === 0) {
     return (
       <Card>
@@ -891,10 +930,11 @@ function SlideFace({ slide }: { slide: Slide }) {
  * وإعادةُ التوليد وحدها تُخصم — فتقف آخراً بوزنٍ خفيف وخلف تأكيد.
  */
 function Actions({
-  job, carouselProduced, rich, canPublish, busy, left, onBuildCarousel, onRegenerate,
+  job, carouselProduced, carouselPending, rich, canPublish, busy, left, onBuildCarousel, onRegenerate,
 }: {
   job: Props['job'];
   carouselProduced: boolean;
+  carouselPending: boolean;
   rich: boolean;
   canPublish: boolean;
   busy: boolean;
@@ -925,7 +965,7 @@ function Actions({
         ) : null}
 
         {/* «أضف مخرَجاً إن لم تُنتَج كلّها» — §6، ومعه أنّه بلا خصم. */}
-        {!carouselProduced && rich && canPublish ? (
+        {!carouselProduced && !carouselPending && rich && canPublish ? (
           <Button variant="secondary" loading={busy} onClick={onBuildCarousel}>
             <Icon name="grid" size={16} />
             {t('jobs.preview.add_output')}

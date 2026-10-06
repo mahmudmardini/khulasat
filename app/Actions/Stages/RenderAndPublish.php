@@ -68,17 +68,31 @@ final class RenderAndPublish
         // `RenderOutput` يحرس الشواهد المعلّقة ويقيّد المخرَج في `outputs`.
         $output = $this->render->handle($job, $this->page, $primary);
 
-        // و`PublishSummary` هو من ينقل إلى `published` بعد أن يرفع الملفّ.
-        $urls = $this->publish->handle($job, [
-            $output->type->value.':'.$primary->value => $output->contents,
-        ]);
+        /*
+         * ★ **ما بعد اللغة الأولى «في الطريق» قبل أن تصير المهمّةُ منشورة** — T-228.
+         *
+         * فالنشرُ التالي ينقلها إلى `published`، والشاشةُ تفتح المعاينةَ عندها،
+         * واللغاتُ التالية والشرائحُ لم تُبنَ بعد. وبلا علامةٍ قبله تُري
+         * الإنجليزيةَ «تعذّرت» والشرائحَ «لم تُنشأ»، ولا تتحدّث من نفسها.
+         */
+        $job->forceFill(['finishing_at' => now()])->save();
 
-        $urls = [...$urls, ...$this->secondaryLocales($job, $locales, $primary)];
+        try {
+            // و`PublishSummary` هو من ينقل إلى `published` بعد أن يرفع الملفّ.
+            $urls = $this->publish->handle($job, [
+                $output->type->value.':'.$primary->value => $output->contents,
+            ]);
 
-        // شريطُ اللغات يحتاج الجميعَ منشوراً قبل أن يُرسَم — T-134.
-        $this->relink->handle($job);
+            $urls = [...$urls, ...$this->secondaryLocales($job, $locales, $primary)];
 
-        $this->carousel($job);
+            // شريطُ اللغات يحتاج الجميعَ منشوراً قبل أن يُرسَم — T-134.
+            $this->relink->handle($job);
+
+            $this->carousel($job);
+        } finally {
+            // انتهى أو سقط — فما بقي ناقصاً بعدها ساقطٌ يُعاد، لا منتظَر.
+            $job->forceFill(['finishing_at' => null])->save();
+        }
 
         return $urls;
     }

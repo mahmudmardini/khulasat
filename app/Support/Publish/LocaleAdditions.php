@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Support\Publish;
 
+use App\Actions\Stages\RenderAndPublish;
 use App\Actions\Summary\AddOutputLocale;
 use App\Enums\Locale;
 use App\Models\SummaryJob;
@@ -46,10 +47,11 @@ final class LocaleAdditions
     {
         $rows = self::translations($job);
         $chosen = self::chosen($job);
+        $finishing = $job->isFinishing();
         $out = [];
 
         foreach (Locale::cases() as $locale) {
-            $state = self::resolve($locale, $chosen, $rows[$locale->value] ?? null);
+            $state = self::resolve($locale, $chosen, $rows[$locale->value] ?? null, $finishing);
 
             if ($state === null || $state === self::READY) {
                 continue;
@@ -66,7 +68,7 @@ final class LocaleAdditions
     {
         $row = $job->translations()->where('locale', $locale->value)->first();
 
-        return self::resolve($locale, self::chosen($job), $row);
+        return self::resolve($locale, self::chosen($job), $row, $job->isFinishing());
     }
 
     /** أتُرجَم هذه اللغة الآن؟ — مبدّلُ المعاينة يقول «جارٍ» لا «لم تُترجَم». */
@@ -77,9 +79,20 @@ final class LocaleAdditions
     }
 
     /**
-     * @param  list<string>  $chosen
+     * ★ **أو تُترجَم في الخطّ نفسه بعد نشر الأولى** — T-228. فلغةٌ اختيرت عند
+     * الإنشاء لا طلبَ لها ولا `requested_at`: يترجمها {@see RenderAndPublish}
+     * بعد أن تصير المهمّةُ منشورة. وكانت تُعدّ ساقطةً في تلك الدقيقة.
      */
-    private static function resolve(Locale $locale, array $chosen, ?SummaryTranslation $row): ?string
+    public static function isTranslatingFor(SummaryJob $job, ?SummaryTranslation $row): bool
+    {
+        return self::isTranslating($row) || ($row?->isReady() !== true && $job->isFinishing());
+    }
+
+    /**
+     * @param  list<string>  $chosen
+     * @param  bool  $finishing  الخطُّ يبني ما بعد اللغة الأولى الآن — T-228.
+     */
+    private static function resolve(Locale $locale, array $chosen, ?SummaryTranslation $row, bool $finishing): ?string
     {
         $isChosen = in_array($locale->value, $chosen, true);
 
@@ -99,7 +112,12 @@ final class LocaleAdditions
         }
 
         if ($isChosen) {
-            return $row?->isReady() === true ? self::READY : self::FAILED;
+            if ($row?->isReady() === true) {
+                return self::READY;
+            }
+
+            // مختارةٌ عند الإنشاء والخطُّ لم يبلغها بعد — في الطريق لا ساقطة.
+            return $finishing ? self::TRANSLATING : self::FAILED;
         }
 
         return self::AVAILABLE;

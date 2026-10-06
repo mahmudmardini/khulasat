@@ -315,8 +315,8 @@ return [
 
         'locale' => [
             'legend' => 'Preview language',
-            'untranslated' => 'Not translated yet',
-            'untranslated_note' => 'This language has not been translated yet, so the page is shown in Arabic until its translation is complete.',
+            'failed' => 'Translation failed',
+            'failed_note' => 'This language could not be translated, so the page is shown in Arabic. Try again from “Add a language” above.',
         ],
 
         'quick' => [
@@ -366,6 +366,9 @@ return [
         'images_soon_body' => 'Once it is, it will be drawn from the same slides, at no cost and with no regeneration.',
 
         'carousel_empty' => 'No slides have been built for this summary',
+        'carousel_pending' => 'The slides are being built',
+        'carousel_pending_body' => 'They appear here when they are ready, in a minute or two, without reloading the page.',
+        'carousel_pending_short' => 'Building',
         'slides' => 'Instagram slides',
         'slide_texts' => 'Slide text',
     ],

@@ -48,7 +48,7 @@ it('classifies every planted fixture as the sample demands', function (): void {
 
 it('covers every case in the sample file', function (): void {
     // حارس ضدّ صمت الاختبار: ملفّ لا يُقرأ يجعل كلّ ما فوقه يمرّ فارغاً.
-    expect($this->outcomes)->toHaveCount(21);
+    expect($this->outcomes)->toHaveCount(23);
 });
 
 // ── ★ القواعد الحاجبة — تأكيدات مستقلّة لا آثار جانبية ★ ────────

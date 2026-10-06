@@ -3,15 +3,21 @@
 declare(strict_types=1);
 
 use App\Actions\Summary\TransitionJob;
+use App\Actions\Usage\RecordUsage;
+use App\Actions\Usage\RefundUnstartedSummary;
 use App\Contracts\VerifierRegistry;
 use App\Domain\Summary\JobState;
 use App\Enums\ReviewStatus;
+use App\Enums\TranscriptErrorCode;
+use App\Enums\UsageEvent;
 use App\Jobs\RunSummaryPipeline;
 use App\Models\EvidenceItem;
 use App\Models\Lecture;
 use App\Models\SummaryJob;
 use App\Models\Tenant;
+use App\Models\UsageRecord;
 use App\Models\User;
+use App\Services\Quota\QuotaGuard;
 use App\Services\Verification\HadithVerifier;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Queue;
@@ -126,6 +132,55 @@ it('halts at verifying with corpus_unavailable when the hadith corpus is down, a
         ->and($job->evidenceItems()->count())->toBe(0)
         ->and($job->outputs()->count())->toBe(0)
         ->and($job->transitions()->get()->last()->from_state)->toBe(JobState::Verifying);
+});
+
+/*
+ * ★ T-222 — **وقفت عند نصّ الدرس فلم يُكتب ملخّص: تعود الوحدة.** كانت تُقيَّد
+ * عند الإنشاء وتبقى، والرسالة تقول «لم نصرف من حصّتكم شيئاً».
+ */
+function chargedJob(array $attributes = []): SummaryJob
+{
+    $job = queuedJob($attributes);
+
+    app(RecordUsage::class)->handle(test()->tenant, UsageEvent::Generate, units: 1, job: $job);
+
+    return $job;
+}
+
+it('gives the unit back when the job stops at the transcript', function (): void {
+    $job = runPipeline(chargedJob(['transcript_text' => str_repeat('كلمة ', 120)]));
+
+    expect($job->state)->toBe(JobState::Failed)
+        ->and($job->error_code)->toBe(TranscriptErrorCode::TranscriptTooShort->value)
+        ->and(app(QuotaGuard::class)->monthlyQuota($this->tenant->refresh())->used)->toBe(0)
+        // ومرّةً واحدة: إعادةُ الردّ لا تُنشئ رصيداً.
+        ->and(app(RefundUnstartedSummary::class)->handle($job))->toBeNull()
+        ->and(UsageRecord::query()->where('summary_job_id', $job->id)->sum('units'))->toBe(0);
+});
+
+it('keeps the unit when the job stops after the transcript', function (): void {
+    app()->when(HadithVerifier::class)->needs('$providers')
+        ->give(fn (): array => [new FakeHadithProvider(failWith: 'انقطاع القاعدة', name: 'graded')]);
+    app()->forgetInstance(VerifierRegistry::class);
+
+    $job = chargedJob(['evidence_json' => [['kind' => 'hadith', 'raw_text' => 'أحب الأعمال إلى الله أدومها وإن قل']]]);
+
+    foreach ([JobState::Transcribing, JobState::Cleaning, JobState::ExtractingStructure, JobState::ExtractingEvidence, JobState::Verifying] as $state) {
+        app(TransitionJob::class)->handle($job, $state);
+    }
+
+    $job = runPipeline($job);
+
+    expect($job->error_code)->toBe('corpus_unavailable')
+        ->and(app(QuotaGuard::class)->monthlyQuota($this->tenant->refresh())->used)->toBe(1);
+});
+
+it('gives nothing back for a job that was never charged', function (): void {
+    // الخَلَفُ من «أعد المحاولة» دفع على سلفه، فلا يُردّ عليه ما لم يُقيَّد.
+    $job = runPipeline(queuedJob(['transcript_text' => str_repeat('كلمة ', 120)]));
+
+    expect($job->state)->toBe(JobState::Failed)
+        ->and(UsageRecord::query()->where('summary_job_id', $job->id)->count())->toBe(0);
 });
 
 it('never leaves a job spinning when a stage fails to advance it', function (): void {

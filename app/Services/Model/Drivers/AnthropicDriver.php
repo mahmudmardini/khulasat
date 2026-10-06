@@ -140,6 +140,7 @@ class AnthropicDriver implements ModelDriver
             content: $text,
             inputTokens: (int) $response->json('usage.input_tokens', 0),
             outputTokens: (int) $response->json('usage.output_tokens', 0),
+            truncated: $response->json('stop_reason') === 'max_tokens',
         );
     }
 }

@@ -123,6 +123,7 @@ class GoogleDriver implements ModelDriver
             // توكنز الخرج، وهي مسعَّرة معه — أُغفلت لأُنقصت الكلفة الحقيقية.
             outputTokens: (int) $response->json('usageMetadata.candidatesTokenCount', 0)
                 + (int) $response->json('usageMetadata.thoughtsTokenCount', 0),
+            truncated: $response->json('candidates.0.finishReason') === 'MAX_TOKENS',
         );
     }
 }

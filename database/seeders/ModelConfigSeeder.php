@@ -191,7 +191,10 @@ class ModelConfigSeeder extends Seeder
                 'stage' => Stage::Carousel->value,
                 'provider' => 'anthropic',
                 'model_id' => 'claude-sonnet-5-5',
-                'max_tokens' => 4_000,
+                // ٤٠٠٠ كانت تقطع الخرج — T-217: جيلُ 5.5 يفكّر بقدر الجهد من
+                // السقف نفسه، فيقف قبل أن يكتمل JSON. وعلّةُ البنية نفسُها، ٨ أيلول.
+                // والسقفُ لا يُدفع ثمنُه: الكلفةُ بما خرج فعلاً.
+                'max_tokens' => 8_000,
                 'thinking_level' => 'none',
                 'fallback_provider' => 'openai',
                 'fallback_model_id' => 'gpt-5-nano',

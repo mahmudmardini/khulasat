@@ -42,15 +42,52 @@ final class CondenseForCarousel
             );
         }
 
-        $response = $this->runStage(Stage::Carousel, $this->material($content), $job);
-
-        $deck = SlideDeck::fromModel((array) ($response->decoded ?? []));
-
-        $this->guard($deck);
+        $deck = $this->condense($job, $content);
 
         // **التثبيت بعد الحراسة لا قبلها**: الحراسة تقيس ما أخرجه النموذج،
         // والتثبيت يُصلح ما أفسده. ولو قِيس بعد الإصلاح لمرّ الاختصار صامتاً.
         return $this->quotes($deck->anchoredTo($content), $content, $job);
+    }
+
+    /**
+     * نداءُ المرحلة وحارسُها — **ويُعاد النداءُ مرّةً واحدة إن أخفق الحارس** (T-217).
+     *
+     * الحارسُ فشلُ مخطّطٍ بنصّه ({@see self::violation()})، وفشلُ المخطّط إعادةٌ
+     * واحدة ثمّ وقوف — §6. والبوّابة تعيد على مخطّط JSON وحده، فكانت شريحةٌ
+     * زادت كلمةً تُسقط البناء من أوّل نداء، ويُطلب من المستخدم أن يضغط ثانيةً.
+     *
+     * **ولا يُعاد هنا على إخفاق البوّابة نفسها**: تلك أعادت مرّتها، وإعادتُها
+     * ثانيةً تضاعف النداءات على عطلٍ لا تُصلحه الإعادة.
+     *
+     * @throws ModelCallFailed
+     */
+    private function condense(SummaryJob $job, ContentObject $content): SlideDeck
+    {
+        $material = $this->material($content);
+
+        $deck = $this->slides($job, $material);
+        $violation = $this->violation($deck);
+
+        if ($violation !== null) {
+            Log::info('carousel.guard_retry', ['summary_job_id' => $job->id, 'reason' => $violation]);
+
+            $deck = $this->slides($job, $material);
+            $violation = $this->violation($deck);
+        }
+
+        if ($violation !== null) {
+            throw ModelCallFailed::schemaValidation($violation, Stage::Carousel);
+        }
+
+        return $deck;
+    }
+
+    /** @throws ModelCallFailed */
+    private function slides(SummaryJob $job, string $material): SlideDeck
+    {
+        $response = $this->runStage(Stage::Carousel, $material, $job);
+
+        return SlideDeck::fromModel((array) ($response->decoded ?? []));
     }
 
     /**
@@ -121,17 +158,14 @@ final class CondenseForCarousel
      * **ولا يُقتطع نصٌّ ليمرّ.** الاقتطاع الآليّ يقصّ الجملة في منتصفها
      * فيُخرج معنًى ناقصاً باسم الجهة، وهو أسوأ من شريحةٍ لم تُرسَم. والإخفاق
      * هنا `schema_validation_failed`: مخرَجٌ خالف عقدَه، ونداءُ التكثيف
-     * وحدَه رخيصٌ يُعاد — ولا يمسّ الخطّ ولا الملخّص المنشور.
+     * وحدَه رخيصٌ يُعاد ({@see self::condense()}) — ولا يمسّ الخطّ ولا الملخّص المنشور.
      *
-     * @throws ModelCallFailed
+     * @return string|null سببُ الرفض كما يُعرض، أو `null` لشرائح تمرّ.
      */
-    private function guard(SlideDeck $deck): void
+    private function violation(SlideDeck $deck): ?string
     {
         if ($deck->count() < SlideDeck::MIN || $deck->count() > SlideDeck::MAX) {
-            throw ModelCallFailed::schemaValidation(
-                "عدد الشرائح {$deck->count()}، والمطلوب من ".SlideDeck::MIN.' إلى '.SlideDeck::MAX.'.',
-                Stage::Carousel,
-            );
+            return "عدد الشرائح {$deck->count()}، والمطلوب من ".SlideDeck::MIN.' إلى '.SlideDeck::MAX.'.';
         }
 
         $overlong = $deck->overlong();
@@ -139,10 +173,9 @@ final class CondenseForCarousel
         if ($overlong !== []) {
             $numbers = implode('، ', array_map(static fn (Slide $s): string => $s->label(), $overlong));
 
-            throw ModelCallFailed::schemaValidation(
-                "الشرائح ({$numbers}) تجاوز نصّها الحرّ ".SlideDeck::MAX_WORDS.' كلمة.',
-                Stage::Carousel,
-            );
+            return "الشرائح ({$numbers}) تجاوز نصّها الحرّ ".SlideDeck::MAX_WORDS.' كلمة.';
         }
+
+        return null;
     }
 }

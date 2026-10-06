@@ -252,7 +252,7 @@ class PageRenderer implements Renderer
     {
         foreach ($content->evidence as $item) {
             if (in_array($item->grade, ['daif', 'mawdu'], true)) {
-                return 'ما كان من الأحاديث دون الصحيح والحسن فقد بُيّنت درجته إلى جانبه.';
+                return PageStrings::of('sources_note', $content->locale);
             }
         }
 

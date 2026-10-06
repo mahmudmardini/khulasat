@@ -51,7 +51,7 @@ enum TranscriptErrorCode: string
     /** الرسالة العربية التي تُعرض، بلا رمز ولا تفصيل تقني. */
     public function message(): string
     {
-        return (string) __('errors.transcript.'.$this->value);
+        return (string) __('errors.transcript.'.$this->value, ['min' => self::MINIMUM_WORDS]);
     }
 
     /**

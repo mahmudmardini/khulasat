@@ -76,7 +76,7 @@ it('لا يكتب تجاوزاً حين يطابق الاختيارُ الافت
 
     $this->actingAs($user)->post('/panel/lectures', [
         'source_kind' => 'text',
-        'transcript_text' => str_repeat('كلمة ', 300),
+        'transcript_text' => str_repeat('كلمة ', 600),
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
@@ -98,7 +98,7 @@ it('يكتب التجاوز حين يخالف الاختيارُ الافترا�
 
     $this->actingAs($user)->post('/panel/lectures', [
         'source_kind' => 'text',
-        'transcript_text' => str_repeat('كلمة ', 300),
+        'transcript_text' => str_repeat('كلمة ', 600),
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
@@ -118,7 +118,7 @@ it('يرفض قالباً أو لغةً خارج القائمة', function (): v
 
     $this->actingAs($user)->post('/panel/lectures', [
         'source_kind' => 'text',
-        'transcript_text' => str_repeat('كلمة ', 300),
+        'transcript_text' => str_repeat('كلمة ', 600),
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
@@ -135,7 +135,7 @@ it('يقبل ملخّصاً بالإنجليزية وحدها بلا عربية'
 
     $this->actingAs($user)->post('/panel/lectures', [
         'source_kind' => 'text',
-        'transcript_text' => str_repeat('كلمة ', 300),
+        'transcript_text' => str_repeat('كلمة ', 600),
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
@@ -200,7 +200,7 @@ it('لا يكتب تجاوز لوحةٍ حين يطابق الاختيارُ ا�
 
     $this->actingAs($user)->post('/panel/lectures', [
         'source_kind' => 'text',
-        'transcript_text' => str_repeat('كلمة ', 300),
+        'transcript_text' => str_repeat('كلمة ', 600),
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
@@ -218,7 +218,7 @@ it('يكتب تجاوز اللوحة حين يخالف الاختيارُ الا
 
     $this->actingAs($user)->post('/panel/lectures', [
         'source_kind' => 'text',
-        'transcript_text' => str_repeat('كلمة ', 300),
+        'transcript_text' => str_repeat('كلمة ', 600),
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',
@@ -236,7 +236,7 @@ it('يرفض لوحةً خارج القائمة', function (): void {
 
     $this->actingAs($user)->post('/panel/lectures', [
         'source_kind' => 'text',
-        'transcript_text' => str_repeat('كلمة ', 300),
+        'transcript_text' => str_repeat('كلمة ', 600),
         'title_ar' => 'درس',
         'speaker_name' => 'الملقي',
         'venue_mode' => 'institution',

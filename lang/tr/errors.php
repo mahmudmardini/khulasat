@@ -55,7 +55,7 @@ return [
 
         'transcription_failed' => 'Bu dersi deşifre edemedik. Tekrar deneyin; sürerse daha net bir ses dosyası yükleyin ya da ders metnini yapıştırın.',
 
-        'transcript_too_short' => 'Çıkarılan metin tam bir ders olamayacak kadar kısa ve altyazı eksik görünüyor. Üretmeden önce gözden geçirip tamamlayın; kotanızdan hiçbir şey düşülmedi.',
+        'transcript_too_short' => 'Çıkarılan metin :min kelimenin altında; tam bir ders olamayacak kadar kısa ve videonun altyazısı ya da sesi eksik görünüyor. Kaynağı kontrol edin ya da dersin tam metnini yapıştırın.',
 
         'ytdlp_timeout' => 'Bu dersin okunması izin verilenden uzun sürdü, biz de durdurduk. Tekrar deneyin ya da ders dosyasını cihazınızdan yükleyin.',
 

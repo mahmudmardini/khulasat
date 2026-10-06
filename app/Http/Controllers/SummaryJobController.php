@@ -10,6 +10,7 @@ use App\Actions\Summary\TransitionJob;
 use App\Domain\Summary\JobState;
 use App\Domain\Summary\RegenerationRefused;
 use App\Enums\ComplaintStatus;
+use App\Enums\TranscriptErrorCode;
 use App\Http\Controllers\Admin\AdminJobController;
 use App\Jobs\RunSummaryPipeline;
 use App\Models\Complaint;
@@ -208,7 +209,7 @@ class SummaryJobController extends Controller
             $key = "{$namespace}.{$job->error_code}";
 
             if (trans()->has($key)) {
-                return trans($key);
+                return trans($key, ['min' => TranscriptErrorCode::MINIMUM_WORDS]);
             }
         }
 

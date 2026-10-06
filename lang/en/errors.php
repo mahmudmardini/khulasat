@@ -54,7 +54,7 @@ return [
 
         'transcription_failed' => 'We could not transcribe this lecture. Try again; if it keeps happening, upload a clearer audio file or paste the lecture text.',
 
-        'transcript_too_short' => 'The extracted text is too short to be a full lecture, and the captions look incomplete. Review and complete it before generating — nothing has been taken from your quota.',
+        'transcript_too_short' => 'The extracted text is under :min words, too short to be a full lecture; the video’s captions or audio look incomplete. Check the source, or paste the full lecture text.',
 
         'ytdlp_timeout' => 'Reading this lecture took longer than allowed, so we stopped it. Try again, or upload the lecture file from your device.',
 

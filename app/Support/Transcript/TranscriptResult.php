@@ -26,7 +26,18 @@ final readonly class TranscriptResult
      */
     public function wordCount(): int
     {
-        $words = preg_split('/\s+/u', trim($this->text)) ?: [];
+        return self::countWords($this->text);
+    }
+
+    /**
+     * عددُ كلمات نصٍّ بالقاعدة نفسها — T-221.
+     *
+     * يقرؤه النموذجُ أيضاً قبل أن يُنشئ المهمّة، فيُردّ النصُّ الملصوق القصير
+     * هناك قبل أن يُحتسب من الحصّة، بالعدّ الذي يقف به الخطّ نفسه.
+     */
+    public static function countWords(string $text): int
+    {
+        $words = preg_split('/\s+/u', trim($text)) ?: [];
 
         return count(array_filter($words, static fn (string $word): bool => $word !== ''));
     }

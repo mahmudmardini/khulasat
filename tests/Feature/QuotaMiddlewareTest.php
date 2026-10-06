@@ -140,6 +140,33 @@ it('يمنع إنشاء ملخّص وقد نفدت الحصّة الشهرية،
     expect(SummaryJob::query()->count())->toBe(0);
 });
 
+/*
+ * ★ T-221: النصُّ الملصوق دون ٥٠٠ كلمة كان يُقبل ويُحتسب من الحصّة، ثمّ يقف
+ * الخطّ برسالةٍ تقول إنّ الحصّة لم تُمسّ. فيُردّ في النموذج، بعدده وحدّه.
+ */
+it('يردّ النصّ الملصوق القصير في النموذج قبل أن يُحتسب من الحصّة', function (): void {
+    $this->actingAs($this->user)->post('/panel/lectures', [
+        ...newLecturePayload(),
+        'transcript_text' => str_repeat('كلمة ', 258),
+    ])->assertSessionHasErrors([
+        'transcript_text' => 'النصّ ٢٥٨ كلمة، وأقلّ ما يُلخَّص ٥٠٠ كلمة. الصقوا نصّ الدرس كاملاً.',
+    ]);
+
+    Queue::assertNothingPushed();
+
+    expect(SummaryJob::query()->count())->toBe(0)
+        ->and(UsageRecord::query()->count())->toBe(0);
+});
+
+it('يقبل النصّ الملصوق الذي يبلغ الحدّ', function (): void {
+    $this->actingAs($this->user)->post('/panel/lectures', [
+        ...newLecturePayload(),
+        'transcript_text' => str_repeat('كلمة ', 500),
+    ])->assertSessionHasNoErrors();
+
+    expect(SummaryJob::query()->count())->toBe(1);
+});
+
 /**
  * **ولا يُردّ النموذج فارغاً.**
  *

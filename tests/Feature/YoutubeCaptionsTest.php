@@ -316,7 +316,9 @@ it('stops a transcript shorter than five hundred words', function (): void {
         $this->provider->fetch(lectureAt('https://www.youtube.com/watch?v=abc123'));
     } catch (TranscriptFailed $failure) {
         expect($failure->errorCode)->toBe(TranscriptErrorCode::TranscriptTooShort)
-            ->and($failure->userMessage())->toContain('لم نصرف من حصّتكم شيئاً');
+            ->and($failure->userMessage())->toContain('دون ٥٠٠ كلمة')
+            // ★ T-221: والوحدةُ احتُسبت عند إنشاء المهمّة، فلا يُقال إنّ الحصّة لم تُمسّ.
+            ->and($failure->userMessage())->not->toContain('حصّتكم');
 
         return;
     }

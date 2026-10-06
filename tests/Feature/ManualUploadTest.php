@@ -154,7 +154,9 @@ it('stops a pasted fragment shorter than five hundred words', function (): void 
         $this->manual->fetch(request_()->withPastedText('بسم الله الرحمن الرحيم'));
     } catch (TranscriptFailed $failure) {
         expect($failure->errorCode)->toBe(TranscriptErrorCode::TranscriptTooShort)
-            ->and($failure->userMessage())->toContain('لم نصرف من حصّتكم شيئاً');
+            ->and($failure->userMessage())->toContain('دون ٥٠٠ كلمة')
+            // ★ T-221: والوحدةُ احتُسبت عند إنشاء المهمّة، فلا يُقال إنّ الحصّة لم تُمسّ.
+            ->and($failure->userMessage())->not->toContain('حصّتكم');
 
         return;
     }

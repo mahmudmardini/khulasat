@@ -209,7 +209,7 @@ class SummaryJobController extends Controller
             $key = "{$namespace}.{$job->error_code}";
 
             if (trans()->has($key)) {
-                return trans($key, ['min' => TranscriptErrorCode::MINIMUM_WORDS]);
+                return trans($key, ['min' => TranscriptErrorCode::minimumWordsLabel()]);
             }
         }
 

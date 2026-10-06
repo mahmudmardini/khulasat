@@ -97,11 +97,11 @@ class StoreLectureRequest extends FormRequest
 
                 if ($words < TranscriptErrorCode::MINIMUM_WORDS) {
                     // والأرقامُ هنديةٌ في العربية كما يكتبها العدّاد تحت الحقل.
-                    $digits = static fn (int $n): string => app()->getLocale() === 'ar' ? Arabic::toArabicIndicDigits($n) : (string) $n;
+                    $count = app()->getLocale() === 'ar' ? Arabic::toArabicIndicDigits($words) : (string) $words;
 
                     $validator->errors()->add('transcript_text', trans('lectures.create.source.text_too_short', [
-                        'count' => $digits($words),
-                        'min' => $digits(TranscriptErrorCode::MINIMUM_WORDS),
+                        'count' => $count,
+                        'min' => TranscriptErrorCode::minimumWordsLabel(),
                     ]));
                 }
             }

@@ -13,6 +13,7 @@ use App\Actions\Stages\VerifyEvidence;
 use App\Actions\Stages\WriteBody;
 use App\Actions\Summary\ScheduleStageRetry;
 use App\Actions\Summary\TransitionJob;
+use App\Actions\Usage\RefundUnstartedSummary;
 use App\Domain\Summary\AutomaticRetryRefused;
 use App\Domain\Summary\JobState;
 use App\Enums\TranscriptErrorCode;
@@ -192,6 +193,12 @@ class RunSummaryPipeline implements ShouldQueue
             errorCode: $code,
             errorDetail: $detail,
         );
+
+        // ★ **وقفت عند نصّ الدرس فلم يُكتب ملخّص: تعود الوحدة** — T-222.
+        //   رموزُ `TranscriptErrorCode` وحدها إخفاقُ مصدرٍ قبل أيّ مرحلة كتابة.
+        if (TranscriptErrorCode::tryFrom($code) !== null) {
+            app(RefundUnstartedSummary::class)->handle($job);
+        }
     }
 
     /**

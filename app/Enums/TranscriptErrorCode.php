@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Support\Arabic;
+
 /**
  * The failure modes of the transcription stage: the spec's ten (§5-أ-7), and a server fault.
  *
@@ -51,7 +53,18 @@ enum TranscriptErrorCode: string
     /** الرسالة العربية التي تُعرض، بلا رمز ولا تفصيل تقني. */
     public function message(): string
     {
-        return (string) __('errors.transcript.'.$this->value);
+        return (string) __('errors.transcript.'.$this->value, ['min' => self::minimumWordsLabel()]);
+    }
+
+    /**
+     * الحدُّ كما يُكتب في رسالة — T-221. هنديُّ الأرقام في العربية، كما
+     * يكتبه عدّادُ الكلمات تحت حقل النصّ.
+     */
+    public static function minimumWordsLabel(): string
+    {
+        return app()->getLocale() === 'ar'
+            ? Arabic::toArabicIndicDigits(self::MINIMUM_WORDS)
+            : (string) self::MINIMUM_WORDS;
     }
 
     /**

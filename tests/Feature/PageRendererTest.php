@@ -323,6 +323,29 @@ it('يطبع درجة الضعيف في قائمة التخريج', function ():
         ->and($html)->toContain('فقد بُيّنت درجته');
 });
 
+/** ★ T-221: والحاشية بلسان الصفحة، لا بالعربية في كلّ لغة. */
+it('يكتب حاشية الدرجات بلسان الصفحة', function (): void {
+    (new EvidenceItem)->forceFill([
+        'summary_job_id' => $this->job->id,
+        'tenant_id' => $this->tenant->id,
+        'domain' => 'islamic',
+        'kind' => 'hadith',
+        'raw_text' => 'لفظ المحاضرة',
+        'normalized_text' => 'لفظ المحاضرة',
+        'matched_text' => 'لفظ المصدر كما هو',
+        'match_status' => 'exact',
+        'review_status' => ReviewStatus::AutoPassed->value,
+        'source_meta' => ['takhrij' => 'رواه أبو داود', 'grade' => 'daif'],
+    ])->save();
+
+    $english = renderTranslated($this->job->refresh(), Locale::En);
+
+    expect($english)->toContain('has its grade stated beside it')
+        ->and($english)->not->toContain('فقد بُيّنت درجته')
+        ->and(renderTranslated($this->job, Locale::Tr))->toContain('derecesi yanında belirtilmiştir')
+        ->and(renderTranslated($this->job, Locale::Ru))->toContain('указана рядом');
+});
+
 /** **ولا يُعرض لفظ المحاضرة** — يُعرض لفظ المصدر. */
 it('يعرض لفظ المصدر لا لفظ المحاضرة', function (): void {
     (new EvidenceItem)->forceFill([

@@ -6,14 +6,17 @@ namespace App\Http\Requests;
 
 use App\Enums\Locale;
 use App\Enums\SummaryTemplate;
+use App\Enums\TranscriptErrorCode;
 use App\Enums\VenueMode;
 use App\Http\Controllers\LectureController;
 use App\Models\Lecture;
 use App\Models\MediaUpload;
 use App\Services\Transcript\ChunkedUploads;
+use App\Support\Arabic;
 use App\Support\Render\Palette;
 use App\Support\Transcript\SourceKey;
 use App\Support\Transcript\SourceUrlGuard;
+use App\Support\Transcript\TranscriptResult;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -86,8 +89,21 @@ class StoreLectureRequest extends FormRequest
                 $this->validateUpload($validator);
             }
 
-            if ($kind === 'text' && trim((string) $this->input('transcript_text')) === '') {
-                $validator->errors()->add('transcript_text', trans('errors.transcript.transcript_too_short'));
+            // ★ **النصُّ الملصوق القصير يُردّ هنا، قبل أن تُنشأ المهمّة** — T-221.
+            //   كان يُقبل ويُحتسب من الحصّة، ثمّ يقف الخطّ عند ٥٠٠ كلمة برسالةٍ
+            //   عن «الترجمة المرافقة» تقول إنّ الحصّة لم تُمسّ.
+            if ($kind === 'text') {
+                $words = TranscriptResult::countWords((string) $this->input('transcript_text'));
+
+                if ($words < TranscriptErrorCode::MINIMUM_WORDS) {
+                    // والأرقامُ هنديةٌ في العربية كما يكتبها العدّاد تحت الحقل.
+                    $count = app()->getLocale() === 'ar' ? Arabic::toArabicIndicDigits($words) : (string) $words;
+
+                    $validator->errors()->add('transcript_text', trans('lectures.create.source.text_too_short', [
+                        'count' => $count,
+                        'min' => TranscriptErrorCode::minimumWordsLabel(),
+                    ]));
+                }
             }
         });
     }

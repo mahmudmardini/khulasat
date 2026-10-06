@@ -111,6 +111,13 @@ final class PageStrings
             'tr' => 'Ayetlerin meali: :name',
             'ru' => 'Перевод смыслов аятов: :name',
         ],
+        // ★ حاشيةُ قائمة التخريج بلسان الصفحة — T-221. كانت بالعربية في كلّ لغة.
+        'sources_note' => [
+            'ar' => 'ما كان من الأحاديث دون الصحيح والحسن فقد بُيّنت درجته إلى جانبه.',
+            'en' => 'Any hadith graded below sound or good has its grade stated beside it.',
+            'tr' => 'Sahih ve hasen derecesinin altındaki hadislerin derecesi yanında belirtilmiştir.',
+            'ru' => 'Для хадисов ниже степени «достоверный» и «хороший» их степень указана рядом.',
+        ],
         // والمتنُ يعرض بعضَ الآية: فالترجمةُ تُقال للآية كلّها، لا لما عُرض منها.
         'ayah_translation_whole' => [
             'ar' => 'الآية كاملة',

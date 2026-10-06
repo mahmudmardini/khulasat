@@ -200,6 +200,8 @@ return [
             'text_label' => 'Paste the transcript',
             'text_hint' => 'Or upload an srt or vtt captions file, or plain text.',
             'text_placeholder' => 'Paste the full lecture text here…',
+            'text_words' => ':count words',
+            'text_too_short' => 'The text is :count words; a summary needs at least :min. Paste the full lecture text.',
 
             /*
              * Duplicates — T-65. **It does not block; it stops and asks**:

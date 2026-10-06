@@ -9,6 +9,7 @@ use App\Domain\Summary\JobState;
 use App\Enums\Locale;
 use App\Enums\OutputType;
 use App\Enums\SummaryTemplate;
+use App\Enums\TranscriptErrorCode;
 use App\Enums\UsageEvent;
 use App\Enums\VenueMode;
 use App\Http\Requests\StoreLectureRequest;
@@ -120,6 +121,8 @@ class LectureController extends Controller
         return Inertia::render('Lectures/Create', [
             'limits' => [
                 'max_lecture_minutes' => (int) $tenant->max_lecture_minutes,
+                // أقلّ ما يُلخَّص من نصٍّ ملصوق — يعدّه النموذجُ قبل البدء (T-221).
+                'min_words' => TranscriptErrorCode::MINIMUM_WORDS,
                 'upload_max_bytes' => (int) config('khulasah.transcript.upload.max_bytes'),
                 'text_extensions' => config('khulasah.transcript.upload.text_extensions'),
                 'media_extensions' => config('khulasah.transcript.upload.media_extensions'),

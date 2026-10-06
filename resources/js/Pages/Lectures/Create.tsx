@@ -62,6 +62,8 @@ interface OutputLocale {
 interface Props {
   limits: {
     max_lecture_minutes: number;
+    /** أقلّ ما يُلخَّص من نصٍّ ملصوق، بالعدّ الذي يقف به الخطّ (T-221). */
+    min_words: number;
     upload_max_bytes: number;
     text_extensions: string[];
     media_extensions: string[];
@@ -311,11 +313,15 @@ export default function Create({
   const uploadBusy = upload.phase === 'uploading' || upload.phase === 'checking';
   const blocked = (preflight?.ok === true && preflight.exceeds_limit === true) || (kind === 'upload' && uploadBusy);
 
+  // ★ النصُّ الملصوق يُعدّ كما يعدّه الخادم، فلا يُرسَل ما سيُردّ — T-221.
+  const textWords = form.data.transcript_text.split(/\s+/u).filter((word) => word !== '').length;
+  const textShort = textWords < limits.min_words;
+
   const sourceReady =
     kind === 'url'
       ? form.data.source_url.trim() !== ''
       : kind === 'text'
-        ? form.data.transcript_text.trim() !== ''
+        ? !textShort
         : upload.phase === 'ready';
   const meetingReady = form.data.title_ar.trim() !== '' && form.data.speaker_name.trim() !== '';
 
@@ -522,6 +528,15 @@ export default function Create({
                       className="field leading-[1.9]"
                     />
                   </FieldGroup>
+                  {textWords > 0 && !form.errors.transcript_text ? (
+                    <p className={cn('mt-2 text-[13px]', textShort ? 'text-warning' : 'text-text-muted')} aria-live="polite">
+                      {toArabicIndic(
+                        textShort
+                          ? t('lectures.create.source.text_too_short', { count: textWords, min: limits.min_words })
+                          : t('lectures.create.source.text_words', { count: textWords }),
+                      )}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </Card>

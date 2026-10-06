@@ -198,6 +198,8 @@ return [
             'text_label' => 'Deşifre metnini yapıştırın',
             'text_hint' => 'Ya da srt veya vtt altyazı dosyası veya düz metin yükleyin.',
             'text_placeholder' => 'Dersin tam metnini buraya yapıştırın…',
+            'text_words' => ':count kelime',
+            'text_too_short' => 'Metin :count kelime; özet için en az :min kelime gerekir. Dersin tam metnini yapıştırın.',
 
             /*
              * Tekrar — T-65. **Engellemez, durur ve sorar**: aynı videodan

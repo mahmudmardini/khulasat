@@ -8,10 +8,12 @@ use App\Enums\TranscriptErrorCode;
 use App\Exceptions\TranscriptFailed;
 use App\Support\Transcript\CaptionTrack;
 use App\Support\Transcript\Preflight;
+use App\Support\Transcript\ProxyCredentials;
 use App\Support\Transcript\SourceUrlGuard;
 use App\Support\Transcript\TemporaryDirectory;
 use App\Support\Transcript\YtDlpErrorMap;
 use Illuminate\Process\Exceptions\ProcessTimedOutException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Process;
 use JsonException;
 
@@ -25,7 +27,8 @@ use JsonException;
  *      ({@see SourceUrlGuard}) حاجزٌ آخر لا بديل.
  *
  *   ٢. **مهلةٌ صارمة** من `YTDLP_TIMEOUT` — §5-أ-6 البند ٤: عمليةٌ معلّقة
- *      تحبس عاملاً في الطابور حتى يمتلئ الطابور بها.
+ *      تحبس عاملاً في الطابور حتى يمتلئ الطابور بها. **وهي للنداء كلِّه**،
+ *      لا لكلّ محاولة حين يُعاد العطلُ العابر (T-227).
  *
  *   ٣. **مجلّد مؤقّت يُنظَّف دائماً**، في `finally` لا بعد النجاح: المسار
  *      الذي يُنظّف عند النجاح وحده يترك المخلّفات في كلّ إخفاق، وهي الحالة
@@ -39,6 +42,15 @@ use JsonException;
  */
 class YtDlp
 {
+    /** المحاولاتُ على العطل العابر، الأولى منها — T-227. */
+    public const ATTEMPTS = 3;
+
+    /**
+     * لا تُبدأ محاولةٌ بأقلّ من هذا: أسرعُ فحصٍ ناجح على الخادم سبعُ ثوانٍ،
+     * فمحاولةٌ بثانيتين تُخفق بالمهلة لا محالة، ويطول انتظارُ المستخدم بلا طائل.
+     */
+    private const MINIMUM_ATTEMPT_SECONDS = 5;
+
     /**
      * Read the cheap metadata call — المواصفة §5-أ-1.
      *
@@ -175,6 +187,18 @@ class YtDlp
     }
 
     /**
+     * Run yt-dlp, again on a transient failure — T-227.
+     *
+     * **الوكيلُ الدوّار يُخرج كلَّ نداءٍ من عنوانٍ آخر**، وبعضُ العناوين
+     * يُردّ بفحص الروبوت أو يُخفق في مصافحة SSL. على الخادم أخفق ٤ من ١٢
+     * تشغيلاً للفيديو نفسه، ونجح التالي غالباً. فيُعاد ما كان عابراً
+     * ({@see YtDlpErrorMap::isTransient()}) حتى {@see self::ATTEMPTS} مرّات،
+     * ولا يُعاد الدائم: الفيديو الخاصّ خاصٌّ من كلّ عنوان.
+     *
+     * **و`$timeout` للمحاولات كلّها لا لكلّ واحدة.** الفحصُ المسبق يجري في
+     * دورة الطلب، وثلاثُ محاولاتٍ بمهلةٍ لكلٍّ تحبس عاملَ PHP-FPM ثلاثةَ
+     * أضعافها. فكلُّ محاولةٍ تأخذ ما بقي، وأسوأُ الحالات كما كانت قبل الإعادة.
+     *
      * @param  list<string>  $command
      *
      * @throws TranscriptFailed
@@ -182,8 +206,37 @@ class YtDlp
     protected function run(array $command, ?string $directory = null, ?int $timeout = null): string
     {
         $command = $this->withProxy($command);
-        $timeout ??= $this->timeout();
+        $budget = $timeout ?? $this->timeout();
+        $started = hrtime(true);
+        $remaining = fn (): int => $budget - intdiv(hrtime(true) - $started, 1_000_000_000);
 
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return $this->attempt($command, $directory, $remaining());
+            } catch (TranscriptFailed $failure) {
+                $retry = $attempt < self::ATTEMPTS
+                    && $failure->transient
+                    && $remaining() >= self::MINIMUM_ATTEMPT_SECONDS;
+
+                if (! $retry) {
+                    throw $failure;
+                }
+
+                // الرمزُ وحده: النصُّ كاملاً في استثناء المحاولة الأخيرة.
+                Log::info('ytdlp_retry', ['attempt' => $attempt, 'code' => $failure->errorCode->value]);
+            }
+        }
+    }
+
+    /**
+     * One run of the process, with whatever is left of the time.
+     *
+     * @param  list<string>  $command
+     *
+     * @throws TranscriptFailed
+     */
+    private function attempt(array $command, ?string $directory, int $timeout): string
+    {
         $process = Process::timeout($timeout);
 
         if ($directory !== null) {
@@ -197,15 +250,20 @@ class YtDlp
                 TranscriptErrorCode::YtdlpTimeout,
                 "تجاوزت العملية {$timeout} ثانية.",
                 $exception,
+                transient: true,
             );
         }
 
         if ($result->failed()) {
             // الرمز يُقرأ من stderr — §5-أ-6 البند ٣: عطلٌ مستقلّ برسالة
-            // مفهومة، لا «فشل التفريغ» لكلّ شيء.
+            // مفهومة، لا «فشل التفريغ» لكلّ شيء. **وبيانات دخول الوكيل تُمحى
+            // هنا**، قبل أن يصير stderr رسالةً تُحفظ في السجلّ والمهمّة.
+            $stderr = $result->errorOutput();
+
             throw TranscriptFailed::because(
-                YtDlpErrorMap::forStderr($result->errorOutput()),
-                trim($result->errorOutput()),
+                YtDlpErrorMap::forStderr($stderr),
+                ProxyCredentials::redact(trim($stderr)),
+                transient: YtDlpErrorMap::isTransient($stderr),
             );
         }
 

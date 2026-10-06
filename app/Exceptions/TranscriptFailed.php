@@ -23,6 +23,12 @@ final class TranscriptFailed extends RuntimeException
         public readonly TranscriptErrorCode $errorCode,
         string $message,
         ?Throwable $previous = null,
+        /**
+         * محاولةٌ أخرى قد تنجح — T-227. يقرؤه `YtDlp::run()` وحده، ولا
+         * يُعرف من الرمز: `transcription_failed` لعطل SSL عابرٌ، وللمخرَج
+         * الذي لا يُقرأ دائم.
+         */
+        public readonly bool $transient = false,
     ) {
         parent::__construct($message, previous: $previous);
     }
@@ -31,11 +37,13 @@ final class TranscriptFailed extends RuntimeException
         TranscriptErrorCode $code,
         string $detail = '',
         ?Throwable $previous = null,
+        bool $transient = false,
     ): self {
         return new self(
             $code,
             $detail === '' ? $code->value : $code->value.': '.$detail,
             $previous,
+            $transient,
         );
     }
 

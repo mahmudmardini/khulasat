@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\TranscriptFailed;
 use App\Services\Transcript\YtDlp;
+use App\Support\Transcript\ProxyCredentials;
 use App\Support\Transcript\SourceUrlGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
@@ -47,9 +50,17 @@ class PreflightController extends Controller
 
         try {
             $preflight = $ytdlp->preflight($url);
-        } catch (Throwable) {
+        } catch (Throwable $failure) {
             // **ولا يُعرض سبب الإخفاق التقني.** المستخدم يحتاج ما يفعله،
-            // لا رسالةَ أداةٍ لا يعرفها.
+            // لا رسالةَ أداةٍ لا يعرفها. **ويُسجَّل** — T-227: إخفاقٌ مرّةً
+            // من ثلاث بقي بلا أثرٍ حتى شُغّل yt-dlp بيدٍ على الخادم. وبلا
+            // بيانات دخول الوكيل، فـstderr قد يحوي `user:pass@host`.
+            Log::warning('preflight_failed', [
+                'url' => $url,
+                'code' => $failure instanceof TranscriptFailed ? $failure->errorCode->value : $failure::class,
+                'stderr' => ProxyCredentials::redact($failure->getMessage()),
+            ]);
+
             return response()->json([
                 'ok' => false,
                 'message' => trans('lectures.create.preflight.unavailable'),

@@ -86,7 +86,69 @@ final class YtDlpErrorMap
         ]],
     ];
 
+    /**
+     * أعطالُ الطريق لا الفيديو — T-227. لا رمزَ لها في الجدول فتسقط إلى
+     * `transcription_failed`، وهي مع الوكيل الدوّار عنوانٌ رديء لا رابطٌ رديء:
+     * النداءُ التالي يخرج من عنوانٍ آخر.
+     *
+     * @var list<string>
+     */
+    private const NETWORK = [
+        'ssl',
+        'handshake',
+        'proxy',
+        'tunnel connection failed',
+        'connection reset',
+        'connection refused',
+        'connection aborted',
+        'remote end closed connection',
+        'remotedisconnected',
+        'unable to connect',
+        'failed to connect',
+        'network is unreachable',
+        'temporary failure in name resolution',
+        'name or service not known',
+        'http error 502',
+        'http error 503',
+        'http error 504',
+    ];
+
     private function __construct() {}
+
+    /**
+     * Whether another attempt could succeed where this one failed — T-227.
+     *
+     * **الفيديو لا يتغيّر بين محاولتين، والعنوانُ يتغيّر.** فما يقوله يوتيوب
+     * عن الفيديو (خاصّ، محذوف، محجوب في البلد) دائم، وما يقوله عن العنوان
+     * (روبوت، 429، 403) أو ما يقطع الطريقَ إليه (SSL، الوكيل، المهلة) عابر.
+     * والتصنيف من {@see self::forStderr()} نفسه، فلا يُعاد ما رمزُه دائم ولو
+     * حوى نصُّه كلمةً من أعطال الطريق.
+     */
+    public static function isTransient(string $stderr): bool
+    {
+        $haystack = str_replace("\u{2019}", "'", mb_strtolower($stderr));
+
+        return match (self::forStderr($stderr)) {
+            // «confirm your age» في قائمة الروبوت بنصّها، وهو قيدُ عمرٍ على
+            // الفيديو لا حكمٌ على العنوان: لا تنفعه إعادة.
+            TranscriptErrorCode::BotCheck => ! str_contains($haystack, 'confirm your age'),
+            TranscriptErrorCode::YtdlpTimeout => true,
+            TranscriptErrorCode::TranscriptionFailed => self::containsAny($haystack, self::NETWORK),
+            default => false,
+        };
+    }
+
+    /** @param  list<string>  $needles */
+    private static function containsAny(string $haystack, array $needles): bool
+    {
+        foreach ($needles as $needle) {
+            if (str_contains($haystack, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * والافتراضي `transcription_failed`: عطلٌ لم نعرفه بعدُ، ورسالتُه تقترح

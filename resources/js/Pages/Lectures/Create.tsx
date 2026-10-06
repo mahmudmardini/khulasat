@@ -178,7 +178,12 @@ export default function Create({
       }
 
       if (!response.ok) {
-        setPreflight({ ok: false, message: t('lectures.create.preflight.unavailable') });
+        // رسالةُ الخادم إن قالها هو (قائمةُ تشغيل، موقعٌ غير مدعوم) — T-227.
+        // وكانت تُطرح فيُقال لكلّ ردٍّ «تعذّرت قراءة الرابط». و`ok: false`
+        // يميّز ردَّه عن ردّ التحقّق وخطأ الخادم، وفيهما `message` أيضاً.
+        const body = (await response.json().catch(() => null)) as Preflight | null;
+        const message = body?.ok === false && typeof body.message === 'string' ? body.message : null;
+        setPreflight({ ok: false, message: message ?? t('lectures.create.preflight.unavailable') });
         return;
       }
 

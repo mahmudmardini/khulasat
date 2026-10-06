@@ -97,3 +97,36 @@ it('gives every code an Arabic message that is not its code', function (): void 
             ->and(preg_match('/\p{Arabic}/u', $code->message()))->toBe(1);
     }
 });
+
+// ── العابر والدائم — T-227 ───────────────────────────────────────
+// الوكيلُ الدوّار يُخرج كلَّ نداءٍ من عنوانٍ آخر: ما يُقال عن العنوان أو
+// عن الطريق إليه يُعاد، وما يُقال عن الفيديو لا يتغيّر بإعادة.
+
+it('calls a failure of the address or the road to it transient', function (string $stderr): void {
+    expect(YtDlpErrorMap::isTransient($stderr))->toBeTrue();
+})->with([
+    "ERROR: [youtube] abc: Sign in to confirm you\u{2019}re not a bot. Use --cookies-from-browser or --cookies for the authentication.",
+    'ERROR: unable to download API page: HTTP Error 429: Too Many Requests',
+    'ERROR: [youtube] abc: HTTP Error 403: Forbidden',
+    // بنصّه من الخادم، ٦ أكتوبر ٢٠٢٦.
+    'ERROR: [youtube] abc: Unable to download webpage: [SSL: SSLV3_ALERT_HANDSHAKE_FAILURE] sslv3 alert handshake failure (_ssl.c:1006) (caused by SSLError(...))',
+    "ERROR: [youtube] abc: Unable to download webpage: ('Unable to connect to proxy', OSError('Tunnel connection failed: 502 Bad Gateway'))",
+    'ERROR: [youtube] abc: Unable to download webpage: Remote end closed connection without response',
+    'ERROR: Unable to download webpage: The read operation timed out',
+]);
+
+it('calls a failure of the video itself permanent', function (string $stderr): void {
+    expect(YtDlpErrorMap::isTransient($stderr))->toBeFalse();
+})->with([
+    "ERROR: [youtube] abc: Private video. Sign in if you've been granted access to this video",
+    'ERROR: [youtube] abc: Video unavailable',
+    'ERROR: [youtube] abc: This video has been removed by the uploader',
+    'ERROR: [youtube] abc: The uploader has not made this video available in your country',
+    'ERROR: Unsupported URL: https://www.youtube.com/feed/subscriptions',
+    // في قائمة الروبوت بنصّها، وهو قيدُ عمرٍ لا حكمٌ على العنوان.
+    'ERROR: [youtube] abc: Sign in to confirm your age. This video may be inappropriate for some users.',
+    // الرمزُ الدائم يغلب كلمةَ الطريق في النصّ نفسه.
+    'ERROR: [youtube] abc: Video unavailable. (proxy: http://proxy.test:8080)',
+    // عطلٌ لا نعرفه: لا يُعاد على التخمين.
+    'ERROR: [youtube] abc: Some new failure we have never seen',
+]);

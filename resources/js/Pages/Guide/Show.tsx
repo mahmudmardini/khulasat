@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Link } from '@inertiajs/react';
 import { cn } from '@/lib/cn';
 import { t } from '@/lib/i18n';
@@ -249,12 +249,7 @@ export default function GuideShow({ locale, role, locales, roles, chapters }: Pr
 
           <div ref={content} className="guide-prose">
             {chapters.map((chapter) => (
-              <section
-                key={chapter.id}
-                className="guide-chapter"
-                data-number={t('guide.chapter', { n: number(chapter.number) })}
-                dangerouslySetInnerHTML={{ __html: chapter.html }}
-              />
+              <ChapterBody key={chapter.id} html={chapter.html} label={t('guide.chapter', { n: number(chapter.number) })} />
             ))}
           </div>
 
@@ -304,6 +299,19 @@ export default function GuideShow({ locale, role, locales, roles, chapters }: Pr
     </GuideLayout>
   );
 }
+
+/**
+ * متنُ فصلٍ واحد — **لا يُعاد رسمُه إلّا إن تغيّر نصُّه** (T-218).
+ *
+ * React 19 يقارن `dangerouslySetInnerHTML` بالكائن لا بالنصّ، فكائنٌ جديد
+ * في كلّ رسمٍ للصفحة يعيد كتابةَ المتن كلِّه: مع كلّ قسمٍ يبلغه القارئ،
+ * ومع كلّ رابطٍ يُفتح (Inertia يحدّث خصائصَ الصفحة عند تغيّر `#`). فتُستبدل
+ * العناوين، ويبقى متتبّعُ المحتويات يقيس عناوينَ خرجت من الصفحة وكلُّها عند
+ * الصفر، فيقع على آخرها. ويُمحى معها وميضُ القسم المفتوح برابطه.
+ */
+const ChapterBody = memo(function ChapterBody({ html, label }: { html: string; label: string }) {
+  return <section className="guide-chapter" data-number={label} dangerouslySetInnerHTML={{ __html: html }} />;
+});
 
 function Contents({
   chapters,

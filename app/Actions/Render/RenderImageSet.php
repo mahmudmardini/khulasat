@@ -91,7 +91,9 @@ final class RenderImageSet
         }
 
         $chosen = CarouselDesign::forJob($job);
-        $pageUrl = $job->outputs()->where('type', OutputType::Page->value)->first()?->public_url;
+        // **رابطُ اللغة الأولى** — T-216: والمعاينةُ تقارن `page_url` به من
+        // المصدر نفسه، وإلّا عُدّت الحزمةُ قديمةً وأُخفيت ساعةَ اكتمالها.
+        $pageUrl = $job->primaryPage()?->public_url;
 
         $renderer = new CarouselRenderer($this->views, $deck, $pageUrl, $chosen);
         $content = ContentObject::fromJob($job);

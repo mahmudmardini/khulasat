@@ -80,7 +80,7 @@ class PreviewController extends Controller
     {
         $name = $job->slug ?? 'summary-'.$job->id;
         $locale = $this->requestedLocale($request, $job);
-        $suffix = $locale === $this->primaryLocale($job) ? '' : '-'.$locale->value;
+        $suffix = $locale === $job->primaryLocale() ? '' : '-'.$locale->value;
 
         [$contents, $mime, $filename] = match ($type) {
             OutputType::Page->value => [$this->pageHtml($job, $renderer, $locale), 'text/html; charset=UTF-8', "{$name}{$suffix}.html"],
@@ -109,6 +109,7 @@ class PreviewController extends Controller
         $carousel = $this->output($job, OutputType::Carousel);
         $meta = (array) ($carousel?->meta ?? []);
         $pending = $job->pendingEvidenceCount();
+        $page = $job->primaryPage();
 
         return [
             // تبويبُ الاختبار — T-195، بجوار الصفحة والشرائح.
@@ -122,12 +123,12 @@ class PreviewController extends Controller
                 'renderable' => $this->renderable($job),
                 'published' => $job->state === JobState::Published && $job->unpublished_at === null,
                 'unpublished' => $job->unpublished_at !== null,
-                'public_url' => $this->output($job, OutputType::Page)?->public_url,
+                'public_url' => $page?->public_url,
             ],
             'outputs' => [
                 'page' => [
                     'produced' => $job->body_html !== null,
-                    'public_url' => $this->output($job, OutputType::Page)?->public_url,
+                    'public_url' => $page?->public_url,
                 ],
                 'carousel' => [
                     'produced' => $carousel !== null,
@@ -154,7 +155,7 @@ class PreviewController extends Controller
             'rich_outputs' => $tenant?->allowsRichOutputs() ?? false,
 
             // لغات النشر للمبدّل — T-84.
-            'primary_locale' => $this->primaryLocale($job)->value,
+            'primary_locale' => $job->primaryLocale()->value,
             'locales' => $this->localeOptions($job),
 
             // «أضف لغة» — T-166. ما يُضاف وما يُترجَم الآن وما سقط.
@@ -191,7 +192,7 @@ class PreviewController extends Controller
                 // رابطُ هذه اللغة إن نُشرت — فالنسخُ والمشاركة للّغة المعروضة.
                 'public_url' => $pages->firstWhere('locale', $locale)?->public_url,
             ],
-            $this->outputLocales($job),
+            $job->outputLocales(),
         );
     }
 
@@ -275,8 +276,10 @@ class PreviewController extends Controller
             'stale' => $count > 0 && $output?->rendered_at !== null && (
                 ($this->output($job, OutputType::Carousel)?->rendered_at?->gt($output->rendered_at) ?? false)
                 // وحزمةٌ قبل تقييد الرابط لا يُعرف رابطُها، فلا تُعدّ قديمةً به.
+                // **والرابطُ من المصدر الذي كتبه** ({@see SummaryJob::primaryPage()})
+                // — T-216: رابطٌ بلغةٍ أخرى كان يُخفي صوراً أُنشئت للتوّ.
                 || (array_key_exists('page_url', $meta)
-                    && $meta['page_url'] !== $this->output($job, OutputType::Page)?->public_url)
+                    && $meta['page_url'] !== $job->primaryPage()?->public_url)
             ),
             'urls' => array_map(
                 static fn (int $slide): string => route('jobs.images.show', ['job' => $job->id, 'slide' => $slide], false)."?v={$version}",
@@ -315,23 +318,15 @@ class PreviewController extends Controller
      * وهي التي يُشارَك رابطُها.
      *
      * ويسقط إلى أوّل صفٍّ إن غاب صفُّ الأولى، فرابطٌ قائم خيرٌ من فراغ.
+     *
+     * **والصفحةُ لا تُقرأ من هنا** — T-216: لها {@see SummaryJob::primaryPage()}،
+     * يقرؤها الكاتبُ والمعاينةُ معاً.
      */
     private function output(SummaryJob $job, OutputType $type): ?Output
     {
         $rows = $job->outputs()->where('type', $type->value)->get();
 
-        return $rows->firstWhere('locale', $this->primaryLocale($job)) ?? $rows->first();
-    }
-
-    /** @return list<Locale> لغاتُ النشر: اختيارُ الدرس، وإلّا افتراضُ الجهة، وإلّا المصدر. */
-    private function outputLocales(SummaryJob $job): array
-    {
-        return $job->lecture?->outputLocales() ?? $job->tenant?->outputLocales() ?? [Locale::source()];
-    }
-
-    private function primaryLocale(SummaryJob $job): Locale
-    {
-        return Locale::primaryOf($this->outputLocales($job));
+        return $rows->firstWhere('locale', $job->primaryLocale()) ?? $rows->first();
     }
 
     /**
@@ -343,7 +338,7 @@ class PreviewController extends Controller
      */
     private function requestedLocale(Request $request, SummaryJob $job): Locale
     {
-        $allowed = $this->outputLocales($job);
+        $allowed = $job->outputLocales();
 
         if (! $request->filled('locale')) {
             return Locale::primaryOf($allowed);

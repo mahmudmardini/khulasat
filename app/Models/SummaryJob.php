@@ -7,6 +7,8 @@ namespace App\Models;
 use App\Actions\Summary\TransitionJob;
 use App\Domain\Summary\InvalidTransition;
 use App\Domain\Summary\JobState;
+use App\Enums\Locale;
+use App\Enums\OutputType;
 use App\Enums\ReviewStatus;
 use App\Enums\TranscriptSource;
 use App\Models\Concerns\BelongsToTenant;
@@ -149,6 +151,43 @@ class SummaryJob extends Model
         } finally {
             $this->transitioning = false;
         }
+    }
+
+    /**
+     * لغاتُ النشر: اختيارُ الدرس، وإلّا افتراضُ الجهة، وإلّا المصدر — T-84.
+     *
+     * @return list<Locale>
+     */
+    public function outputLocales(): array
+    {
+        return $this->lecture?->outputLocales() ?? $this->tenant?->outputLocales() ?? [Locale::source()];
+    }
+
+    /** اللغةُ الأولى: تُنشر على الجذر، ورابطُها هو الذي يُشارَك — T-64. */
+    public function primaryLocale(): Locale
+    {
+        return Locale::primaryOf($this->outputLocales());
+    }
+
+    /**
+     * صفحةُ الملخّص **باللغة الأولى** — T-216، والمصدرُ الوحيد لها.
+     *
+     * ★ **واللغةُ تُثبَّت ولا يُكتفى بأوّل صفّ.** لملخّصٍ منشورٍ بعدّة لغاتٍ صفُّ
+     * صفحةٍ لكلّ لغة، وPostgres يُعيدها بلا ترتيبٍ مضمون. فكان `RenderImageSet`
+     * يكتب في الحزمة رابطَ `/en` أو `/tr` أحياناً، والمعاينةُ تقارنه برابط اللغة
+     * الأولى، فتُعدّ الصورُ أقدمَ من شرائحها وتُخفى بعد إنشائها مباشرة. وتحمل
+     * الشريحةُ الأخيرة من الكاروسيل العربيّ رابطَ الصفحة الإنجليزية.
+     *
+     * فمن كتب الرابطَ ومن قارنه يقرآنه من هنا، فلا يختلفان. والأولى، وإلّا لغةُ
+     * المصدر، وإلّا أقدمُ صفحةٍ — ورابطٌ قائمٌ خيرٌ من فراغ.
+     */
+    public function primaryPage(): ?Output
+    {
+        $pages = $this->outputs()->where('type', OutputType::Page->value)->orderBy('id')->get();
+
+        return $pages->firstWhere('locale', $this->primaryLocale())
+            ?? $pages->firstWhere('locale', Locale::source())
+            ?? $pages->first();
     }
 
     /** كم شاهداً ما زال ينتظر قرار إنسان — المواصفة §5. */

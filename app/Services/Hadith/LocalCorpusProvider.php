@@ -79,6 +79,14 @@ class LocalCorpusProvider implements HadithProvider
             // كتبُ هذه الطبقة وحدها — T-170. والطبقةُ الثانية مزوّدٌ بعده.
             ->whereIn('book', array_map(static fn (HadithBook $book): string => $book->value, $this->books()))
             ->orderByDesc('trgm_similarity')
+            // ★ **وترتيبُ المتساوين ثابت** — T-219. Postgres لا يضمن ترتيبَ
+            // صفوفٍ تتساوى في التشابه، فكان المدخلُ الواحد يُعزى إلى كتابٍ مرّة
+            // وإلى غيره أخرى، ويقطع الحدُّ أعلاها رتبةً. فالكتابُ برتبته، ثمّ الصفّ.
+            ->orderByRaw('array_position(?::text[], book)', ['{'.implode(',', array_map(
+                static fn (HadithBook $book): string => $book->value,
+                HadithBook::cases(),
+            )).'}'])
+            ->orderBy('id')
             ->limit(self::CANDIDATES)
             ->get()
             ->map(static fn (Hadith $row): HadithMatch => new HadithMatch(

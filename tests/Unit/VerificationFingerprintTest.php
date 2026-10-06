@@ -163,6 +163,18 @@ it('keeps the narration formulas that are never taken for a hadith', function ()
         ->toBe('456769cbc8c61108d77471df85f8a92f6e38eb07a32f3ff2450366785d6dede5', FINGERPRINT_ADVICE);
 });
 
+it('keeps the honorifics that are never counted as wording', function (): void {
+    // T-219: تُنزع من الطرفين قبل قياس التشابه وحدّ الشذرة.
+    expect(hash('sha256', json_encode(verificationConstant(NarrationFormulas::class, 'HONORIFICS'), JSON_UNESCAPED_UNICODE)))
+        ->toBe('7235e1ab6b2e5138a3f4d5608a2b9d48766b3b71501d7d77b6852eea124c2d1b', FINGERPRINT_ADVICE);
+});
+
+it('keeps the order in which books win a tie', function (): void {
+    // T-219: الأعلى رتبةً يُعزى إليه الحديث حين يطابقه كتابان بالتمام نفسه.
+    expect(array_map(static fn (HadithBook $book): string => $book->value, HadithBook::cases()))
+        ->toBe(['bukhari', 'muslim', 'abudawud', 'tirmidhi', 'nasai', 'ibnmajah', 'malik', 'ahmad', 'darimi'], FINGERPRINT_ADVICE);
+});
+
 it('keeps the sahihayn exception and the grades that may pass without a human', function (): void {
     $sahihayn = array_values(array_map(
         static fn (HadithBook $book): string => $book->value,

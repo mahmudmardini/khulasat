@@ -124,6 +124,9 @@ class PreviewController extends Controller
                 'published' => $job->state === JobState::Published && $job->unpublished_at === null,
                 'unpublished' => $job->unpublished_at !== null,
                 'public_url' => $page?->public_url,
+                // ★ اللغاتُ التالية والشرائحُ ما زالت تُبنى بعد النشر — T-228،
+                // فتتحدّث الشاشةُ من نفسها حتى تنتهي.
+                'finishing' => $job->isFinishing(),
             ],
             'outputs' => [
                 'page' => [
@@ -132,6 +135,11 @@ class PreviewController extends Controller
                 ],
                 'carousel' => [
                     'produced' => $carousel !== null,
+                    // طُلبت عند الإنشاء ويبنيها الخطُّ الآن — «تُبنى» لا «لم تُنشأ» — T-228.
+                    'pending' => $carousel === null
+                        && $job->isFinishing()
+                        && $job->lecture?->want_carousel === true
+                        && ($tenant?->allowsRichOutputs() ?? false),
                     'slides' => $meta['slides'] ?? [],
                     // من الشرائح لا من المحفوظ — انظر `carouselText()`.
                     'plain_text' => SlideDeck::fromArray($meta['slides'] ?? [])->toPlainText(),
@@ -187,8 +195,9 @@ class PreviewController extends Controller
                 'native' => $locale->nativeName(),
                 'direction' => $locale->direction(),
                 'translated' => $locale->isSource() || $rows->get($locale->value)?->isReady() === true,
-                // ★ «جارٍ» لا «لم تُترجَم» لما طُلبت ترجمتُه الآن — T-166.
-                'translating' => LocaleAdditions::isTranslating($rows->get($locale->value)),
+                // ★ «جارٍ» لا «لم تُترجَم» لما طُلبت ترجمتُه الآن — T-166،
+                // أو يترجمه الخطُّ بعد نشر الأولى — T-228.
+                'translating' => ! $locale->isSource() && LocaleAdditions::isTranslatingFor($job, $rows->get($locale->value)),
                 // رابطُ هذه اللغة إن نُشرت — فالنسخُ والمشاركة للّغة المعروضة.
                 'public_url' => $pages->firstWhere('locale', $locale)?->public_url,
             ],

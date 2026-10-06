@@ -313,8 +313,8 @@ return [
 
         'locale' => [
             'legend' => 'Önizleme dili',
-            'untranslated' => 'Henüz çevrilmedi',
-            'untranslated_note' => 'Bu dil henüz çevrilmedi; çevirisi tamamlanana kadar sayfa Arapça gösterilir.',
+            'failed' => 'Çeviri başarısız',
+            'failed_note' => 'Bu dil çevrilemedi; sayfa Arapça gösteriliyor. Yukarıdaki “Dil ekle” bölümünden yeniden deneyin.',
         ],
 
         'quick' => [
@@ -364,6 +364,9 @@ return [
         'images_soon_body' => 'Oluşturulduğunda aynı slaytlardan, maliyetsiz ve yeniden üretimsiz çizilecek.',
 
         'carousel_empty' => 'Bu özet için slayt oluşturulmadı',
+        'carousel_pending' => 'Slaytlar oluşturuluyor',
+        'carousel_pending_body' => 'Bir iki dakika içinde, sayfayı yenilemeden burada görünürler.',
+        'carousel_pending_short' => 'Oluşturuluyor',
         'slides' => 'Instagram slaytları',
         'slide_texts' => 'Slayt metinleri',
     ],

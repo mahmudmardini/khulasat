@@ -12,6 +12,7 @@ use App\Enums\OutputType;
 use App\Enums\ReviewStatus;
 use App\Enums\TranscriptSource;
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\Publish\LocaleAdditions;
 use Database\Factories\SummaryJobFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -37,6 +38,9 @@ class SummaryJob extends Model
     protected $guarded = [];
 
     /** يُرفع داخل {@see self::writeTransition()} وحده. */
+    /** ربعُ ساعة — {@see self::isFinishing()}. */
+    public const FINISHING_STALE_AFTER_MINUTES = 15;
+
     private bool $transitioning = false;
 
     protected function casts(): array
@@ -56,6 +60,8 @@ class SummaryJob extends Model
             'total_cost_usd' => 'decimal:4',
             'published_at' => 'datetime',
             'unpublished_at' => 'datetime',
+            // ما بعد اللغة الأولى ما زال يُبنى — T-228.
+            'finishing_at' => 'datetime',
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
         ];
@@ -161,6 +167,22 @@ class SummaryJob extends Model
     public function outputLocales(): array
     {
         return $this->lecture?->outputLocales() ?? $this->tenant?->outputLocales() ?? [Locale::source()];
+    }
+
+    /**
+     * أما زال العاملُ يبني ما بعد اللغة الأولى؟ — T-228.
+     *
+     * فالمهمّةُ تبلغ `published` بنشر اللغة الأولى، ثمّ تُترجَم اللغاتُ
+     * التالية وتُبنى الشرائح. وما دام هذا قائماً فالناقصُ «في الطريق» لا «سقط».
+     *
+     * ★ **وما طال ربعَ ساعةٍ يُعدّ منتهياً** — نظيرُ ترجمةٍ طُلبت
+     * ({@see LocaleAdditions}): عاملٌ مات في وسطه لا يمحو العلامة، فتنتظر
+     * الشاشةُ أبداً ما لن يأتي.
+     */
+    public function isFinishing(): bool
+    {
+        return $this->finishing_at !== null
+            && $this->finishing_at->gt(now()->subMinutes(self::FINISHING_STALE_AFTER_MINUTES));
     }
 
     /** اللغةُ الأولى: تُنشر على الجذر، ورابطُها هو الذي يُشارَك — T-64. */

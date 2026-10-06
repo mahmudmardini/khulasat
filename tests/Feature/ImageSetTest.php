@@ -546,3 +546,74 @@ it('يقول إنّ الصور قديمةٌ إذا نُشر الملخّص بع�
 
     expect($stale())->toBeFalse();
 });
+
+// ── T-216: رابطُ الصفحة باللغة الأولى ───────────────────────────────
+
+/**
+ * يضع للملخّص صفحةً بكلّ لغةٍ من `$locales` **بترتيبها**، ويعيد روابطها.
+ *
+ * والعربيةُ آخرُها إدراجاً عمداً: `->where('type', page)->first()` بلا لغةٍ
+ * ولا ترتيبٍ يُعيد الإنجليزية في جدولٍ جديد — وهو ما كان يقع على الخادم.
+ *
+ * @param  list<string>  $locales
+ * @return array<string, string>
+ */
+function pagesIn(SummaryJob $job, array $locales): array
+{
+    $urls = [];
+
+    foreach ($locales as $locale) {
+        $urls[$locale] = 'https://khulasat.io/tenant/anuan-al-drs'.($locale === 'ar' ? '' : "/{$locale}");
+
+        Output::query()->create([
+            'summary_job_id' => $job->id,
+            'tenant_id' => $job->tenant_id,
+            'type' => OutputType::Page->value,
+            'locale' => $locale,
+            'format' => OutputType::Page->format()->value,
+            'public_url' => $urls[$locale],
+            'rendered_at' => now(),
+            'renderer_version' => '1.0.0',
+        ]);
+    }
+
+    return $urls;
+}
+
+it('يحفظ في الحزمة رابطَ الصفحة العربية ولو سبقتها لغاتٌ أخرى، فلا تُخفى الصورُ بعد إنشائها', function (): void {
+    $this->job->lecture->forceFill(['locales' => ['ar', 'en', 'tr']])->save();
+    $urls = pagesIn($this->job, ['en', 'tr', 'ar']);
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/images");
+
+    expect(imageSetRow($this->job)->meta['state'])->toBe('ready')
+        ->and(imageSetRow($this->job)->meta['page_url'])->toBe($urls['ar']);
+
+    // **والشريحةُ الأخيرة في الصور تحمل الرابطَ العربيّ** لا الإنجليزيّ ولا التركيّ.
+    $captured = implode('', array_column($this->capturer->calls, 'html'));
+
+    expect($captured)->toContain('<p class="link">'.BrandKit::shorten($urls['ar']).'</p>')
+        ->not->toContain(BrandKit::shorten($urls['en']))
+        ->not->toContain(BrandKit::shorten($urls['tr']));
+
+    $this->actingAs($this->user)->get("/panel/jobs/{$this->job->id}/preview")
+        ->assertInertia(fn (Assert $page): Assert => $page
+            ->where('outputs.images.state', 'ready')
+            ->where('outputs.images.stale', false)
+            ->has('outputs.images.urls', 5)
+            ->where('outputs.page.public_url', $urls['ar'])
+            ->where('job.public_url', $urls['ar'])
+        );
+});
+
+it('يضع رابطَ الصفحة العربية في الشريحة الأخيرة من الكاروسيل ولو سبقتها لغاتٌ أخرى', function (): void {
+    $this->job->lecture->forceFill(['locales' => ['ar', 'en', 'tr']])->save();
+    $urls = pagesIn($this->job, ['tr', 'en', 'ar']);
+
+    $this->actingAs($this->user)->post("/panel/jobs/{$this->job->id}/carousel/build", ['recondense' => false])
+        ->assertSessionHasNoErrors();
+
+    $carousel = $this->job->outputs()->where('type', OutputType::Carousel->value)->first();
+
+    expect($carousel->meta['page_url'])->toBe($urls['ar']);
+});

@@ -72,12 +72,15 @@ final class RenderCarousel
         return $deck->count() === 0 ? null : $deck;
     }
 
-    /** رابط الصفحة الكاملة للشريحة الأخيرة — ويغيب قبل النشر. */
+    /**
+     * رابط الصفحة الكاملة للشريحة الأخيرة — ويغيب قبل النشر.
+     *
+     * **باللغة الأولى** ({@see SummaryJob::primaryPage()}) — T-216: أوّلُ صفّ
+     * صفحةٍ بلا لغة كان يضع رابطَ `/en` في الكاروسيل العربيّ.
+     */
     private function pageUrl(SummaryJob $job): ?string
     {
-        $page = $job->outputs()->where('type', OutputType::Page->value)->first();
-
-        return $page?->public_url;
+        return $job->primaryPage()?->public_url;
     }
 
     private function output(SummaryJob $job): ?Output

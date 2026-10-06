@@ -70,7 +70,10 @@ function Side({
   keep: 'added' | 'removed';
   tone: string;
 }) {
-  const mine = tokens.filter((token) => token.op === 'same' || token.op === keep);
+  // ★ T-182: ما لم يُقتبس من المصدر يُعرض في جانبه باهتاً، ولا يُظلَّل فرقاً.
+  const mine = tokens.filter(
+    (token) => token.op === 'same' || token.op === keep || (keep === 'removed' && token.op === 'outside'),
+  );
 
   return (
     <div>
@@ -79,7 +82,11 @@ function Side({
         {mine.map((token, index) => (
           <span
             key={`${index}-${token.text}`}
-            className={cn('rounded px-0.5', token.op === keep && `${tone} font-semibold`)}
+            className={cn(
+              'rounded px-0.5',
+              token.op === keep && `${tone} font-semibold`,
+              token.op === 'outside' && 'text-text-faint',
+            )}
           >
             {token.text}
             {index < mine.length - 1 ? ' ' : ''}

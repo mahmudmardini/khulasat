@@ -8,14 +8,13 @@
  * والعرض وحده — **لا حكم هنا**. القرار من الخادم، وهذا يُظهره فقط.
  */
 
-export type DiffOp = 'same' | 'removed' | 'added';
+export type DiffOp = 'same' | 'removed' | 'added' | 'outside';
 
 export interface DiffToken {
   op: DiffOp;
   text: string;
 }
 
-/** أطول تتابع مشترك على الكلمات، ثم يُقرأ منه الفرق. */
 /**
  * مفتاح المقارنة — **يُقارَن به ولا يُعرَض**.
  *
@@ -35,6 +34,15 @@ function key(word: string): string {
     .replace(/\u0629/g, '\u0647');
 }
 
+/**
+ * ★ **يُقارَن الاقتباسُ بما يقابله من المصدر، لا بالمصدر كلّه** — T-182.
+ *
+ * النصُّ يقتبس بعضَ الآية أو الحديث. وكانت المقارنةُ على المصدر كلّه تُظلّل
+ * ما لم يُقتبس «ناقصاً»، فتضيع الكلمةُ المبدَّلة بين خمس كلماتٍ مظلَّلة لم
+ * يُخطئ فيها أحد. فيُحاذى الاقتباسُ على أفضل نافذةٍ في المصدر بمسافة تحريرٍ
+ * يُتخطّى فيها صدرُ المصدر وعجزُه بلا كلفة، كما يقيس `HadithVerifier`.
+ * وما خرج عن النافذة `outside`: يُعرض باهتاً ليبقى السياق، ولا يُظلَّل.
+ */
 export function wordDiff(source: string, quoted: string): DiffToken[] {
   const aWords = source.split(/\s+/).filter(Boolean);
   const bWords = quoted.split(/\s+/).filter(Boolean);
@@ -42,46 +50,66 @@ export function wordDiff(source: string, quoted: string): DiffToken[] {
   // يُقارَن على المفتاح، ويُعرَض الأصل — فالشكل لا يصنع فرقاً في المعنى.
   const a = aWords.map(key);
   const b = bWords.map(key);
+  const m = a.length;
+  const n = b.length;
 
-  const table: number[][] = Array.from({ length: a.length + 1 }, () =>
-    new Array<number>(b.length + 1).fill(0),
-  );
+  // d[i][j]: كلفةُ محاذاة أوّل i كلمةً من الاقتباس على مصدرٍ ينتهي عند j، ومبدؤه حرّ.
+  const d: number[][] = Array.from({ length: n + 1 }, (_, i) => new Array<number>(m + 1).fill(i));
 
-  for (let i = a.length - 1; i >= 0; i -= 1) {
-    for (let j = b.length - 1; j >= 0; j -= 1) {
-      table[i][j] = a[i] === b[j]
-        ? table[i + 1][j + 1] + 1
-        : Math.max(table[i + 1][j], table[i][j + 1]);
+  for (let j = 0; j <= m; j += 1) {
+    d[0][j] = 0;
+  }
+
+  for (let i = 1; i <= n; i += 1) {
+    for (let j = 1; j <= m; j += 1) {
+      d[i][j] = Math.min(
+        d[i - 1][j - 1] + (b[i - 1] === a[j - 1] ? 0 : 1),
+        d[i - 1][j] + 1,
+        d[i][j - 1] + 1,
+      );
     }
   }
 
-  const out: DiffToken[] = [];
-  let i = 0;
-  let j = 0;
+  // نهايةٌ حرّة: أقلُّ كلفةٍ في الصفّ الأخير، وأقربُها عند التساوي.
+  let end = 0;
 
-  while (i < a.length && j < b.length) {
-    if (a[i] === b[j]) {
-      out.push({ op: 'same', text: aWords[i] });
-      i += 1;
-      j += 1;
-    } else if (table[i + 1][j] >= table[i][j + 1]) {
-      out.push({ op: 'removed', text: aWords[i] });
-      i += 1;
+  for (let j = 1; j <= m; j += 1) {
+    if (d[n][j] < d[n][end]) {
+      end = j;
+    }
+  }
+
+  const aligned: DiffToken[] = [];
+  let i = n;
+  let j = end;
+
+  while (i > 0) {
+    if (j > 0 && d[i][j] === d[i - 1][j - 1] + (b[i - 1] === a[j - 1] ? 0 : 1)) {
+      if (b[i - 1] === a[j - 1]) {
+        aligned.push({ op: 'same', text: aWords[j - 1] });
+      } else {
+        aligned.push({ op: 'added', text: bWords[i - 1] }, { op: 'removed', text: aWords[j - 1] });
+      }
+
+      i -= 1;
+      j -= 1;
+    } else if (d[i][j] === d[i - 1][j] + 1) {
+      aligned.push({ op: 'added', text: bWords[i - 1] });
+      i -= 1;
     } else {
-      out.push({ op: 'added', text: bWords[j] });
-      j += 1;
+      aligned.push({ op: 'removed', text: aWords[j - 1] });
+      j -= 1;
     }
   }
 
-  while (i < a.length) {
-    out.push({ op: 'removed', text: aWords[i] });
-    i += 1;
-  }
+  aligned.reverse();
 
-  while (j < b.length) {
-    out.push({ op: 'added', text: bWords[j] });
-    j += 1;
-  }
+  // لا كلمةَ مشتركة: لا نافذةَ تُعرف، فيبقى المصدرُ كلُّه فرقاً كما كان.
+  const outside: DiffOp = aligned.some((token) => token.op === 'same') ? 'outside' : 'removed';
 
-  return out;
+  return [
+    ...aWords.slice(0, j).map((text) => ({ op: outside, text })),
+    ...aligned,
+    ...aWords.slice(end).map((text) => ({ op: outside, text })),
+  ];
 }

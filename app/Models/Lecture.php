@@ -9,6 +9,7 @@ use App\Enums\SummaryTemplate;
 use App\Enums\VenueMode;
 use App\Models\Concerns\BelongsToTenant;
 use App\Support\Render\Palette;
+use App\Support\Transcript\SourceKey;
 use Database\Factories\LectureFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -60,6 +61,28 @@ class Lecture extends Model
     public function summaryJobs(): HasMany
     {
         return $this->hasMany(SummaryJob::class);
+    }
+
+    /**
+     * آخرُ محاضرةٍ في الجهة من المصدر نفسه، أو `null` — T-65.
+     *
+     * ★ يسأل عنها الفحصُ المسبق وحارسُ الإنشاء معاً (T-226)، **فبمفتاحٍ
+     * واحد**: لو اختلفا لنبّه الفحصُ على ما يمرّره الإنشاء، أو العكس.
+     */
+    public static function earlierFromSource(int $tenantId, ?string $url): ?self
+    {
+        $key = SourceKey::for($url);
+
+        if ($key === null) {
+            return null;
+        }
+
+        // **العزلُ بالجهة**: مصدرُ جهةٍ لا يحجب جهةً أخرى.
+        return self::query()
+            ->where('tenant_id', $tenantId)
+            ->where('source_key', $key)
+            ->latest('id')
+            ->first();
     }
 
     /** @return BelongsTo<User, $this> */

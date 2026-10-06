@@ -26,7 +26,7 @@ Choose one of three ways in:
    - **The Arabic captions that come with the video**: if they exist, the system reads the text from them directly, which is faster. If not, it listens to the audio and writes it down, which is slower.
 
 > [!WARNING]
-> If you enter a link your institution has used before, the system warns you and names the earlier summary. If you want a second summary from it (in another language or template), tick "I know it is a duplicate" and click again.
+> If you enter a link your institution has used before, the system warns you when you check the link, names the earlier summary and links to it. If you want a second summary from it (in another language or template), tick "I know it is a duplicate" before you start.
 
 ### Audio or video file {#create-upload}
 

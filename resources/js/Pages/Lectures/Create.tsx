@@ -41,6 +41,8 @@ interface Preflight {
   has_arabic_captions?: boolean;
   limit_minutes?: number;
   exceeds_limit?: boolean;
+  /** محاضرةٌ سابقة من المصدر نفسه — T-226. و`url` ملخّصُها إن وُجد. */
+  duplicate?: { title: string; url: string | null } | null;
   message?: string;
 }
 
@@ -322,12 +324,22 @@ export default function Create({
   const textWords = form.data.transcript_text.split(/\s+/u).filter((word) => word !== '').length;
   const textShort = textWords < limits.min_words;
 
-  const sourceReady =
+  /*
+    التكرارُ يُعرف من الفحص المسبق، أو من ردّ الخادم لمن لم يفحص — T-226.
+    **وما لم يُقَرّ به فالمصدرُ غير جاهز**: كانت الخطوةُ الأولى تحمل علامةَ
+    اكتمالٍ والطلبُ مردودٌ بسببها.
+  */
+  const duplicateKnown = kind === 'url'
+    && ((preflight?.ok === true && preflight.duplicate != null) || form.errors.confirm_duplicate !== undefined);
+  const duplicatePending = duplicateKnown && !form.data.confirm_duplicate;
+
+  const sourceGiven =
     kind === 'url'
       ? form.data.source_url.trim() !== ''
       : kind === 'text'
         ? !textShort
         : upload.phase === 'ready';
+  const sourceReady = sourceGiven && !duplicatePending;
   const meetingReady = form.data.title_ar.trim() !== '' && form.data.speaker_name.trim() !== '';
 
   const template = templates.find((item) => item.key === form.data.template);
@@ -383,6 +395,15 @@ export default function Create({
         ref={formRef}
         onSubmit={(event) => {
           event.preventDefault();
+
+          // تكرارٌ معروفٌ لم يُقَرّ به: يُرى الإقرارُ أوّلاً، ولا يُسأل عن كلفةِ طلبٍ سيُردّ.
+          if (duplicatePending) {
+            const box = formRef.current?.querySelector<HTMLInputElement>('[name="confirm_duplicate"]');
+            box?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            box?.focus();
+            return;
+          }
+
           setConfirmingCreate(true);
         }}
         className="pb-2"
@@ -429,7 +450,16 @@ export default function Create({
                         autoFocus
                         placeholder="https://www.youtube.com/watch?v=…"
                         value={form.data.source_url}
-                        onChange={(event) => form.setData('source_url', event.target.value)}
+                        onChange={(event) => {
+                          form.setData('source_url', event.target.value);
+
+                          // رابطٌ آخر: ما قيل عن السابق لا يُنسب إليه، ولا إقرارُه.
+                          if (duplicateKnown || form.data.confirm_duplicate) {
+                            form.setData('confirm_duplicate', false);
+                            form.clearErrors('confirm_duplicate');
+                            setPreflight(null);
+                          }
+                        }}
                         className="field text-start"
                       />
 
@@ -449,21 +479,15 @@ export default function Create({
                     إقرارُ التكرار — T-65. **ولا يظهر إلّا بعد التنبيه.** فخانةٌ
                     دائمة تسأل عن تكرارٍ لم يقع تُربك من لا مصدرَ مكرَّراً عنده.
                   */}
-                  {form.errors.confirm_duplicate !== undefined ? (
-                    <div className="rounded border border-border bg-surface-alt px-3 py-2.5">
-                      <p className="text-[14px] text-text">{form.errors.confirm_duplicate}</p>
-
-                      <label className="mt-2.5 flex items-start gap-2.5 text-[14px] text-text">
-                        <input
-                          type="checkbox"
-                          name="confirm_duplicate"
-                          className="mt-0.5"
-                          checked={form.data.confirm_duplicate}
-                          onChange={(event) => form.setData('confirm_duplicate', event.target.checked)}
-                        />
-                        {t('lectures.create.source.duplicate_confirm')}
-                      </label>
-                    </div>
+                  {duplicateKnown ? (
+                    <DuplicateNotice
+                      message={preflight?.duplicate
+                        ? t('lectures.create.source.duplicate_found', { title: preflight.duplicate.title })
+                        : form.errors.confirm_duplicate ?? ''}
+                      url={preflight?.duplicate?.url ?? null}
+                      checked={form.data.confirm_duplicate}
+                      onChange={(checked) => form.setData('confirm_duplicate', checked)}
+                    />
                   ) : null}
 
                   {preflight ? <PreflightPanel result={preflight} limit={limits.max_lecture_minutes} /> : null}
@@ -1023,9 +1047,10 @@ export default function Create({
                 },
               ]}
               todo={[
-                sourceReady ? null : t('lectures.create.summary.todo_source'),
+                sourceGiven ? null : t('lectures.create.summary.todo_source'),
                 form.data.title_ar.trim() !== '' ? null : t('lectures.create.summary.todo_title'),
                 form.data.speaker_name.trim() !== '' ? null : t('lectures.create.summary.todo_speaker'),
+                duplicatePending ? t('lectures.create.summary.todo_duplicate') : null,
               ].filter((item): item is string => item !== null)}
               cost={cost}
               blocked={blocked}
@@ -1449,6 +1474,54 @@ function PreflightPanel({ result, limit }: { result: Preflight; limit: number })
           })}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * تنبيهُ التكرار وإقرارُه — T-65، وأُعيد في T-226.
+ *
+ * **بلون التحذير لا بلون الملاحظة**: كان صندوقاً رمادياً كبقيّة اللوحات،
+ * فلا يُرى أنّه ما يقف دون الإرسال. ورابطُ الملخّص السابق في لسانٍ جديد،
+ * فلا يضيع ما كُتب في النموذج — وهو في الغالب ما جاء المستخدم يطلبه.
+ */
+function DuplicateNotice({ message, url, checked, onChange }: {
+  message: string;
+  url: string | null;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <div className="rounded-lg border border-warning/40 bg-warning/10 p-4" role="alert">
+      <h3 className="flex items-center gap-2 text-[15px] font-semibold text-warning">
+        <Icon name="alert" size={17} />
+        {t('lectures.create.source.duplicate_title')}
+      </h3>
+
+      <p className="mt-1.5 text-[14px] leading-relaxed text-text">{message}</p>
+
+      {url !== null ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener"
+          className="mt-2 inline-flex items-center gap-1.5 text-[14px] font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {t('lectures.create.source.duplicate_open')}
+          <Icon name="external" size={14} />
+        </a>
+      ) : null}
+
+      <label className="mt-3 flex items-start gap-2.5 border-t border-warning/25 pt-3 text-[14px] font-medium text-text">
+        <input
+          type="checkbox"
+          name="confirm_duplicate"
+          className="mt-0.5"
+          checked={checked}
+          onChange={(event) => onChange(event.target.checked)}
+        />
+        {t('lectures.create.source.duplicate_confirm')}
+      </label>
     </div>
   );
 }

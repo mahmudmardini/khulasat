@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\Lecture;
+use App\Models\SummaryJob;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\Transcript\SourceKey;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Queue;
 
 /*
@@ -104,4 +106,41 @@ it('لا يحجب جهةً بمصدر جهةٍ أخرى', function (): void {
     $this->actingAs($this->user)
         ->post('/panel/lectures', lecturePayload('https://www.youtube.com/watch?v=abc12345678'))
         ->assertSessionHasNoErrors();
+});
+
+/*
+ * ★ **والفحصُ المسبق يقوله قبل الإرسال** — T-226. كان التنبيه لا يظهر إلّا
+ * بعد «ابدأ الإعداد» وتأكيد الكلفة، فيُردّ الطلب ويقفز المستخدم إلى صندوقٍ
+ * لم يره. والفحصُ يسمّي المحاضرة ويدلّ على ملخّصها.
+ */
+it('يسمّي الفحصُ المسبق المحاضرةَ السابقة ويدلّ على ملخّصها', function (): void {
+    Process::fake(['*' => Process::result(json_encode(['title' => 'درس', 'duration' => 600]))]);
+
+    $lecture = Lecture::factory()->create([
+        'tenant_id' => $this->tenant->id,
+        'title_ar' => 'عنوان الدرس',
+        'source_url' => 'https://www.youtube.com/watch?v=abc12345678',
+        'source_key' => 'yt:abc12345678',
+    ]);
+    $job = SummaryJob::factory()->for_($lecture)->create();
+
+    $this->actingAs($this->user)
+        ->postJson('/panel/lectures/preflight', ['source_url' => 'https://youtu.be/abc12345678'])
+        ->assertOk()
+        ->assertJson(['duplicate' => ['title' => 'عنوان الدرس', 'url' => route('jobs.show', $job)]]);
+});
+
+it('لا يقول الفحصُ تكراراً لمصدرٍ جديد ولا لمصدر جهةٍ أخرى', function (): void {
+    Process::fake(['*' => Process::result(json_encode(['title' => 'درس', 'duration' => 600]))]);
+
+    Lecture::factory()->create([
+        'tenant_id' => Tenant::factory()->create()->id,
+        'source_url' => 'https://www.youtube.com/watch?v=abc12345678',
+        'source_key' => 'yt:abc12345678',
+    ]);
+
+    $this->actingAs($this->user)
+        ->postJson('/panel/lectures/preflight', ['source_url' => 'https://youtu.be/abc12345678'])
+        ->assertOk()
+        ->assertJson(['duplicate' => null]);
 });

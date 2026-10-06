@@ -14,7 +14,6 @@ use App\Models\MediaUpload;
 use App\Services\Transcript\ChunkedUploads;
 use App\Support\Arabic;
 use App\Support\Render\Palette;
-use App\Support\Transcript\SourceKey;
 use App\Support\Transcript\SourceUrlGuard;
 use App\Support\Transcript\TranscriptResult;
 use Illuminate\Foundation\Http\FormRequest;
@@ -185,19 +184,13 @@ class StoreLectureRequest extends FormRequest
             return;
         }
 
-        $key = SourceKey::for($this->input('source_url'));
         $tenantId = $this->user()?->tenant_id;
 
-        if ($key === null || $tenantId === null) {
+        if ($tenantId === null) {
             return;
         }
 
-        // **العزلُ بالجهة**: مصدرُ جهةٍ لا يحجب جهةً أخرى.
-        $existing = Lecture::query()
-            ->where('tenant_id', $tenantId)
-            ->where('source_key', $key)
-            ->latest('id')
-            ->first();
+        $existing = Lecture::earlierFromSource($tenantId, $this->input('source_url'));
 
         if ($existing === null) {
             return;

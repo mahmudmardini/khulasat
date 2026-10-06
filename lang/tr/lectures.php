@@ -163,6 +163,7 @@ return [
             'todo_source' => 'Ders kaynağı',
             'todo_title' => 'Ders başlığı',
             'todo_speaker' => 'Konuşmacının adı',
+            'todo_duplicate' => 'Tekrarlanan bağlantının onayı',
         ],
 
         'source' => [
@@ -209,6 +210,10 @@ return [
             'duplicate' => 'Bu bağlantı daha önce «:title» içinde girilmişti. '
                 .'Ondan ikinci bir özet istiyorsanız — başka bir dilde ya da başka bir şablonla — bunu onaylayıp tekrar gönderin.',
             'duplicate_confirm' => 'Tekrar olduğunu biliyorum ve ondan ikinci bir özet istiyorum.',
+            // T-226: aynı uyarı ön kontrolde, göndermeden önce.
+            'duplicate_title' => 'Bu bağlantı daha önce özetlendi',
+            'duplicate_found' => 'Daha önce «:title» içinde girilmişti. Ondan ikinci bir özet istiyorsanız — başka bir dilde ya da başka bir şablonla — bunu burada onaylayın.',
+            'duplicate_open' => 'Önceki özeti aç',
         ],
 
         'preflight' => [

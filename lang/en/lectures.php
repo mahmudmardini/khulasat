@@ -165,6 +165,7 @@ return [
             'todo_source' => 'Lecture source',
             'todo_title' => 'Lecture title',
             'todo_speaker' => 'Speaker name',
+            'todo_duplicate' => 'Confirm the repeated link',
         ],
 
         'source' => [
@@ -211,6 +212,10 @@ return [
             'duplicate' => 'This link was entered before, in ":title". '
                 .'If you want a second summary from it — in another language or another template — confirm that and submit again.',
             'duplicate_confirm' => 'I know it is a duplicate, and I want a second summary from it.',
+            // T-226: the same notice at preflight, before submitting rather than after.
+            'duplicate_title' => 'This link was summarized before',
+            'duplicate_found' => 'It was entered before, in ":title". If you want a second summary from it — in another language or another template — confirm that here.',
+            'duplicate_open' => 'Open the earlier summary',
         ],
 
         'preflight' => [

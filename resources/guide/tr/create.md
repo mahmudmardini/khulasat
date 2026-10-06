@@ -26,7 +26,7 @@ Ardından [Hazırlamaya başla](#create-start) düğmesine tıklarsınız.
    - **Videoyla gelen Arapça altyazı**: varsa sistem metni doğrudan ondan okur; bu daha hızlıdır. Yoksa sesi dinleyip yazıya döker; bu daha yavaştır.
 
 > [!WARNING]
-> Kurumunuzun daha önce kullandığı bir bağlantıyı girerseniz sistem sizi uyarır ve önceki özetin adını verir. Ondan ikinci bir özet istiyorsanız (başka bir dilde veya şablonda), «Tekrar olduğunu biliyorum» kutusunu işaretleyip yeniden tıklayın.
+> Kurumunuzun daha önce kullandığı bir bağlantıyı girerseniz sistem bağlantıyı kontrol ettiğinizde sizi uyarır, önceki özetin adını verir ve ona bir bağlantı koyar. Ondan ikinci bir özet istiyorsanız (başka bir dilde veya şablonda), başlatmadan önce «Tekrar olduğunu biliyorum» kutusunu işaretleyin.
 
 ### Ses veya video dosyası {#create-upload}
 

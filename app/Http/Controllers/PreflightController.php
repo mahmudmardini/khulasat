@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Exceptions\TranscriptFailed;
+use App\Models\Lecture;
 use App\Services\Transcript\YtDlp;
 use App\Support\Transcript\ProxyCredentials;
 use App\Support\Transcript\SourceUrlGuard;
@@ -67,6 +68,17 @@ class PreflightController extends Controller
             ], 422);
         }
 
+        /*
+         * ★ التكرارُ يُقال هنا أيضاً — T-226. كان لا يظهر إلّا بعد «ابدأ
+         * الإعداد» وتأكيدِ الكلفة، فيُردّ الطلب وتقفز الصفحة إلى صندوقٍ
+         * لم يُرَ. والفحصُ هو ما ينظر إليه المستخدم حين يعرف المصدر.
+         * وحارسُ الإنشاء باقٍ: من لم يفحص لا يمرّ تكرارُه صامتاً.
+         */
+        $earlier = $request->user()?->tenant_id === null
+            ? null
+            : Lecture::earlierFromSource($request->user()->tenant_id, $url);
+        $earlierJob = $earlier?->summaryJobs()->latest('id')->first();
+
         $limitMinutes = (int) ($request->user()?->tenant?->max_lecture_minutes ?? 0);
         $minutes = $preflight->durationSeconds === null
             ? null
@@ -81,6 +93,10 @@ class PreflightController extends Controller
             // يُحسم في الخادم لا في المتصفّح: الحدّ من الاشتراك، وحسابُه
             // في الواجهة يجعله قابلاً للتعديل من أدوات المطوّر.
             'exceeds_limit' => $limitMinutes > 0 && $preflight->exceedsLimitMinutes($limitMinutes),
+            'duplicate' => $earlier === null ? null : [
+                'title' => (string) $earlier->title_ar,
+                'url' => $earlierJob === null ? null : route('jobs.show', $earlierJob),
+            ],
         ]);
     }
 }

@@ -17,11 +17,11 @@ use App\Models\Output;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\SummaryJob;
-use App\Support\Ui\JobProgress;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Model\FakeModelGateway;
 use App\Services\Quota\SpendCap;
+use App\Support\Ui\JobProgress;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 

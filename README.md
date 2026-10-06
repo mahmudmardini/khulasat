@@ -42,7 +42,7 @@
 
 </div>
 
-**لا بيانات في المستودع.** لا محاضرات ولا تفريغات ولا ملخّصات، ولا جهات ولا مستخدمين، حقيقيةً كانت أو مصنوعة. فكلّ بيانات المنصّة تُنشأ على النسخة المنشورة نفسها، أو على جهاز من يثبّتها. والذي في المستودع من النصوص بياناتٌ مرجعية للتحقّق فقط: مدوّنة الحديث، وعيّنات من المصحف والحديث في الاختبارات، وعيّنة الشواهد المدسوسة. ومصادرها في [SOURCES.md](SOURCES.md).
+**البيانات في المستودع.** في الكود نفسه بياناتٌ مرجعية للتحقّق فقط: مدوّنة الحديث، وعيّنات من المصحف والحديث في الاختبارات، وعيّنة الشواهد المدسوسة. **وفي `database/dump/` قاعدةٌ جاهزة لتسهيل التجربة على جهاز اللجنة**: المصحف وترجماته، والحديث، وإعداد النماذج، وجهة التجربة وحساباتها الثلاثة، **وملخّصٌ تجريبيّ واحد** من درسٍ منشور على يوتيوب للشيخ محمد بن صالح العثيمين رحمه الله، مع اختبار فهمه. ولا شيء غير ذلك من محاضراتٍ أو جهاتٍ أو مستخدمين. ومصادر كلّ ذلك في [SOURCES.md](SOURCES.md).
 
 ---
 
@@ -77,7 +77,7 @@
 
 **على الموقع المنشور** لا تظهر هذه الأزرار إلّا إذا فتحت صفحة الدخول من الرابط الخاصّ المرسَل مع ملفّات التسليم (`/panel/login?judge=<الرمز>`). لو ظهرت لكلّ زائر لاستطاع أيّ أحدٍ أن يدخل حساب المشرف ويرى الإعدادات الحسّاسة.
 
-**على جهازك** تظهر الأزرار دائماً، بعد تشغيل الأمر `php artisan khulasah:seed-judges` مرّةً واحدة.
+**على جهازك** تظهر الأزرار دائماً، والحسابات الثلاثة في القاعدة الجاهزة.
 
 ### خمس خطوات في عشر دقائق
 
@@ -269,127 +269,68 @@ curl https://<host>/api/v1/verify/{id}
 
 ## التثبيت والتشغيل
 
-خطوات تثبيت المنصّة على جهاز لجنة التحكيم، من مستودعٍ فارغ إلى ملخّصٍ منشور. والـCI تثبّتها وتختبرها على لينكس في كلّ إيداع.
+تثبيت المنصّة على جهاز لجنة التحكيم في خمس خطوات. **قاعدة البيانات جاهزة** في `database/dump/`: فيها المصحف وترجماته، والحديث بكتبه التسعة، وإعداد النماذج، وحسابات اللجنة الثلاثة، وملخّصٌ تجريبيّ منشور مع اختبار فهمه. فلا يلزم تحميل شيءٍ من الإنترنت ولا أيُّ حسابٍ غير مفاتيح الذكاء الاصطناعي.
 
-### ١. المتطلّبات
+### ١. البرامج المطلوبة
 
-<div dir="rtl">
+PHP 8.3 أو أحدث، وComposer، وPostgreSQL 16، وNode.js 20، وFFmpeg، وyt-dlp.
 
-| المكوّن | الإصدار | لماذا |
-|---|---|---|
-| **PHP** | 8.3 أو أحدث، بالامتدادات `pdo_pgsql` و`mbstring` و`intl` و`gd` و`curl` | الخادم. و`intl` لتوحيد ترميز النصّ العربي، و`gd` لقصّ صور الكاروسيل |
-| **Composer** | 2 | مكتبات PHP |
-| **PostgreSQL** | 16، بامتداد `pg_trgm` (في حزمة contrib، ويُنشئه الترحيل) | قاعدة البيانات والبحث النصّي العربي. **لا يعمل على sqlite ولا MySQL** |
-| **Redis** | 7 | الطوابير والتخزين المؤقّت |
-| **Node.js** | 20 | بناء الواجهة |
-| **FFmpeg** | أيّ إصدار حديث | تقطيع الصوت عند رفع ملفّ. بدونه يبقى رابط يوتيوب واللصق |
-| **yt-dlp** | حديث | جلب ترجمات يوتيوب وصوته. بدونه يبقى رفع الملفّ واللصق |
-| **Google Chrome** | اختياري | صور الكاروسيل وبطاقة المشاركة فقط |
-
-</div>
-
-على macOS بـHomebrew:
+على macOS:
 
 ```bash
-brew install php composer postgresql@16 redis node ffmpeg yt-dlp
-brew services start postgresql@16 && brew services start redis
+brew install php composer postgresql@16 node ffmpeg yt-dlp
+brew services start postgresql@16
 ```
 
 وعلى Ubuntu/Debian:
 
 ```bash
 sudo apt install php8.3 php8.3-{pgsql,mbstring,intl,gd,curl,xml,zip} composer \
-  postgresql-16 postgresql-contrib redis-server nodejs npm ffmpeg
+  postgresql-16 postgresql-contrib nodejs npm ffmpeg
 pipx install yt-dlp
 ```
 
-### ٢. قاعدة البيانات
+### ٢. قاعدة بيانات فارغة
 
 ```bash
-sudo -u postgres psql -c "CREATE USER khulasah WITH PASSWORD 'secret';"
+createuser -s khulasah && createdb -O khulasah khulasah                      # macOS
+# أو على لينكس:
+sudo -u postgres psql -c "CREATE USER khulasah WITH SUPERUSER PASSWORD 'secret';"
 sudo -u postgres psql -c "CREATE DATABASE khulasah OWNER khulasah;"
 ```
 
-على macOS يكفي `createuser -s khulasah && createdb -O khulasah khulasah` ثمّ ضبط كلمة المرور. والقيم نفسها في `.env.example`، فلا تعديل إن أبقيتها.
-
-### ٣. المفاتيح
-
-انسخ `.env.example` إلى `.env` (`cp .env.example .env`)، ثمّ املأ ما يلي. وما سواه من القيم جاهزٌ للتشغيل المحلّي كما هو. **المفاتيح في `.env` وحده**، لا في قاعدة البيانات ولا في الكود.
-
-<div dir="rtl">
-
-| المتغيّر | من أين | يلزم لـ |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | console.anthropic.com | استخراج البنية والشواهد، وكتابة المتن، والكاروسيل، وأداة «تحقّق» |
-| `OPENAI_API_KEY` | platform.openai.com | التنظيف، وبيانات الإخراج، والترجمة |
-| `GOOGLE_AI_API_KEY` | aistudio.google.com | تفريغ الصوت (مع `WHISPER_PROVIDER=gemini`)، واختبار الفهم، وبديل الترجمة |
-| `QURAN_CLIENT_ID` و`QURAN_CLIENT_SECRET` | حساب مطوّر مجّاني لدى [Quran Foundation](https://quran.foundation) | تحميل المصحف وترجماته إلى قاعدة البيانات (seed) |
-| `MODEL_GATEWAY=real` | — | **بدونه تبقى البوّابة الوهمية** ولا يُنادى أيّ نموذج |
-| `WHISPER_PROVIDER=gemini` | — | تفريغ الصوت بمفتاح Google نفسه |
-| `YTDLP_BIN` | ناتج الأمر `which yt-dlp` | روابط يوتيوب. القيمة الجاهزة `/usr/local/bin/yt-dlp` لا تصحّ على كلّ جهاز: على Mac بمعالج Apple تكون عادةً `/opt/homebrew/bin/yt-dlp`، ومع pipx على لينكس في `~/.local/bin/` (اكتب المسار كاملاً) |
-
-</div>
-
-**ضع المفاتيح الثلاثة**: المراحل موزّعة على المزوّدين الثلاثة، ولكلّ مرحلة نموذجٌ بديل من مزوّدٍ آخر. وسقف الإنفاق في `SPEND_CAP_DAILY_USD` و`SPEND_CAP_MONTHLY_USD`، ويوقف الطابور كلّه عند بلوغه.
-
-> **لماذا الوهمية افتراضاً؟** لا يُنادى نموذجٌ حقيقي في التطوير ولا في الاختبارات، فلا يُصرف مالٌ بخطأ. والبوّابة الوهمية تقرأ ردوداً مسجّلة من `tests/Fixtures/model-responses/`، **ولا ردود مسجّلة في المستودع** لأنّه بلا بيانات. فالتجربة الحقيقية تحتاج `MODEL_GATEWAY=real`.
-
-### ٤. التثبيت وتحميل البيانات (seed)
+### ٣. التثبيت
 
 ```bash
 git clone https://github.com/mahmudmardini/khulasat.git && cd khulasat
-cp .env.example .env                 # ثمّ املأ المفاتيح كما في الخطوة ٣
 composer install
-npm ci && npm run build
-php artisan key:generate
-php artisan migrate                  # الجداول، وامتداد pg_trgm
-php artisan db:seed                  # إعداد النماذج لكلّ مرحلة — وحده، بلا بيانات
-php artisan khulasah:seed-quran      # المصحف: 6236 آية من Quran Foundation
-php artisan khulasah:seed-quran-translations   # ترجمات المعاني: en · tr · ru
-php artisan khulasah:seed-hadith     # الحديث: 9 كتب، 65,712 حديثاً، من المستودع نفسه بلا شبكة
-php artisan khulasah:seed-judges     # جهة التجربة وحسابات اللجنة الثلاثة
-php artisan khulasah:preflight       # يقول ما ينقص قبل أيّ إنفاق
+composer run setup
 ```
 
-**الأمر `khulasah:seed-hadith`** يقرأ الملفّات المضغوطة في `database/data/hadith/`، ويتحقّق من بصمة كلّ ملفّ في `manifest.json` قبل أن يكتب صفّاً. و`--book=bukhari` يحمّل كتاباً بعينه.
+`composer run setup` ينشئ ملفّ `.env`، ويبني الواجهة، ويستعيد القاعدة الجاهزة في أقلّ من دقيقة.
 
-**الأمر `khulasah:seed-judges`** يطبع كلمات مرور الحسابات الثلاثة مرّةً واحدة، لمن أراد الدخول بالنموذج. ويُعاد بلا ضرر، و`--reset` يضع كلماتٍ جديدة.
+### ٤. المفاتيح
 
-**الأمر `khulasah:preflight`** لا ينادي نموذجاً. يفحص المفاتيح، وإعداد النماذج وبدائلها، والمصحف وترجماته، وyt-dlp وFFmpeg، والنشر، وسقف الإنفاق، ويقول لكلّ ناقصٍ ما يُفعل به.
+افتح ملفّ `.env` واكتب فيه:
+
+```
+MODEL_GATEWAY=real
+ANTHROPIC_API_KEY=...
+OPENAI_API_KEY=...
+GOOGLE_AI_API_KEY=...
+YTDLP_BIN=/opt/homebrew/bin/yt-dlp
+```
+
+- **المفاتيح الثلاثة** من console.anthropic.com وplatform.openai.com وaistudio.google.com. وهي لازمةٌ لإنشاء ملخّصٍ جديد ولأداة «تحقّق». أمّا تصفّح الملخّص التجريبي فلا يحتاجها.
+- **`YTDLP_BIN`** هو ناتج الأمر `which yt-dlp` على جهازك.
 
 ### ٥. التشغيل
 
-تحتاج المنصّة ثلاثة برامج تعمل معاً طوال التجربة. افتح **ثلاث نوافذ Terminal** في مجلّد المشروع، وشغّل في كلّ نافذةٍ أمراً واحداً من هذه، واتركها مفتوحة:
-
 ```bash
-php artisan serve                    # النافذة ١: الموقع نفسه، على http://localhost:8000
-php artisan horizon                  # النافذة ٢: تنفيذ خطوات إعداد الملخّص في الخلفية
-php artisan schedule:work            # النافذة ٣: المهامّ الدورية، مثل حذف النصوص القديمة وفحص حدّ الإنفاق
+composer run start
 ```
 
-ثمّ افتح المتصفّح على أحد هذين الرابطين:
-
-- **صفحة الدخول:** `http://localhost:8000/panel/login`. فيها ثلاثة أزرار (مشرف المنصّة، ومالك الجهة، والمحرّر)، تضغط أحدها فتدخل مباشرةً. وتفاصيلها في [الدخول بنقرة](#الدخول-بنقرة).
-- **أداة «تحقّق»:** `http://localhost:8000/verify`، ولا تحتاج دخولاً.
-
-**لا تغلق نافذة Terminal التي شغّلت فيها `php artisan horizon`.** إن أغلقتها توقّف إعداد الملخّصات، وبقي كلّ ملخّصٍ جديد على رسالة «في قائمة الانتظار» حتى تعيد تشغيل الأمر.
-
-**إن لم يكن Redis مثبّتاً على جهازك** (وهو برنامجٌ يحفظ قائمة الملخّصات التي تنتظر دورها)، فغيّر هذين السطرين في ملفّ `.env`:
-
-```
-QUEUE_CONNECTION=database
-CACHE_STORE=database
-```
-
-ثمّ شغّل `php artisan queue:work` بدلاً من `php artisan horizon`.
-
-### ٦. على خادمٍ عامّ
-
-- اضبط `APP_ENV=production` و`APP_DEBUG=false`، وفعّل HTTPS (كعكة الجلسة تصير آمنةً وحدها في production).
-- **ضع في `JUDGE_LOGIN_KEY` رمزاً طويلاً عشوائياً.** بدونه لا تظهر أزرار اللجنة على خادمٍ غير محلّي أصلاً، ومعه لا تظهر إلّا على `/panel/login?judge=<الرمز>`.
-- شغّل Horizon تحت Supervisor أو systemd، وأضف `* * * * * php artisan schedule:run` إلى cron.
-- اضبط `PUBLISH_DISK` وإعداد S3 وCDN إن أُريد خدمة الصفحات المنشورة من الحافّة. وإن خلا خُدمت من القرص المحلّي.
-- بعد كلّ تحديث: `composer install --no-dev`، و`npm ci && npm run build`، و`php artisan migrate --force`، و`php artisan horizon:terminate` ليعيد العمّالُ تحميل الكود.
+ثمّ افتح `http://localhost:8000/panel/login`، واضغط أحد الأزرار الثلاثة (مشرف المنصّة، أو مالك الجهة، أو المحرّر) فتدخل مباشرةً. وأداة «تحقّق» على `http://localhost:8000/verify` بلا دخول. **واترك نافذة الأمر مفتوحة** طوال التجربة: فيها الموقع، والعامل الذي يُعدّ الملخّصات.
 
 ### مشكلات شائعة
 
@@ -397,13 +338,21 @@ CACHE_STORE=database
 
 | العَرَض | السبب والحلّ |
 |---|---|
-| `could not open extension control file pg_trgm` | ثبّت `postgresql-contrib`، أو امنح المستخدم صلاحية إنشاء الامتداد |
-| الملخّص واقف على «في قائمة الانتظار» | الأمر `php artisan horizon` (أو `queue:work`) غير مشغّل في Terminal |
-| «لم يُعثر» لكلّ آية | المصحف غير محمَّل في قاعدة البيانات (seed): شغّل `khulasah:seed-quran` بمفاتيح Quran Foundation |
-| رسالة «الملفّ تالف» عند رفع صوت | FFmpeg غير مثبّت أو غير موجود على `FFMPEG_BIN`. و`khulasah:preflight` يكشفه |
-| لا أزرار للجنة في صفحة الدخول | `JUDGE_LOGIN=true` غير مضبوط، أو لم يُشغَّل `khulasah:seed-judges`، أو الخادم غير محلّي بلا `?judge=` |
+| `تعذّر الاتّصال بقاعدة البيانات` عند `composer run setup` | القاعدة أو المستخدم غير موجودين، أو قيم `DB_*` في `.env` لا تطابقهما. أعد الخطوة ٢ |
+| `في القاعدة جداولُ من قبل` | القاعدة ليست فارغة. `php artisan khulasah:restore-dump --force` يمحوها ويستعيد الجاهزة |
+| الملخّص واقف على «في قائمة الانتظار» | `composer run start` غير مشغّل |
+| رابط يوتيوب لا يُقرأ | `YTDLP_BIN` لا يشير إلى yt-dlp على جهازك |
+| رسالة «الملفّ تالف» عند رفع صوت | FFmpeg غير مثبّت. و`php artisan khulasah:preflight` يقول ما ينقص |
 
 </div>
+
+### على خادمٍ عامّ
+
+- اضبط `APP_ENV=production` و`APP_DEBUG=false`، وفعّل HTTPS (كعكة الجلسة تصير آمنةً وحدها في production).
+- **ضع في `JUDGE_LOGIN_KEY` رمزاً طويلاً عشوائياً.** بدونه لا تظهر أزرار اللجنة على خادمٍ غير محلّي أصلاً، ومعه لا تظهر إلّا على `/panel/login?judge=<الرمز>`.
+- اجعل `QUEUE_CONNECTION=redis` و`CACHE_STORE=redis` مع Redis 7، وشغّل `php artisan horizon` تحت Supervisor أو systemd، وأضف `* * * * * php artisan schedule:run` إلى cron.
+- اضبط `PUBLISH_DISK` وإعداد S3 وCDN إن أُريد خدمة الصفحات المنشورة من الحافّة. وإن خلا خُدمت من القرص المحلّي.
+- بعد كلّ تحديث: `composer install --no-dev`، و`npm ci && npm run build`، و`php artisan migrate --force`، و`php artisan horizon:terminate` ليعيد العمّالُ تحميل الكود.
 
 ---
 

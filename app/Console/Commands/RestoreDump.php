@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Schema;
+use PDO;
 use Throwable;
 
 /**
@@ -31,6 +32,32 @@ class RestoreDump extends Command
 
     private const DUMP = 'dump/khulasat.sql.gz';
 
+    /**
+     * ★ **القاعدةُ تُنشأ إن لم توجد**، بمستخدم PostgreSQL الذي في `.env`. فمن
+     * ثبّت PostgreSQL عنده مستخدمُه، يكتبه في `.env`، ولا يُنشئ قاعدةً بيده.
+     *
+     * @param  array<string, mixed>  $config
+     */
+    private function createDatabaseIfMissing(array $config): void
+    {
+        $pdo = new PDO(
+            sprintf('pgsql:host=%s;port=%s;dbname=postgres', $config['host'], $config['port']),
+            (string) $config['username'],
+            (string) ($config['password'] ?? ''),
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+        );
+
+        $name = (string) $config['database'];
+        $exists = $pdo->prepare('SELECT 1 FROM pg_database WHERE datname = ?');
+        $exists->execute([$name]);
+
+        if ($exists->fetchColumn() === false) {
+            $pdo->exec('CREATE DATABASE "'.str_replace('"', '""', $name).'"');
+            $this->info("أُنشئت القاعدة {$name}.");
+            DB::purge();
+        }
+    }
+
     public function handle(): int
     {
         $dump = database_path(self::DUMP);
@@ -41,11 +68,14 @@ class RestoreDump extends Command
             return self::FAILURE;
         }
 
+        $config = config('database.connections.'.config('database.default'));
+
         try {
+            $this->createDatabaseIfMissing($config);
             $hasTables = Schema::hasTable('migrations');
         } catch (Throwable $e) {
             $this->error('تعذّر الاتّصال بقاعدة البيانات: '.$e->getMessage());
-            $this->line('أنشئ القاعدة والمستخدم كما في الـREADME، وتحقّق من قيم DB_* في .env.');
+            $this->line('تحقّق من مستخدم PostgreSQL وكلمة مروره في DB_USERNAME وDB_PASSWORD في ملفّ .env.');
 
             return self::FAILURE;
         }
@@ -60,8 +90,6 @@ class RestoreDump extends Command
             DB::statement('DROP SCHEMA public CASCADE');
             DB::statement('CREATE SCHEMA public');
         }
-
-        $config = config('database.connections.'.config('database.default'));
 
         $this->info('تُستعاد القاعدة… (دقيقةٌ أو اثنتان)');
 

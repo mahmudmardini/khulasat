@@ -269,7 +269,7 @@ curl https://<host>/api/v1/verify/{id}
 
 ## التثبيت والتشغيل
 
-تثبيت المنصّة على جهاز لجنة التحكيم في خمس خطوات. **قاعدة البيانات جاهزة** في `database/dump/`: فيها المصحف وترجماته، والحديث بكتبه التسعة، وإعداد النماذج، وحسابات اللجنة الثلاثة، وملخّصٌ تجريبيّ منشور مع اختبار فهمه. فلا يلزم تحميل شيءٍ من الإنترنت ولا أيُّ حسابٍ غير مفاتيح الذكاء الاصطناعي.
+تثبيت المنصّة على جهاز لجنة التحكيم في أربع خطوات. **قاعدة البيانات جاهزة** في `database/dump/`: فيها المصحف وترجماته، والحديث بكتبه التسعة، وإعداد النماذج، وحسابات اللجنة الثلاثة، وملخّصٌ تجريبيّ منشور مع اختبار فهمه. فلا يلزم تحميل شيءٍ من الإنترنت ولا أيُّ حسابٍ غير مفاتيح الذكاء الاصطناعي.
 
 ### ١. البرامج المطلوبة
 
@@ -290,30 +290,18 @@ sudo apt install php8.3 php8.3-{pgsql,mbstring,intl,gd,curl,xml,zip} composer \
 pipx install yt-dlp
 ```
 
-### ٢. قاعدة بيانات فارغة
-
-```bash
-createuser -s khulasah && createdb -O khulasah khulasah                      # macOS
-# أو على لينكس:
-sudo -u postgres psql -c "CREATE USER khulasah WITH SUPERUSER PASSWORD 'secret';"
-sudo -u postgres psql -c "CREATE DATABASE khulasah OWNER khulasah;"
-```
-
-### ٣. التثبيت
+### ٢. الإعدادات
 
 ```bash
 git clone https://github.com/mahmudmardini/khulasat.git && cd khulasat
-composer install
-composer run setup
+cp .env.example .env
 ```
 
-`composer run setup` ينشئ ملفّ `.env`، ويبني الواجهة، ويستعيد القاعدة الجاهزة في أقلّ من دقيقة.
-
-### ٤. المفاتيح
-
-افتح ملفّ `.env` واكتب فيه:
+ثمّ افتح ملفّ `.env` واكتب فيه:
 
 ```
+DB_USERNAME=...
+DB_PASSWORD=...
 MODEL_GATEWAY=real
 ANTHROPIC_API_KEY=...
 OPENAI_API_KEY=...
@@ -321,10 +309,20 @@ GOOGLE_AI_API_KEY=...
 YTDLP_BIN=/opt/homebrew/bin/yt-dlp
 ```
 
+- **`DB_USERNAME` و`DB_PASSWORD`:** مستخدم PostgreSQL على جهازك. وعلى macOS بـHomebrew هو اسم مستخدم جهازك، بلا كلمة مرور. والقاعدة نفسها تُنشأ وحدها في الخطوة التالية.
 - **المفاتيح الثلاثة** من console.anthropic.com وplatform.openai.com وaistudio.google.com. وهي لازمةٌ لإنشاء ملخّصٍ جديد ولأداة «تحقّق». أمّا تصفّح الملخّص التجريبي فلا يحتاجها.
 - **`YTDLP_BIN`** هو ناتج الأمر `which yt-dlp` على جهازك.
 
-### ٥. التشغيل
+### ٣. التثبيت
+
+```bash
+composer install
+composer run setup
+```
+
+`composer run setup` يبني الواجهة، وينشئ القاعدة ويستعيد البيانات الجاهزة فيها، في أقلّ من دقيقة.
+
+### ٤. التشغيل
 
 ```bash
 composer run start
@@ -338,7 +336,7 @@ composer run start
 
 | العَرَض | السبب والحلّ |
 |---|---|
-| `تعذّر الاتّصال بقاعدة البيانات` عند `composer run setup` | القاعدة أو المستخدم غير موجودين، أو قيم `DB_*` في `.env` لا تطابقهما. أعد الخطوة ٢ |
+| `تعذّر الاتّصال بقاعدة البيانات` عند `composer run setup` | `DB_USERNAME` أو `DB_PASSWORD` في `.env` لا يطابقان مستخدم PostgreSQL على جهازك، أو PostgreSQL غير مشغّل |
 | `في القاعدة جداولُ من قبل` | القاعدة ليست فارغة. `php artisan khulasah:restore-dump --force` يمحوها ويستعيد الجاهزة |
 | الملخّص واقف على «في قائمة الانتظار» | `composer run start` غير مشغّل |
 | رابط يوتيوب لا يُقرأ | `YTDLP_BIN` لا يشير إلى yt-dlp على جهازك |

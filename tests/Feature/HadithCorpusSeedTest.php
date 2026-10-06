@@ -174,6 +174,54 @@ it('names one book alone when only that book carries the wording', function (): 
         ->toBe('رواه البخاري');
 });
 
+it('names the higher book when two books carry the wording equally', function (): void {
+    // ★ T-219: أبو داود بُذر أوّلاً، فكان يعود أوّلاً ويُعزى إليه الحديث،
+    // والبخاريُّ يطابقه بالتمام نفسه.
+    $matn = 'قال رسول الله صلى الله عليه وسلم إنما الأعمال بالنيات وإنما لكل امرئ ما نوى';
+
+    corpusRow(HadithBook::AbuDawud, '2201', 'حدثنا محمد بن كثير '.$matn);
+    corpusRow(HadithBook::Bukhari, '1', 'حدثنا الحميدي '.$matn);
+
+    $r = verifyAgainstCorpus('إنما الأعمال بالنيات وإنما لكل امرئ ما نوى');
+
+    expect($r->status)->toBe(MatchStatus::Exact)
+        ->and($r->sourceMeta['book'])->toBe('صحيح البخاري')
+        ->and($r->sourceMeta['hadith_number'])->toBe('1');
+});
+
+it('returns rows of equal similarity in a fixed order, the higher book first', function (): void {
+    // ★ T-219: ترتيبُ المتساوين في Postgres غير مضمون، فالمدخلُ الواحد
+    // كان يُعزى إلى كتابٍ مرّةً وإلى غيره أخرى.
+    $matn = 'إنما الأعمال بالنيات وإنما لكل امرئ ما نوى';
+
+    corpusRow(HadithBook::Malik, '1', $matn);
+    corpusRow(HadithBook::Nasai, '75', $matn);
+    corpusRow(HadithBook::Muslim, '1907', $matn);
+    corpusRow(HadithBook::Bukhari, '54', $matn);
+    corpusRow(HadithBook::Bukhari, '1', $matn);
+
+    $order = array_map(
+        static fn ($match): string => $match->bookKey->value.'#'.$match->hadithNumber,
+        (new LocalCorpusProvider)->search(Arabic::normalize($matn)),
+    );
+
+    expect($order)->toBe(['bukhari#54', 'bukhari#1', 'muslim#1907', 'nasai#75', 'malik#1']);
+});
+
+it('does not let the salutation on the Prophet make a quote of an unrelated row', function (): void {
+    // ★ T-219: «النبي صلى الله عليه وسلم كان» ستُّ كلمات، فبلغت حدَّ الاقتباس
+    // وطابق قولُ عائشة حديثَ النورة، ونُشر حديثاً ضعيفاً لا صلة له بالشاهد.
+    corpusRow(
+        HadithBook::IbnMajah,
+        '3751',
+        'حدثنا محمد بن يحيى عن أم سلمة أن النبي صلى الله عليه وسلم كان إذا اطلى بدأ بعورته فطلاها بالنورة وسائر جسده أهله',
+        HadithGrade::Daif,
+    );
+
+    expect(verifyAgainstCorpus('إن عمل النبي صلى الله عليه وسلم كان ديمة')->status)
+        ->toBe(MatchStatus::None);
+});
+
 it('reports nothing rather than the nearest row when the corpus is empty', function (): void {
     // «فراغ الجدول ليس إخفاقاً»: تعود الشواهد `none` وتُرفع للمراجعة.
     expect(verifyAgainstCorpus('من داوم على قراءة سورة الكهف رفع الله عنه هم الدنيا')->status)

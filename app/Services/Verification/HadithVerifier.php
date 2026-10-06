@@ -188,7 +188,11 @@ class HadithVerifier implements EvidenceVerifier
                     $exactBooks[] = $match->bookKey;
                 }
 
-                if ($best === null || $similarity > $best[1]) {
+                // ★ **وعند التساوي يُقدَّم الأعلى رتبةً** — T-219. كان يُؤخذ
+                // أوّلُ ما أعاده المزوّد، فعُزي «إنما الأعمال بالنيات» إلى أبي
+                // داود والبخاريُّ يطابقه بالتمام نفسه.
+                if ($best === null || $similarity > $best[1]
+                    || ($similarity === $best[1] && $this->outranks($match, $best[0]))) {
                     $best = [$match, $similarity];
                 }
             }
@@ -212,6 +216,21 @@ class HadithVerifier implements EvidenceVerifier
         }
 
         return $best === null ? null : [$best[0], $best[1], $exactBooks];
+    }
+
+    /**
+     * أيعلو هذا المرشّحُ ذاك رتبةً؟ — T-219.
+     *
+     * ومرشّحٌ لا يُعرف كتابُه (كالوهمي في الاختبارات) لا يعلو شيئاً، فيبقى
+     * الأوّلُ كما كان.
+     */
+    private function outranks(HadithMatch $candidate, HadithMatch $current): bool
+    {
+        if ($candidate->bookKey === null) {
+            return false;
+        }
+
+        return $current->bookKey === null || $candidate->bookKey->rank() < $current->bookKey->rank();
     }
 
     /**
@@ -251,6 +270,20 @@ class HadithVerifier implements EvidenceVerifier
      */
     private function similarity(string $a, string $b): float
     {
+        if ($a === $b) {
+            return 1.0;
+        }
+
+        // ★ **صيغُ التعظيم ليست من اللفظ** — T-219. تُنزع من الطرفين قبل
+        // القياس، فلا تجعل شذرةً اقتباساً بأنّها في كلّ صفّ، ولا يُنزل
+        // غيابُها أو كتابتُها «ﷺ» اقتباساً صحيحاً.
+        $a = NarrationFormulas::withoutHonorifics($a);
+        $b = NarrationFormulas::withoutHonorifics($b);
+
+        if ($a === '') {
+            return 0.0;
+        }
+
         if ($a === $b) {
             return 1.0;
         }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Contracts\SupplementaryHadithProvider;
+use App\Enums\HadithBook;
 use App\Enums\HadithGrade;
 use App\Enums\MatchStatus;
 use App\Enums\ReviewStatus;
@@ -113,6 +114,48 @@ it('exempts a short hadith quoted whole from the fragment floor', function (): v
 
     expect($r->status)->toBe(MatchStatus::Exact)
         ->and($r->sourceMeta['is_fragment'])->toBeFalse();
+});
+
+// ── ★ صيغُ التعظيم ليست من اللفظ — T-219 ───────────────────────
+
+it('does not count the salutation on the Prophet toward a citable fragment', function (): void {
+    // أربعُ كلماتٍ من ستّ هي الصلاةُ على النبي ﷺ، وهي في كلّ صفّ.
+    $r = verifyHadith('إن عمل النبي صلى الله عليه وسلم كان ديمة', providers: [
+        new FakeHadithProvider([new HadithMatch(
+            text: 'أن النبي صلى الله عليه وسلم كان إذا اطلى بدأ بعورته فطلاها بالنورة وسائر جسده أهله',
+            ruling: 'ضعيف',
+        )]),
+    ]);
+
+    expect($r->status)->toBe(MatchStatus::None);
+});
+
+it('matches a quote whatever way it writes the salutation', function (string $quote): void {
+    $r = verifyHadith($quote, providers: [
+        new FakeHadithProvider([new HadithMatch(
+            text: 'كان رسول الله صلى الله عليه وسلم أحسن الناس خلقا',
+            ruling: 'صحيح',
+        )]),
+    ]);
+
+    expect($r->status)->toBe(MatchStatus::Exact);
+})->with([
+    'بالرمز' => ['كان رسول الله ﷺ أحسن الناس خلقا'],
+    'بالآل' => ['كان رسول الله صلى الله عليه وآله وسلم أحسن الناس خلقا'],
+    'بلا صيغة' => ['كان رسول الله أحسن الناس خلقا'],
+]);
+
+it('prefers the higher book when two books match equally', function (): void {
+    $matn = 'إنما الأعمال بالنيات وإنما لكل امرئ ما نوى';
+
+    $r = verifyHadith($matn, providers: [
+        new FakeHadithProvider([
+            new HadithMatch(text: $matn, hadithNumber: '2201', ruling: 'صحيح', bookKey: HadithBook::AbuDawud),
+            new HadithMatch(text: $matn, hadithNumber: '1', ruling: 'صحيح', bookKey: HadithBook::Bukhari),
+        ]),
+    ]);
+
+    expect($r->sourceMeta['hadith_number'])->toBe('1');
 });
 
 // ── ★ القاعدة الحاكمة: الحكم يغلب التطابق ★ ─────────────────────

@@ -89,6 +89,17 @@ enum HadithBook: string
         return $this === self::Ahmad || $this === self::Darimi;
     }
 
+    /**
+     * رتبةُ الكتاب حين يطابق الاقتباسُ كتابين بالتمام نفسه — T-219.
+     *
+     * **ترتيبُ الحالات أعلاه**: الصحيحان، ثمّ السنن، ثمّ الموطّأ، ثمّ الطبقة
+     * الثانية. والأصغرُ أعلى.
+     */
+    public function rank(): int
+    {
+        return (int) array_search($this, self::cases(), true);
+    }
+
     /** @return list<self> */
     public static function all(): array
     {

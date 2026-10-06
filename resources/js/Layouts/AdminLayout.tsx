@@ -54,7 +54,8 @@ export function AdminLayout({ title, description, action, children }: Props) {
       <div className="flex min-h-0 flex-1">
         <Sidebar open={drawer} onClose={() => setDrawer(false)} currentUrl={page.url} />
 
-        <main id="main" className="min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8">
+        {/* `relative` يُبقي كلَّ `absolute` في تمرير `main` — انظر AppLayout. */}
+        <main id="main" className="relative min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8">
           <div className="content-shell">
             <header className="mb-6 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
               <div className="min-w-0">
@@ -232,7 +233,7 @@ function Sidebar({
         aria-label={t('admin.nav.home')}
         className={cn(
           'z-40 flex shrink-0 flex-col overflow-y-auto border-e border-border bg-surface',
-          'fixed inset-y-0 start-0 w-64 transition-transform duration-200 md:static md:translate-x-0',
+          'fixed inset-y-0 start-0 w-64 transition-transform duration-200 md:relative md:translate-x-0',
           open ? 'translate-x-0 shadow-lifted' : 'translate-x-full md:translate-x-0',
           'md:w-16 lg:w-60',
         )}

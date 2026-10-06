@@ -75,7 +75,13 @@ export function AppLayout({ title, description, action, wide = false, children }
           tenant={page.props.auth?.user?.tenant ?? null}
         />
 
-        <main id="main" className="min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8">
+        {/*
+          **`relative` على `main` لا زينة.** كلُّ `absolute` بلا سلفٍ موضَّع —
+          ونصوصُ `sr-only` أكثرُها — كان يأخذ الوثيقةَ كتلةً حاوية فيفلت من
+          تمرير `main`، ويطيل الوثيقة نفسها بطول المحتوى: فيمرّ التمرير تحت
+          شريط الحصّة إلى فراغ. وبها يبقى داخل `main` ويُمرَّر معها.
+        */}
+        <main id="main" className="relative min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8 sm:py-8">
           {/*
             **`flex min-h-full flex-col` والفاصلُ `flex-1` — T-111.** محتوًى
             أقصر من الشاشة (فهرسٌ بصفحةٍ واحدة، حالةٌ فارغة) كان يترك ذيلَ
@@ -353,7 +359,7 @@ function Sidebar({
           // درج تحت 768px. و`start-0` في RTL هي الحافّة اليمنى، فإخفاؤه
           // يكون بدفعه يميناً — أي `translate-x-full` الموجبة. ولو كانت
           // الواجهة LTR لاحتاجت السالبة. والاتّجاه مثبَّت على RTL.
-          'fixed inset-y-0 start-0 w-64 transition-transform duration-200 md:static md:translate-x-0',
+          'fixed inset-y-0 start-0 w-64 transition-transform duration-200 md:relative md:translate-x-0',
           open ? 'translate-x-0 shadow-lifted' : 'translate-x-full md:translate-x-0',
           // أيقونات تحت 1024px، وكامل فوقها
           'md:w-16 lg:w-60',

@@ -13,6 +13,7 @@ use App\Models\ModelConfig;
 use App\Models\SummaryJob;
 use App\Support\Model\JsonSchema;
 use App\Support\Model\ModelResponse;
+use Illuminate\Support\Facades\Log;
 use JsonException;
 
 /**
@@ -85,6 +86,20 @@ class DatabaseModelGateway implements ModelGateway
             $inputTokens += $result->inputTokens;
             $outputTokens += $result->outputTokens;
 
+            if ($result->truncated) {
+                // **في السجلّ بسقفه وتوكنزه** — T-217: علّتُه الإعدادُ لا النموذج،
+                // ويُصلَح من شاشة النماذج لا بضغطةٍ أخرى.
+                Log::warning('model.output_truncated', [
+                    'stage' => $stage->value,
+                    'provider' => (string) $config->provider,
+                    'model' => (string) $config->model_id,
+                    'max_tokens' => (int) $config->max_tokens,
+                    'output_tokens' => $result->outputTokens,
+                    'attempt' => $attempts,
+                    'summary_job_id' => $job?->id,
+                ]);
+            }
+
             if (! $stage->expectsJson()) {
                 return $this->finish($stage, $config, $result->content, null, $inputTokens, $outputTokens, $startedAt, $attempts, $job);
             }
@@ -101,7 +116,10 @@ class DatabaseModelGateway implements ModelGateway
                 $lastViolations = implode(' · ', array_slice($violations, 0, 5));
             } else {
                 // **لا يُصلَح JSON معطوب بالتحليل النصّي** — T-10 صراحةً.
-                $lastViolations = 'الخرج ليس JSON صالحاً.';
+                // والمقطوعُ يُسمّى باسمه — T-217: «ليس JSON» يُلقي العلّة على النموذج.
+                $lastViolations = $result->truncated
+                    ? 'انقطع الخرج عند سقف التوكنز ('.(int) $config->max_tokens.') قبل أن يكتمل.'
+                    : 'الخرج ليس JSON صالحاً.';
             }
         } while ($attempts < 2);
 

@@ -70,10 +70,18 @@ final readonly class Slide
         ];
     }
 
+    /**
+     * **وما لا حرفَ فيه ولا رقم لا يُعدّ كلمة** — T-217: «—» و«:» و«…» بين
+     * مسافتين كانت تُحسب في سقف الأربعين، فتُرفض شريحةٌ بثمانٍ وثلاثين كلمةً
+     * وشرطتين، ولا يدري أحدٌ أيُّ كلمةٍ زادت.
+     */
     private static function words(string $text): int
     {
-        $trimmed = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+        $tokens = preg_split('/\s+/u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
-        return $trimmed === '' ? 0 : count(explode(' ', $trimmed));
+        return count(array_filter(
+            $tokens,
+            static fn (string $token): bool => preg_match('/[\p{L}\p{N}]/u', $token) === 1,
+        ));
     }
 }

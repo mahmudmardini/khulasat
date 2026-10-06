@@ -16,5 +16,12 @@ final readonly class DriverResult
         public string $content,
         public int $inputTokens = 0,
         public int $outputTokens = 0,
+        /**
+         * وقف المزوّدُ عند `max_tokens` قبل أن يتمّ الخرج — T-217.
+         *
+         * وبغيره يُقال للخرج المقطوع «ليس JSON صالحاً»، فلا يُعرف أنّ السقف
+         * هو العلّة لا النموذج. وتوكنزُ التفكير تُخصم من السقف نفسه.
+         */
+        public bool $truncated = false,
     ) {}
 }

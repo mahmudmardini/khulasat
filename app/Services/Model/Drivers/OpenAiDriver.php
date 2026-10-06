@@ -106,6 +106,7 @@ class OpenAiDriver implements ModelDriver
             content: $content,
             inputTokens: (int) $response->json('usage.prompt_tokens', 0),
             outputTokens: (int) $response->json('usage.completion_tokens', 0),
+            truncated: $response->json('choices.0.finish_reason') === 'length',
         );
     }
 }

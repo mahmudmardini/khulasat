@@ -12,6 +12,7 @@ use App\Models\UsageRecord;
 use App\Services\Model\DatabaseModelGateway;
 use App\Support\Model\TranscriptEnvelope;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 // المواصفة §6 و§6-أ و§12. ولا نداء نموذج حقيقي — CLAUDE.md §2 القاعدة
 // السابعة: المحوّلات تُختبر بـ Http::fake، والشبكة ممنوعة أصلاً.
@@ -510,4 +511,60 @@ it('sends the thinking level the stage row carries', function (): void {
     gateway()->call(Stage::Cleaning, [['role' => 'user', 'content' => 'x']]);
 
     Http::assertSent(fn ($request): bool => $request['output_config']['effort'] === 'high');
+});
+
+// ── الخرجُ المقطوع عند السقف — T-217 ─────────────────────────────
+
+/*
+ * **المقطوعُ يُسمّى باسمه**: كان يُقال له «ليس JSON صالحاً» فتُلقى العلّةُ على
+ * النموذج، وعلّتُه سقفُ `max_tokens` في شاشة النماذج. والسجلُّ يقول السقفَ والتوكنز.
+ */
+it('says the output was cut off at max_tokens instead of calling it broken json', function (string $provider, Closure $reply): void {
+    Log::spy();
+    configureStage(Stage::Carousel, $provider);
+    $reply();
+
+    try {
+        gateway()->call(Stage::Carousel, [['role' => 'user', 'content' => 'x']], schema());
+        $this->fail('كان يجب أن يقف بعد الإعادة.');
+    } catch (ModelCallFailed $failed) {
+        expect($failed->errorCode)->toBe('schema_validation_failed')
+            ->and($failed->getMessage())->toBe('انقطع الخرج عند سقف التوكنز (1000) قبل أن يكتمل.');
+    }
+
+    Log::shouldHaveReceived('warning')
+        ->with('model.output_truncated', Mockery::on(fn (array $context): bool => $context['stage'] === 'carousel'
+            && $context['provider'] === $provider
+            && $context['max_tokens'] === 1_000
+            && $context['output_tokens'] === 1_000))
+        ->twice();
+})->with([
+    'anthropic' => ['anthropic', fn () => Http::fake(['api.anthropic.com/*' => Http::response([
+        'content' => [['type' => 'text', 'text' => '{"title": "ناق']],
+        'stop_reason' => 'max_tokens',
+        'usage' => ['input_tokens' => 100, 'output_tokens' => 1_000],
+    ])])],
+    'openai' => ['openai', fn () => Http::fake(['api.openai.com/*' => Http::response([
+        'choices' => [['message' => ['content' => '{"title": "ناق'], 'finish_reason' => 'length']],
+        'usage' => ['prompt_tokens' => 100, 'completion_tokens' => 1_000],
+    ])])],
+    'google' => ['google', fn () => Http::fake(['generativelanguage.googleapis.com/*' => Http::response([
+        'candidates' => [['content' => ['parts' => [['text' => '{"title": "ناق']]], 'finishReason' => 'MAX_TOKENS']],
+        'usageMetadata' => ['promptTokenCount' => 100, 'candidatesTokenCount' => 1_000],
+    ])])],
+]);
+
+it('still calls json broken when the provider stopped on its own', function (): void {
+    Log::spy();
+    configureStage(Stage::Carousel);
+    Http::fake(['api.anthropic.com/*' => Http::response([
+        'content' => [['type' => 'text', 'text' => 'إليك الشرائح.']],
+        'stop_reason' => 'end_turn',
+        'usage' => ['input_tokens' => 100, 'output_tokens' => 10],
+    ])]);
+
+    expect(fn () => gateway()->call(Stage::Carousel, [['role' => 'user', 'content' => 'x']], schema()))
+        ->toThrow(ModelCallFailed::class, 'الخرج ليس JSON صالحاً.');
+
+    Log::shouldNotHaveReceived('warning', ['model.output_truncated', Mockery::any()]);
 });
